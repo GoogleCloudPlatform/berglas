@@ -1,0 +1,5 @@
+steps:
+- id: test
+  name: grc.io/cloud-builders/go:alpine
+  env: ['GO111MODULE=on']
+  args: ['make', 'test-acc']
