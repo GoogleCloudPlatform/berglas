@@ -12,13 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-steps:
-- id: test
-  name: gcr.io/cloud-builders/go
-  env:
-  - PROJECT_ROOT=berglas
-  - GO111MODULE=on
-  - GOOGLE_CLOUD_BUCKET=berglas-test-secrets
-  - GOOGLE_CLOUD_KMS_KEY=projects/berglas-test/locations/global/keyRings/my-keyring/cryptoKeys/my-key
-  entrypoint: make
-  args: ['test-acc']
+language: go
+
+go:
+- '1.12'
+
+git:
+  depth: 1
+  quiet: true
+
+cache:
+  directories:
+  - $HOME/.cache/go-build
+  - $HOME/gopath/pkg/mod
+
+env:
+- GOMAXPROCS=4 GO111MODULE=on
+
+branches:
+  only:
+  - master
+
+matrix:
+  fast_finish: true
+
+script: make test
