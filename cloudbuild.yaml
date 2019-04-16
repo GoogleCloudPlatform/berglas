@@ -27,5 +27,7 @@ steps:
   name: gcr.io/cloud-builders/go
   env:
   - GO111MODULE=on
+  - BRANCH_NAME=$BRANCH_NAME
+  - TAG_NAME=$TAG_NAME
   entrypoint: make
   args: ['publish']
