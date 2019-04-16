@@ -25,8 +25,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"github.com/GoogleCloudPlatform/berglas/berglas"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -121,7 +121,7 @@ This command will exit successfully even if the secret does not exist.
 }
 
 var execCmd = &cobra.Command{
-	Use:   "exec [subcommand]",
+	Use:   "exec -- [subcommand]",
 	Short: "Spawn an environment with secrets",
 	Long: strings.Trim(`
 Parse berglas references and spawn the given command with the secrets in the
@@ -138,10 +138,10 @@ signals are proxied to the child process.
 `, "\n"),
 	Example: strings.Trim(`
   # Spawn a subshell with secrets populated
-  berglas exec $SHELL
+  berglas exec -- $SHELL
 
   # Run "myapp" after parsing local references
-  berglas exec --local myapp
+  berglas exec --local -- myapp --with-args
 `, "\n"),
 	Args: cobra.MinimumNArgs(1),
 	Run:  execRun,

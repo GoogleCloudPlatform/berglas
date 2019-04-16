@@ -151,6 +151,14 @@ buckets in the project, which may incur costs.
     my-secret-data
     ```
 
+1. Spawn a child process with secrets populated in the child's environment:
+
+    ```text
+    $ berglas exec -- myapp --flag-a --flag-b
+    ```
+
+    This will spawn `myapp` with an environment parsed by berglas.
+
 1. Delete a secret:
 
     ```text
