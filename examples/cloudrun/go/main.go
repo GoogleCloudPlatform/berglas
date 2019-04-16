@@ -67,8 +67,8 @@ func main() {
 }
 
 func F(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "API_KEY=%s\n", os.Getenv("API_KEY"))
-	fmt.Fprintf(w, "TLS_KEY=%s\n", os.Getenv("TLS_KEY"))
+	fmt.Fprintf(w, "API_KEY: %s\n", os.Getenv("API_KEY"))
+	fmt.Fprintf(w, "TLS_KEY: %s\n", os.Getenv("TLS_KEY"))
 	fmt.Fprintf(w, "\n")
 
 	b, err := ioutil.ReadFile(os.Getenv("TLS_KEY"))
