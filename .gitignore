@@ -1,4 +1,6 @@
 .DS_Store
 build/
-examples/**/vendor
 .env
+
+examples/**/vendor/
+examples/**/node_modules/
