@@ -27,11 +27,13 @@ cache:
   - $HOME/gopath/pkg/mod
 
 env:
-- GOMAXPROCS=4 GO111MODULE=on
+- GO111MODULE=on
 
 branches:
   only:
   - master
+
+install: true
 
 matrix:
   fast_finish: true

@@ -73,8 +73,8 @@ func F(w http.ResponseWriter, r *http.Request) {
 
 	b, err := ioutil.ReadFile(os.Getenv("TLS_KEY"))
 	if err != nil {
-		fmt.Fprintf(w, "err reading file contents: %s\n", err)
+		fmt.Fprintf(w, "CONTENTS: failed to read file: %s\n", err)
 	} else {
-		fmt.Fprintf(w, "file contents: %s\n", b)
+		fmt.Fprintf(w, "CONTENTS: %s\n", b)
 	}
 }

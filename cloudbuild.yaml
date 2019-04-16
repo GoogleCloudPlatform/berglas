@@ -22,3 +22,10 @@ steps:
   - GOOGLE_CLOUD_KMS_KEY=projects/berglas-test/locations/global/keyRings/my-keyring/cryptoKeys/my-key
   entrypoint: make
   args: ['test-acc']
+
+- id: publish
+  name: gcr.io/cloud-builders/go
+  env:
+  - GO111MODULE=on
+  entrypoint: make
+  args: ['publish']

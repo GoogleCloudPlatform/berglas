@@ -1,0 +1,61 @@
+#!/usr/bin/env sh
+
+# Copyright 2019 The Berglas Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -e
+set -o pipefail
+
+# Exit if this is not a tag or master
+REF="${TAG_NAME}"
+if [ -z "${REF}" ] && [ "${BRANCH_NAME}" == "master" ]; then
+  REF="master"
+fi
+if [ -z "${REF}" ]; then
+  echo "Skipping publish: no tag or master branch"
+  exit 0
+fi
+
+# Clear any existing builds
+rm -rf build/
+
+# Build each GOOS/GOARCH combination
+for GOOS in ${GOOSES}; do
+  for GOARCH in ${GOARCHES}; do
+    echo "Building ${GOOS}/${GOARCH}"
+    CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} \
+      go build \
+        -a \
+        -ldflags "-s -w -extldflags 'static'" \
+        -installsuffix cgo \
+        -tags netgo \
+        -mod vendor \
+        -o build/${GOOS}_${GOARCH}/berglas \
+        .
+  done
+done
+
+# Install gsutil
+apk --no-cache --quiet add curl bash
+curl -sfL https://sdk.cloud.google.com | bash >/dev/null 2>&1
+export PATH="$PATH:/builder/home/google-cloud-sdk/bin/"
+
+# Publish each
+for f in $(find build/**/berglas); do
+  F="$(basename "${f}")"
+  OSARCH="$(basename $(dirname "${f}"))"
+  echo "Uploading ${REF}/${OSARCH}/${F}"
+
+  gsutil -q cp ${f} gs://berglas/${REF}/${OSARCH}/${F}
+done
