@@ -21,6 +21,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -80,14 +82,29 @@ type CloudRunEnv struct{}
 
 // EnvVars returns the list of envvars set on the virtual machine.
 func (e *CloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
-	// TODO: replace with cloud run client library when it launches
-	// TODO: stop hard-coding region when an envvar exists
-	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	region := "us-central1"
 	revision := os.Getenv("K_REVISION")
 
-	endpoint := fmt.Sprintf("https://run.googleapis.com/v1alpha1/projects/%s/locations/%s/revisions/%s",
-		project, region, revision)
+	project, err := valueFromMetadata(ctx, "project/project-id")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get project ID")
+	}
+
+	zone, err := valueFromMetadata(ctx, "instance/zone")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get zone")
+	}
+	zone = path.Base(zone)
+
+	region := ""
+	if i := strings.LastIndex(zone, "-"); i > -1 {
+		region = zone[0:i]
+	}
+	if region == "" {
+		return nil, errors.Errorf("failed to extract region from zone: %s", zone)
+	}
+
+	endpoint := fmt.Sprintf("https://%s-run.googleapis.com/apis/serving.knative.dev/v1alpha1/namespaces/%s/revisions/%s",
+		region, project, revision)
 
 	client, err := google.DefaultClient(ctx, iam.CloudPlatformScope)
 	if err != nil {
@@ -113,7 +130,7 @@ func (e *CloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, errors.Wrapf(err, "failed to communicate with cloud run: %s", d)
+		return nil, errors.Errorf("failed to communicate with cloud run: %s", d)
 	}
 
 	var s cloudRunService
@@ -127,6 +144,42 @@ func (e *CloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 	}
 
 	return envvars, nil
+}
+
+// valueFromMetadata queries the GCP metadata service to get information at the
+// specified path.
+func valueFromMetadata(ctx context.Context, path string) (string, error) {
+	path = fmt.Sprintf("http://metadata.google.internal/computeMetadata/v1/%s", path)
+
+	client, err := google.DefaultClient(ctx, iam.CloudPlatformScope)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create cloud run client")
+	}
+	client.Timeout = 15 * time.Second
+
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to create metadata request for %s", path)
+	}
+	req.Header.Set("Metadata-Flavor", "Google")
+	req.Header.Set("User-Agent", UserAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get metadata for %s", path)
+	}
+	defer resp.Body.Close()
+
+	d, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to read body for metadata for %s", path)
+	}
+
+	if resp.StatusCode != 200 {
+		return "", errors.Errorf("failed to get metadata for %s: %s", path, d)
+	}
+
+	return string(d), nil
 }
 
 type cloudRunService struct {
