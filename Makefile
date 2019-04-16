@@ -14,8 +14,18 @@
 
 VERSION = $(shell go run main.go version)
 
+GOOSES = darwin linux windows
+GOARCHES = amd64
+
+deps:
+	@go get -u ./...
+	@go mod vendor
+	@go mod tidy
+.PHONY: deps
+
 dev:
-	@go install ./...
+	@go install -mod=vendor ./...
+.PHONY: dev
 
 docker-push:
 	@gcloud builds submit \
@@ -27,9 +37,16 @@ docker-push:
 		--quiet \
 		gcr.io/berglas/berglas:$(VERSION) \
 		gcr.io/berglas/berglas:latest
+.PHONY: docker-push
+
+publish:
+	@GOOSES="${GOOSES}" GOARCHES="${GOARCHES}" ./bin/publish
+.PHONY: publish
 
 test:
-	@go test -short -parallel=40 ./...
+	@go test -mod=vendor -short -parallel=40 ./...
+.PHONY: test
 
 test-acc:
-	@go test -parallel=40 ./...
+	@go test -mod=vendor -parallel=40 ./...
+.PHONY: test-acc
