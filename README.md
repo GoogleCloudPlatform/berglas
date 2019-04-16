@@ -21,7 +21,11 @@ and other popular tools pre-installed.
 
 1. Install the `berglas` CLI using one of the following methods:
 
-    - Install a [pre-compiled][releases] for your operating system
+    - Install a [pre-compiled][releases] for your operating system:
+
+        - [darwin/amd64](https://storage.googleapis.com/berglas/master/darwin_amd64/berglas)
+        - [linux/amd64](https://storage.googleapis.com/berglas/master/linux_amd64/berglas)
+        - [windows/amd64](https://storage.googleapis.com/berglas/master/windows_amd64/berglas)
 
     - Use the official Docker container:
 
