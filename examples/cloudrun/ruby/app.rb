@@ -16,14 +16,7 @@ require 'sinatra'
 
 set :bind, '0.0.0.0'
 set :port, ENV['PORT'] || '8080'
-
-configure :production do
-  require 'stackdriver'
-  use Google::Cloud::Logging::Middleware
-  use Google::Cloud::ErrorReporting::Middleware
-  use Google::Cloud::Trace::Middleware
-  use Google::Cloud::Debugger::Middleware
-end
+set :server, :puma
 
 get '/' do
   api_key = ENV['API_KEY']
@@ -37,5 +30,7 @@ get '/' do
   resp =  "API_KEY: #{api_key}\n"
   resp << "TLS_KEY_PATH: #{tls_key_path}\n"
   resp << "TLS_KEY: #{tls_key}\n"
+
+  content_type :text
   resp
 end
