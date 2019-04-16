@@ -20,10 +20,6 @@ ENV GOOS=linux
 ENV GOARCH=amd64
 
 WORKDIR /src
-COPY go.mod .
-COPY go.sum .
-RUN go mod download
-
 COPY . .
 
 RUN go build \
