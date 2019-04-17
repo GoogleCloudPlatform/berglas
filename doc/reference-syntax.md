@@ -1,8 +1,8 @@
 # Berglas Reference Syntax
 
 This document describes the syntax for referencing a Berglas entity. Most
-commonly these references will live in environment variables, but the will parse
-these strings at lower levels.
+commonly these references will live in environment variables, but Berglas will
+parse these strings at the library level too.
 
 ## Syntax
 
@@ -21,11 +21,11 @@ berglas://[BUCKET]/[SECRET]?[OPTIONS]
 - `destination` - when specified as a URL query parameter, this controls how the
   secret is resolved:
 
-    - `tempfile` - resolve the secret contents to a tempfile, replacing the
-      environment variable with the path to the tempfile
+    - `tempfile` - resolve the secret and write the contents to a tempfile,
+      replacing the environment variable with the path to the tempfile
 
-    - `[PATH]` - resolve the secret contents and write them to the specified
-      file path.
+    - `[PATH]` - resolve the secret and write the contents to the specified file
+      path.
 
 ## Examples
 
