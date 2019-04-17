@@ -50,6 +50,16 @@ guide assumes this environment variable is set:
     _number_. You can find the project ID by running `gcloud projects list` or
     in the web UI.
 
+1. Enable required services on the project:
+
+    ```text
+    $ gcloud services enable --project $PROJECT_ID \
+        compute.googleapis.com \
+        cloudkms.googleapis.com \
+        storage-api.googleapis.com \
+        storage-component.googleapis.com
+    ```
+
 1. Create a [Cloud KMS][cloud-kms] keyring and crypto key for encrypting
 secrets. Replace `$PROJECT_ID` with the ID of your project.
 
