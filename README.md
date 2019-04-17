@@ -19,7 +19,7 @@ stored in [Cloud Storage][cloud-storage].
 you can run these commands from [Cloud Shell][cloud-shell], which has the SDK
 and other popular tools pre-installed.
 
-1. Install the `berglas` CLI using one of the following methods:
+1. Install the `berglas` CLI using **one** of the following methods:
 
     - Install a pre-compiled binary for your operating system:
 
@@ -36,6 +36,7 @@ and other popular tools pre-installed.
     - Install from source (requires a working Go installation):
 
       ```text
+      $ go get github.com/GoogleCloudPlatform/berglas/...
       $ go install github.com/GoogleCloudPlatform/berglas
       ```
 
