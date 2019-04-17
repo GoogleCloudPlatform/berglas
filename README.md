@@ -172,7 +172,10 @@ buckets in the project, which may incur costs.
     $ berglas exec -- myapp --flag-a --flag-b
     ```
 
-    This will spawn `myapp` with an environment parsed by berglas.
+    This will spawn `myapp` with an environment parsed by berglas. This will
+    only work when run from a GCP resource. To parse local environment
+    variables, use the `--local` flag. For more information, please run `berglas
+    exec -h`.
 
 1. Delete a secret:
 
