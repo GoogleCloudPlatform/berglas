@@ -25,13 +25,12 @@ import (
 
 func F(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "API_KEY: %s\n", os.Getenv("API_KEY"))
-	fmt.Fprintf(w, "TLS_KEY: %s\n", os.Getenv("TLS_KEY"))
-	fmt.Fprintf(w, "\n")
+	fmt.Fprintf(w, "TLS_KEY_PATH: %s\n", os.Getenv("TLS_KEY"))
 
 	b, err := ioutil.ReadFile(os.Getenv("TLS_KEY"))
 	if err != nil {
-		fmt.Fprintf(w, "CONTENTS: failed to read file: %s\n", err)
+		fmt.Fprintf(w, "TLS_KEY: failed to read file: %s\n", err)
 	} else {
-		fmt.Fprintf(w, "CONTENTS: %s\n", b)
+		fmt.Fprintf(w, "TLS_KEY: %s\n", b)
 	}
 }
