@@ -6,11 +6,14 @@ Storage bucket, and Cloud KMS key.
 
 [setup]: https://github.com/GoogleCloudPlatform/berglas#setup
 
+1. Make sure you are in the `examples/cloudrun/ruby` folder before
+continuing!
+
 1. Export the environment variables for your configuration:
 
     ```text
     export PROJECT_ID=my-project
-    export BUCKET=my-bucket
+    export BUCKET_ID=my-bucket
     export KMS_KEY=projects/$PROJECT_ID/locations/$KMS_LOCATION/keyRings/$KMS_KEYRING/cryptoKeys/$KMS_CRYPTO_KEY
     ```
 
@@ -18,12 +21,12 @@ Storage bucket, and Cloud KMS key.
 instructions):
 
     ```text
-    berglas create $BUCKET/api-key "xxx-yyy-zzz" \
+    berglas create $BUCKET_ID/api-key "xxx-yyy-zzz" \
       --key $KMS_KEY
     ```
 
     ```text
-    berglas create $BUCKET/tls-key "=== BEGIN RSA PRIVATE KEY..." \
+    berglas create $BUCKET_ID/tls-key "=== BEGIN RSA PRIVATE KEY..." \
       --key $KMS_KEY
     ```
 
@@ -46,8 +49,8 @@ environment variables:
 1. Grant the service account access to the Cloud Storage bucket objects:
 
     ```text
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET}/api-key
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET}/tls-key
+    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://$BUCKET_ID/api-key
+    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://$BUCKET_ID/tls-key
     ```
 
 1. Grant the service account access to use the KMS key:
@@ -76,7 +79,7 @@ environment variables:
       --image gcr.io/$PROJECT_ID/berglas-example-ruby:0.0.1 \
       --memory 1G \
       --concurrency 10 \
-      --set-env-vars "API_KEY=berglas://$BUCKET/api-key,TLS_KEY=berglas://$BUCKET/tls-key?destination=tempfile" \
+      --set-env-vars "API_KEY=berglas://$BUCKET_ID/api-key,TLS_KEY=berglas://$BUCKET_ID/tls-key?destination=tempfile" \
       --allow-unauthenticated
     ```
 
@@ -95,7 +98,7 @@ environment variables:
       --region us-central1
 
     IMAGE=gcr.io/$PROJECT_ID/berglas-example-ruby
-    for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
-      gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"
+    for DIGEST in $(gcloud container images list-tags $IMAGE --format='get(digest)'); do
+      gcloud container images delete --quiet --force-delete-tags "$IMAGE@$DIGEST"
     done
     ```

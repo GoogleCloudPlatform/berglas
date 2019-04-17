@@ -6,6 +6,9 @@ Storage bucket, and Cloud KMS key.
 
 [setup]: https://github.com/GoogleCloudPlatform/berglas#setup
 
+1. Make sure you are in the `examples/cloudfunctions/go` folder before
+continuing!
+
 1. Export the environment variables for your configuration:
 
     ```text
@@ -18,12 +21,12 @@ Storage bucket, and Cloud KMS key.
 instructions):
 
     ```text
-    berglas create $BUCKET/api-key "xxx-yyy-zzz" \
+    berglas create $BUCKET_ID/api-key "xxx-yyy-zzz" \
       --key $KMS_KEY
     ```
 
     ```text
-    berglas create $BUCKET/tls-key "=== BEGIN RSA PRIVATE KEY..." \
+    berglas create $BUCKET_ID/tls-key "=== BEGIN RSA PRIVATE KEY..." \
       --key $KMS_KEY
     ```
 
@@ -53,8 +56,8 @@ variables:
 1. Grant the service account access to the Cloud Storage bucket objects:
 
     ```text
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET}/api-key
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET}/tls-key
+    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://${BUCKET}/api-key
+    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://${BUCKET}/tls-key
     ```
 
 1. Grant the service account access to use the KMS key:
@@ -75,7 +78,7 @@ variables:
       --memory 1G \
       --max-instances 10 \
       --service-account $SA_EMAIL \
-      --set-env-vars "API_KEY=berglas://$BUCKET/api-key,TLS_KEY=berglas://$BUCKET/tls-key?destination=tempfile" \
+      --set-env-vars "API_KEY=berglas://$BUCKET_ID/api-key,TLS_KEY=berglas://$BUCKET_ID/tls-key?destination=tempfile" \
       --entry-point F \
       --trigger-http
     ```

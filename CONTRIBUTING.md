@@ -51,7 +51,7 @@ infrastructure or services should run in this project.
 1. Create a Cloud Storage bucket:
 
     ```text
-    $ gsutil mb -p $PROJECT_ID gs://$BUCKET
+    $ gsutil mb -p $PROJECT_ID gs://$BUCKET_ID
     ```
 
 1. Create a Cloud KMS key:
@@ -72,7 +72,7 @@ infrastructure or services should run in this project.
 
     ```text
     $ export GOOGLE_CLOUD_PROJECT=$PROJECT_ID
-    $ export GOOGLE_CLOUD_BUCKET=$BUCKET
+    $ export GOOGLE_CLOUD_BUCKET=$BUCKET_ID
     $ export GOOGLE_CLOUD_KMS_KEY=projects/$PROJECT_ID/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     ```
 
