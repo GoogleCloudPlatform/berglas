@@ -22,13 +22,6 @@ WORKDIR /usr/src/app
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-RUN groupadd -g 1001 -r appgroup && \
-  useradd -d /home/appuser -g 1001 -m -r -s /bin/false -u 1001 appuser
-
-RUN chown -R 1001:1001 /usr/src/app
-
-USER 1001:1001
-
 COPY . ./
 COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
 

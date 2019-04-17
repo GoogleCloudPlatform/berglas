@@ -17,13 +17,6 @@ FROM ruby:2.6
 ENV APP_ENV=production
 WORKDIR /usr/src/app
 
-RUN groupadd -g 1001 -r appgroup && \
-  useradd -d /home/appuser -g 1001 -m -r -s /bin/false -u 1001 appuser
-
-RUN chown -R 1001:1001 /usr/src/app
-
-USER 1001:1001
-
 COPY Gemfile Gemfile.lock ./
 RUN bundle install \
   --clean \

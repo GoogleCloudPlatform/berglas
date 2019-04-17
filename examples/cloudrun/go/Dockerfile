@@ -36,9 +36,5 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates && \
   update-ca-certificates
 
-RUN addgroup -g 1001 appgroup && \
-  adduser -H -D -s /bin/false -G appgroup -u 1001 appuser
-
-USER 1001:1001
 COPY --from=builder /bin/app /bin/app
 ENTRYPOINT ["/bin/app"]
