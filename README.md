@@ -62,7 +62,7 @@ guide assumes this environment variable is set:
     ```
 
 1. Create a [Cloud KMS][cloud-kms] keyring and crypto key for encrypting
-secrets. Replace `$PROJECT_ID` with the ID of your project.
+secrets.
 
     ```text
     $ gcloud kms keyrings create my-keyring \
@@ -155,7 +155,7 @@ buckets in the project, which may incur costs.
 
     ```text
     $ berglas create my-secrets/foo my-secret-data \
-        --key projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+        --key projects/$PROJECT_ID/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     Successfully created secret: foo
     ```
 
