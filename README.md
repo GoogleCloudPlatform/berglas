@@ -246,8 +246,15 @@ For more examples and documentation, please see the [godoc][berglas-godoc].
 ## Authentication
 
 By default, Berglas uses Google Cloud Default Application Credentials. If you
-have [gcloud][cloud-sdk] installed locally, it will use those credentials. On
-GCP services, it will use the service account attached to the resource.
+have [gcloud][cloud-sdk] installed locally, ensure you have application default
+credentials:
+
+```text
+$ gcloud auth application-default login
+```
+
+On GCP services (like Cloud Build, Compute, etc), it will use the service
+account attached to the resource.
 
 To use a specific service account, set the `GOOGLE_APPLICATION_CREDENTIALS`
 environment variable to the _filepath_ to the JSON file where your credentials
