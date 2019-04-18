@@ -14,7 +14,7 @@
 
 steps:
 - id: test
-  name: gcr.io/cloud-builders/go
+  name: gcr.io/$PROJECT_ID/go-gcloud-make
   env:
   - PROJECT_ROOT=berglas
   - GO111MODULE=on
@@ -24,11 +24,21 @@ steps:
   entrypoint: make
   args: ['test-acc']
 
+- id: docker-push
+  name: gcr.io/$PROJECT_ID/go-gcloud-make
+  env:
+  - BRANCH_NAME=$BRANCH_NAME
+  - TAG_NAME=$TAG_NAME
+  entrypoint: make
+  args: ['docker-push']
+  waitFor: ['test']
+
 - id: publish
-  name: gcr.io/cloud-builders/go
+  name: gcr.io/$PROJECT_ID/go-gcloud-make
   env:
   - GO111MODULE=on
   - BRANCH_NAME=$BRANCH_NAME
   - TAG_NAME=$TAG_NAME
   entrypoint: make
   args: ['publish']
+  waitFor: ['test']

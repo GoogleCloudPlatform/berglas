@@ -12,38 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GOOSES = darwin linux windows
-GOARCHES = amd64
+steps:
+- name: gcr.io/cloud-builders/docker
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/go-gcloud-make', '-f', 'Dockerfile', '.']
 
-builders:
-	@cd cloudbuild/builders/go-gcloud-make && \
-		gcloud builds submit \
-		  --project berglas-test \
-		  .
-.PHONY: builders
+# Sanity checks
+- name: gcr.io/$PROJECT_ID/go-gcloud-make
+  entrypoint: make
+  args: ['-v']
 
-deps:
-	@go get -u ./...
-	@go mod vendor
-	@go mod tidy
-.PHONY: deps
+- name: gcr.io/$PROJECT_ID/go-gcloud-make
+  entrypoint: gcloud
+  args: ['info']
 
-dev:
-	@go install -mod=vendor ./...
-.PHONY: dev
+- name: gcr.io/$PROJECT_ID/go-gcloud-make
+  entrypoint: gcloud
+  args: ['auth', 'application-default', 'print-access-token']
 
-docker-push:
-	@./bin/docker-push
-.PHONY: docker-push
-
-publish:
-	@GOOSES="${GOOSES}" GOARCHES="${GOARCHES}" ./bin/publish
-.PHONY: publish
-
-test:
-	@go test -mod=vendor -short -parallel=40 ./...
-.PHONY: test
-
-test-acc:
-	@go test -mod=vendor -parallel=40 ./...
-.PHONY: test-acc
+images:
+- gcr.io/$PROJECT_ID/go-gcloud-make

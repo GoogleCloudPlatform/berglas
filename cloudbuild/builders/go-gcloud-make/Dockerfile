@@ -12,38 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GOOSES = darwin linux windows
-GOARCHES = amd64
+FROM gcr.io/cloud-builders/go:alpine
 
-builders:
-	@cd cloudbuild/builders/go-gcloud-make && \
-		gcloud builds submit \
-		  --project berglas-test \
-		  .
-.PHONY: builders
+RUN apk --no-cache --quiet add curl bash
+RUN curl -sfL https://sdk.cloud.google.com | bash && \
+  rm -rf ~/.config/gcloud
 
-deps:
-	@go get -u ./...
-	@go mod vendor
-	@go mod tidy
-.PHONY: deps
+ENV PATH="/root/google-cloud-sdk/bin/:${PATH}"
 
-dev:
-	@go install -mod=vendor ./...
-.PHONY: dev
-
-docker-push:
-	@./bin/docker-push
-.PHONY: docker-push
-
-publish:
-	@GOOSES="${GOOSES}" GOARCHES="${GOARCHES}" ./bin/publish
-.PHONY: publish
-
-test:
-	@go test -mod=vendor -short -parallel=40 ./...
-.PHONY: test
-
-test-acc:
-	@go test -mod=vendor -parallel=40 ./...
-.PHONY: test-acc
+ENTRYPOINT ["/bin/bash"]
