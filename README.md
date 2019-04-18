@@ -149,6 +149,11 @@ buckets in the project, which may incur costs.
     ```
 
 
+## Examples
+
+Examples are available in the [`examples/` folder](examples).
+
+
 ## CLI Usage
 
 1. Create a secret:
