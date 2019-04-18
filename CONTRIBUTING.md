@@ -36,13 +36,13 @@ If you want to develop on Berglas, you will need to create a test setup.
 infrastructure or services should run in this project.
 
     ```text
-    $ gcloud projects create $PROJECT_ID
+    gcloud projects create ${PROJECT_ID}
     ```
 
 1. Enable the necessary APIs on the project:
 
     ```text
-    $ gcloud services enable --project $PROJECT_ID \
+    gcloud services enable --project ${PROJECT_ID} \
         cloudkms.googleapis.com \
         storage-api.googleapis.com \
         storage-component.googleapis.com
@@ -51,18 +51,18 @@ infrastructure or services should run in this project.
 1. Create a Cloud Storage bucket:
 
     ```text
-    $ gsutil mb -p $PROJECT_ID gs://$BUCKET_ID
+    gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
     ```
 
 1. Create a Cloud KMS key:
 
     ```text
-    $ gcloud kms keyrings create my-keyring \
-        --project $PROJECT_ID \
+    gcloud kms keyrings create my-keyring \
+        --project ${PROJECT_ID} \
         --location global
 
-    $ gcloud kms keys create my-key \
-        --project $PROJECT_ID \
+    gcloud kms keys create my-key \
+        --project ${PROJECT_ID} \
         --location global \
         --keyring my-keyring \
         --purpose encryption
@@ -71,13 +71,13 @@ infrastructure or services should run in this project.
 1. Export the values as environment variables:
 
     ```text
-    $ export GOOGLE_CLOUD_PROJECT=$PROJECT_ID
-    $ export GOOGLE_CLOUD_BUCKET=$BUCKET_ID
-    $ export GOOGLE_CLOUD_KMS_KEY=projects/$PROJECT_ID/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+    export GOOGLE_CLOUD_PROJECT=${PROJECT_ID}
+    export GOOGLE_CLOUD_BUCKET=${BUCKET_ID}
+    export GOOGLE_CLOUD_KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     ```
 
 1. Run tests:
 
     ```text
-    $ make test-acc
+    make test-acc
     ```

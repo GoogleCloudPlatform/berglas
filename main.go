@@ -94,7 +94,7 @@ If a secret already exists at that location, its contents are overwritten.
     --key projects/my-p/locations/global/keyRings/my-kr/cryptoKeys/my-k
 
   # Read a secret from stdin
-  echo $SECRET | berglas create my-secrets/api-key - --key...
+  echo ${SECRET} | berglas create my-secrets/api-key - --key...
 
   # Read a secret from a local file
   berglas create my-secrets/api-key @/path/to/file --key...
@@ -138,7 +138,7 @@ signals are proxied to the child process.
 `, "\n"),
 	Example: strings.Trim(`
   # Spawn a subshell with secrets populated
-  berglas exec -- $SHELL
+  berglas exec -- ${SHELL}
 
   # Run "myapp" after parsing local references
   berglas exec --local -- myapp --with-args

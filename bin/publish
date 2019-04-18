@@ -49,7 +49,7 @@ done
 # Install gsutil
 apk --no-cache --quiet add curl bash
 curl -sfL https://sdk.cloud.google.com | bash >/dev/null 2>&1
-export PATH="$PATH:/builder/home/google-cloud-sdk/bin/"
+export PATH="${PATH}:/builder/home/google-cloud-sdk/bin/"
 
 # Publish each
 for f in $(find build/**/berglas); do

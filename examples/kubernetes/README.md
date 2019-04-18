@@ -18,7 +18,7 @@ To deploy on Cloud Functions:
 1. Enable the Cloud Functions API (this only needs to be done once per project):
 
     ```text
-    gcloud services enable --project $PROJECT_ID \
+    gcloud services enable --project ${PROJECT_ID} \
       cloudfunctions.googleapis.com
     ```
 
@@ -34,7 +34,7 @@ To deploy on Cloud Functions:
 
     ```text
     gcloud functions deploy berglas-secrets-webhook \
-      --project $PROJECT_ID \
+      --project ${PROJECT_ID} \
       --runtime go111 \
       --entry-point F \
       --trigger-http
@@ -43,7 +43,7 @@ To deploy on Cloud Functions:
 1. Extract the Cloud Function URL:
 
     ```text
-    ENDPOINT=$(gcloud functions describe berglas-secrets-webhook --project $PROJECT_ID --format 'value(httpsTrigger.url)')
+    ENDPOINT=$(gcloud functions describe berglas-secrets-webhook --project ${PROJECT_ID} --format 'value(httpsTrigger.url)')
     ```
 
 1. Register the webhook with this URL:
@@ -75,54 +75,54 @@ On Google Cloud, it is strongly recommended that you have a dedicated service ac
     ```text
     PROJECT_ID=berglas-test
     BUCKET_ID=berglas-test-secrets
-    KMS_KEY=projects/$PROJECT_ID/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+    KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     ```
 
 1. Create a service account:
 
     ```text
     gcloud iam service-accounts create berglas-k8s \
-      --project $PROJECT_ID \
+      --project ${PROJECT_ID} \
       --display-name "Berglas K8S account"
     ```
 
     ```text
-    export SA_EMAIL=berglas-k8s@$PROJECT_ID.iam.gserviceaccount.com
+    export SA_EMAIL=berglas-k8s@${PROJECT_ID}.iam.gserviceaccount.com
     ```
 
 1. Grant the service account the required GKE permissions:
 
     ```text
-    gcloud projects add-iam-policy-binding $PROJECT_ID \
-      --member "serviceAccount:$SA_EMAIL" \
+    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+      --member "serviceAccount:${SA_EMAIL}" \
       --role roles/logging.logWriter
     ```
 
     ```text
-    gcloud projects add-iam-policy-binding $PROJECT_ID \
-      --member "serviceAccount:$SA_EMAIL" \
+    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+      --member "serviceAccount:${SA_EMAIL}" \
       --role roles/monitoring.metricWriter
     ```
 
     ```text
-    gcloud projects add-iam-policy-binding $PROJECT_ID \
-      --member "serviceAccount:$SA_EMAIL" \
+    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+      --member "serviceAccount:${SA_EMAIL}" \
       --role roles/monitoring.viewer
     ```
 
 1. Grant Berglas permissions:
 
     ```text
-    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://$BUCKET_ID/api-key
+    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/api-key
     ```
 
     ```text
-    gsutil iam ch serviceAccount:$SA_EMAIL:legacyObjectReader gs://$BUCKET_ID/tls-key
+    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/tls-key
     ```
 
     ```text
-    gcloud kms keys add-iam-policy-binding $KMS_KEY \
-      --member serviceAccount:$SA_EMAIL \
+    gcloud kms keys add-iam-policy-binding ${KMS_KEY} \
+      --member serviceAccount:${SA_EMAIL} \
       --role roles/cloudkms.cryptoKeyDecrypter
     ```
 
@@ -130,11 +130,11 @@ On Google Cloud, it is strongly recommended that you have a dedicated service ac
 
     ```text
     gcloud container clusters create berglas-k8s-test \
-      --project $PROJECT_ID \
+      --project ${PROJECT_ID} \
       --region us-east1 \
       --num-nodes 1 \
       --machine-type n1-standard-2 \
-      --service-account $SA_EMAIL \
+      --service-account ${SA_EMAIL} \
       --no-issue-client-certificate \
       --no-enable-basic-auth \
       --enable-autoupgrade \

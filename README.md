@@ -30,21 +30,21 @@ and other popular tools pre-installed.
     - Use the official Docker container:
 
       ```text
-      $ docker pull gcr.io/berglas/berglas
+      docker pull gcr.io/berglas/berglas
       ```
 
     - Install from source (requires a working Go installation):
 
       ```text
-      $ go get github.com/GoogleCloudPlatform/berglas/...
-      $ go install github.com/GoogleCloudPlatform/berglas
+      go get github.com/GoogleCloudPlatform/berglas/...
+      go install github.com/GoogleCloudPlatform/berglas
       ```
 
 1. Export your project ID as an environment variable. The rest of this setup
 guide assumes this environment variable is set:
 
     ```text
-    $ export PROJECT_ID=my-gcp-project-id
+    export PROJECT_ID=my-gcp-project-id
     ```
 
     Please note, this is the project **ID**, not the project _name_ or project
@@ -54,7 +54,7 @@ guide assumes this environment variable is set:
 1. Enable required services on the project:
 
     ```text
-    $ gcloud services enable --project $PROJECT_ID \
+    gcloud services enable --project ${PROJECT_ID} \
         compute.googleapis.com \
         cloudkms.googleapis.com \
         storage-api.googleapis.com \
@@ -65,14 +65,14 @@ guide assumes this environment variable is set:
 secrets.
 
     ```text
-    $ gcloud kms keyrings create my-keyring \
-        --project $PROJECT_ID \
+    gcloud kms keyrings create my-keyring \
+        --project ${PROJECT_ID} \
         --location global
     ```
 
     ```text
-    $ gcloud kms keys create my-key \
-        --project $PROJECT_ID \
+    gcloud kms keys create my-key \
+        --project ${PROJECT_ID} \
         --location global \
         --keyring my-keyring \
         --purpose encryption
@@ -81,7 +81,7 @@ secrets.
 1. Create a [Cloud Storage][cloud-storage] bucket for storing secrets:
 
     ```text
-    $ export BUCKET_ID=my-secrets
+    export BUCKET_ID=my-secrets
     ```
 
     Replace `my-secrets` with the name of your bucket. Bucket names must be
@@ -90,17 +90,17 @@ secrets.
 
 
     ```text
-    $ gsutil mb -p $PROJECT_ID gs://$BUCKET_ID
+    gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
     ```
 
 1. Set the default ACL permissions on the bucket to "private":
 
     ```text
-    $ gsutil defacl set private gs://$BUCKET_ID
+    gsutil defacl set private gs://${BUCKET_ID}
     ```
 
     ```text
-    $ gsutil acl set private gs://$BUCKET_ID
+    gsutil acl set private gs://${BUCKET_ID}
     ```
 
     The default permissions grant anyone with Owner/Editor access on the project
@@ -115,13 +115,13 @@ buckets in the project, which may incur costs.
     Download the exiting project IAM policy:
 
     ```text
-    $ gcloud projects get-iam-policy $PROJECT_ID > policy.yaml
+    gcloud projects get-iam-policy ${PROJECT_ID} > policy.yaml
     ```
 
     Add Cloud Audit logging for Cloud KMS and Cloud Storage:
 
     ```text
-    $ cat <<EOF >> policy.yaml
+    cat <<EOF >> policy.yaml
     auditConfigs:
     - auditLogConfigs:
       - logType: DATA_READ
@@ -139,13 +139,13 @@ buckets in the project, which may incur costs.
     Submit the new policy:
 
     ```text
-    $ gcloud projects set-iam-policy $PROJECT_ID policy.yaml
+    gcloud projects set-iam-policy ${PROJECT_ID} policy.yaml
     ```
 
     (Optional): Remove the updated policy from local disk:
 
     ```text
-    $ rm policy.yaml
+    rm policy.yaml
     ```
 
 
@@ -159,22 +159,22 @@ Examples are available in the [`examples/` folder](examples).
 1. Create a secret:
 
     ```text
-    $ berglas create my-secrets/foo my-secret-data \
-        --key projects/$PROJECT_ID/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+    berglas create my-secrets/foo my-secret-data \
+        --key projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     Successfully created secret: foo
     ```
 
 1. Access a secret's data:
 
     ```text
-    $ berglas access my-secrets/foo
+    berglas access my-secrets/foo
     my-secret-data
     ```
 
 1. Spawn a child process with secrets populated in the child's environment:
 
     ```text
-    $ berglas exec -- myapp --flag-a --flag-b
+    berglas exec -- myapp --flag-a --flag-b
     ```
 
     This will spawn `myapp` with an environment parsed by berglas. This will
@@ -185,7 +185,7 @@ Examples are available in the [`examples/` folder](examples).
 1. Delete a secret:
 
     ```text
-    $ berglas delete my-secrets/foo
+    berglas delete my-secrets/foo
     Successfully deleted secret if it existed: foo
     ```
 
@@ -255,7 +255,7 @@ have [gcloud][cloud-sdk] installed locally, ensure you have application default
 credentials:
 
 ```text
-$ gcloud auth application-default login
+gcloud auth application-default login
 ```
 
 On GCP services (like Cloud Build, Compute, etc), it will use the service
@@ -266,7 +266,7 @@ environment variable to the _filepath_ to the JSON file where your credentials
 live:
 
 ```text
-$ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/my/credentials.json
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/my/credentials.json
 ```
 
 ## Authorization
