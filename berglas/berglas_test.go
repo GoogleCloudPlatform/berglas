@@ -43,6 +43,12 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal("missing GOOGLE_CLOUD_KMS_KEY")
 	}
 
+	sa := os.Getenv("GOOGLE_CLOUD_SERVICE_ACCOUNT")
+	if sa == "" {
+		t.Fatal("missing GOOGLE_CLOUD_SERVICE_ACCOUNT")
+	}
+	sa = fmt.Sprintf("serviceAccount:%s", sa)
+
 	object := testUUID(t)
 
 	c, err := New(ctx)
@@ -80,6 +86,22 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 	if !bytes.Equal(plaintext, original) {
 		t.Errorf("expected %q to be %q", plaintext, original)
+	}
+
+	if err := c.Grant(ctx, &GrantRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: []string{sa},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Revoke(ctx, &RevokeRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: []string{sa},
+	}); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := c.Delete(ctx, &DeleteRequest{

@@ -46,19 +46,11 @@ environment variables:
       --role roles/run.viewer
     ```
 
-1. Grant the service account access to the Cloud Storage bucket objects:
+1. Grant the service account access to the secrets:
 
     ```text
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/api-key
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/tls-key
-    ```
-
-1. Grant the service account access to use the KMS key:
-
-    ```text
-    gcloud kms keys add-iam-policy-binding ${KMS_KEY} \
-      --member serviceAccount:${SA_EMAIL} \
-      --role roles/cloudkms.cryptoKeyDecrypter
+    berglas grant ${BUCKET_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas grant ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
 1. Build a container using Cloud Build and publish it to Container Registry:
@@ -101,4 +93,11 @@ environment variables:
     for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
       gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"
     done
+    ```
+
+1. (Optional) Revoke access to the secrets:
+
+    ```text
+    berglas revoke ${BUCKET_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas revoke ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```

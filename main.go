@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -37,6 +38,8 @@ var (
 
 	key       string
 	execLocal bool
+
+	members []string
 )
 
 var rootCmd = &cobra.Command{
@@ -147,6 +150,42 @@ signals are proxied to the child process.
 	Run:  execRun,
 }
 
+var grantCmd = &cobra.Command{
+	Use:   "grant [secret]",
+	Short: "Grant access to a secret",
+	Long: strings.Trim(`
+Grant IAM access to an existing secret for a given list of members. The secret
+must exist before access can be granted.
+
+When executed, this command grants each specified member two IAM permissions:
+
+  - roles/storage.legacyObjectReader on the Cloud Storage object
+  - roles/cloudkms.cryptoKeyDecrypter on the Cloud KMS crypto key
+
+Members must be specified with their type, for example:
+
+  - domain:mydomain.com
+  - group:group@mydomain.com
+  - serviceAccount:xyz@gserviceaccount.com
+  - user:user@mydomain.com
+`, "\n"),
+	Example: strings.Trim(`
+  # Grant access to a user
+  berglas grant my-secrets/api-key --member user:user@mydomain.com
+
+  # Grant access to service account
+  berglas grant my-secrets/api-key \
+    --member serviceAccount:sa@project.iam.gserviceaccount.com
+
+  # Add multiple members
+  berglas grant my-secrets/api-key \
+    --member user:user@mydomain.com \
+    --member serviceAccount:sa@project.iam.gserviceaccount.com
+`, "\n"),
+	Args: cobra.ExactArgs(1),
+	Run:  grantRun,
+}
+
 var listCmd = &cobra.Command{
 	Use:   "list [bucket]",
 	Short: "List secrets in a bucket",
@@ -163,6 +202,47 @@ the "access" command instead.
 	Run:  listRun,
 }
 
+var revokeCmd = &cobra.Command{
+	Use:   "revoke [secret]",
+	Short: "Revoke access to a secret",
+	Long: strings.Trim(`
+Revoke IAM access to an existing secret for a given list of members. The secret
+must exist for access to be revoked.
+
+When executed, this command revokes the following IAM permissions for each
+member:
+
+  - roles/storage.legacyObjectReader on the Cloud Storage object
+  - roles/cloudkms.cryptoKeyDecrypter on the Cloud KMS crypto key
+
+If the member is not granted the IAM permissions, no action is taken.
+Specifically, this does not return an error if the member did not originally
+have permission to access the secret.
+
+Members must be specified with their type, for example:
+
+  - domain:mydomain.com
+  - group:group@mydomain.com
+  - serviceAccount:xyz@gserviceaccount.com
+  - user:user@mydomain.com
+`, "\n"),
+	Example: strings.Trim(`
+  # Revoke access from a user
+  berglas revoke my-secrets/api-key --member user:user@mydomain.com
+
+  # Revoke revoke from a service account
+  berglas grant my-secrets/api-key \
+    --member serviceAccount:sa@project.iam.gserviceaccount.com
+
+  # Remove multiple members
+  berglas revoke my-secrets/api-key \
+    --member user:user@mydomain.com \
+    --member serviceAccount:sa@project.iam.gserviceaccount.com
+`, "\n"),
+	Args: cobra.ExactArgs(1),
+	Run:  revokeRun,
+}
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show berlgas version",
@@ -177,15 +257,25 @@ func main() {
 	rootCmd.AddCommand(accessCmd)
 
 	rootCmd.AddCommand(createCmd)
-	createCmd.Flags().StringVarP(&key, "key", "k", "", "KMS key to use for encryption")
+	createCmd.Flags().StringVarP(&key, "key", "k", "",
+		"KMS key to use for encryption")
 	createCmd.MarkFlagRequired("key")
 
 	rootCmd.AddCommand(deleteCmd)
 
 	rootCmd.AddCommand(execCmd)
-	execCmd.Flags().BoolVarP(&execLocal, "local", "l", false, "Parse local environment variables for secrets instead of querying the Cloud APIs")
+	execCmd.Flags().BoolVarP(&execLocal, "local", "l", false,
+		"Parse local environment variables for secrets instead of querying the Cloud APIs")
+
+	rootCmd.AddCommand(grantCmd)
+	grantCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
+		"Member to add")
 
 	rootCmd.AddCommand(listCmd)
+
+	rootCmd.AddCommand(revokeCmd)
+	revokeCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
+		"Member to remove")
 
 	rootCmd.AddCommand(versionCmd)
 
@@ -343,6 +433,27 @@ func execRun(_ *cobra.Command, args []string) {
 	}
 }
 
+func grantRun(_ *cobra.Command, args []string) {
+	bucket, object, err := parseRef(args[0])
+	if err != nil {
+		handleError(err, 2)
+	}
+
+	sort.Strings(members)
+
+	ctx := cliCtx()
+	if err := berglas.Grant(ctx, &berglas.GrantRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: members,
+	}); err != nil {
+		handleError(err, 1)
+	}
+
+	fmt.Fprintf(stdout, "Successfully granted permission on %s to: \n- %s\n",
+		object, strings.Join(members, "\n- "))
+}
+
 func listRun(_ *cobra.Command, args []string) {
 	bucket := strings.TrimPrefix(args[0], "gs://")
 
@@ -357,6 +468,27 @@ func listRun(_ *cobra.Command, args []string) {
 	for _, s := range secrets {
 		fmt.Fprintf(stdout, "%s\n", s)
 	}
+}
+
+func revokeRun(_ *cobra.Command, args []string) {
+	bucket, object, err := parseRef(args[0])
+	if err != nil {
+		handleError(err, 2)
+	}
+
+	sort.Strings(members)
+
+	ctx := cliCtx()
+	if err := berglas.Revoke(ctx, &berglas.RevokeRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: members,
+	}); err != nil {
+		handleError(err, 1)
+	}
+
+	fmt.Fprintf(stdout, "Successfully revoked permission on %s to: \n- %s\n",
+		object, strings.Join(members, "\n- "))
 }
 
 func versionRun(_ *cobra.Command, _ []string) {
