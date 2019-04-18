@@ -164,6 +164,12 @@ Examples are available in the [`examples/` folder](examples).
     Successfully created secret: foo
     ```
 
+1. Grant access to a secret:
+
+    ```text
+    berglas grant my-secrets/foo --member user:user@mydomain.com
+    ```
+
 1. Access a secret's data:
 
     ```text
@@ -181,6 +187,12 @@ Examples are available in the [`examples/` folder](examples).
     only work when run from a GCP resource. To parse local environment
     variables, use the `--local` flag. For more information, please run `berglas
     exec -h`.
+
+1. Revoke access to a secret:
+
+    ```text
+    berglas revoke my-secrets/foo --member user:user@mydomain.com
+    ```
 
 1. Delete a secret:
 
