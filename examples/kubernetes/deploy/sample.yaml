@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: envserver
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: envserver
+    spec:
+      containers:
+      - name: envserver
+        image: sethvargo/envserver
+        imagePullPolicy: Always
+        command: ["/bin/envserver"]
+        env:
+        - name: API_KEY
+          value: berglas://berglas-test-secrets/api-key
+        - name: TLS_KEY
+          value: berglas://berglas-test-secrets/tls-key?destination=tempfile
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envserver
+  labels:
+    app: envserver
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: envserver

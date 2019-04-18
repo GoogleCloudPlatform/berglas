@@ -1,0 +1,18 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: berglas-webhook
+  labels:
+    app: berglas-webhook
+    kind: mutator
+
+webhooks:
+- name: berglas-webhook.cloud.google.com
+  clientConfig:
+    url: REPLACE_WITH_YOUR_URL
+    caBundle: ""
+  rules:
+  - operations: ["CREATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
