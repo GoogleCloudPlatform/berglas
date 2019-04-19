@@ -128,7 +128,7 @@ func testUUID(tb testing.TB) string {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return string(u[:])
+	return u.String()
 }
 
 func TestKMSKeyTrimVersion(t *testing.T) {
