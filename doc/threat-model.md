@@ -116,3 +116,23 @@ depending on how the secrets are consumed.
 - Separate "read secret" from "write secret" permission
 - Watch Cloud Audit logs for new write operations
 - Routinely audit Cloud IAM permissions
+
+
+## In-memory Access
+
+When using Berglas auto or `berglas exec`, secrets ultimately end up in the
+process environment in plaintext. Any code running in that process (or any root
+user on the same OS with privledge to trigger a process dump) could retrieve the
+plaintext values.
+
+Similarly, some languages and frameworks automatically dump their environment as
+part of debugging in the event of a crash or panic. Since that framework is
+running inside the context of berglas, it will dump the plaintext values.
+
+**Mitigations**
+
+- Only run trusted code and dependencies
+- Routinely audit your dependencies
+- Leverage automated vulnerability scanning
+- Disable core dumps in your frameworks
+- Disallow outbound network access (sans where explicitly required)
