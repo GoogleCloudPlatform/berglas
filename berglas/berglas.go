@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package berglas is the Go API for calling berglas.
 package berglas
 
 import (
