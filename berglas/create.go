@@ -136,7 +136,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) error {
 
 	// If a specific key version was given, only store the key, not the key
 	// version, because decrypt calls can't specify a key version.
-	iow.Metadata[MetadataKMSKey] = KMSKeyTrimVersion(key)
+	iow.Metadata[MetadataKMSKey] = kmsKeyTrimVersion(key)
 
 	if _, err := iow.Write([]byte(blob)); err != nil {
 		return errors.Wrap(err, "failed save encrypted ciphertext to storage")

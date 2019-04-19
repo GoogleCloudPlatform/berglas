@@ -32,27 +32,29 @@ import (
 	"google.golang.org/api/option"
 )
 
+// RuntimeEnvironment is an interface for getting the envvars of a runtime.
 type RuntimeEnvironment interface {
 	EnvVars(context.Context) (map[string]string, error)
 }
 
+// DetectRuntimeEnvironment returns the most like runtime environment.
 func DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
 	if os.Getenv("X_GOOGLE_FUNCTION_NAME") != "" {
-		return new(CloudFunctionEnv), nil
+		return new(cloudFunctionEnv), nil
 	}
 
 	if os.Getenv("K_REVISION") != "" {
-		return new(CloudRunEnv), nil
+		return new(cloudRunEnv), nil
 	}
 
 	return nil, errors.New("unknown runtime")
 }
 
-// GCF
-type CloudFunctionEnv struct{}
+// cloudFunctionEnv is a Google Cloud Functions environment.
+type cloudFunctionEnv struct{}
 
 // EnvVars returns the list of envvars set on the function.
-func (e *CloudFunctionEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+func (e *cloudFunctionEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 	// Compute the name of the function
 	name := fmt.Sprintf("projects/%s/locations/%s/functions/%s",
 		os.Getenv("X_GOOGLE_GCP_PROJECT"),
@@ -78,10 +80,11 @@ func (e *CloudFunctionEnv) EnvVars(ctx context.Context) (map[string]string, erro
 	return f.EnvironmentVariables, nil
 }
 
-type CloudRunEnv struct{}
+// cloudRunEnv is a Google Cloud Run environment.
+type cloudRunEnv struct{}
 
 // EnvVars returns the list of envvars set on the virtual machine.
-func (e *CloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+func (e *cloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 	revision := os.Getenv("K_REVISION")
 
 	project, err := valueFromMetadata(ctx, "project/project-id")

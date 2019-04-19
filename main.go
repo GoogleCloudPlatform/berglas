@@ -414,10 +414,10 @@ func execRun(_ *cobra.Command, args []string) {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh)
 	go func() {
-		select {
-		case s := <-signalCh:
-			if cmd.Process != nil {
-				cmd.Process.Signal(s)
+		s := <-signalCh
+		if cmd.Process != nil {
+			if err := cmd.Process.Signal(s); err != nil {
+				handleError(errors.Wrap(err, "failed to signal command"), 2)
 			}
 		}
 	}()

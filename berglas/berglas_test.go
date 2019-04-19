@@ -128,7 +128,7 @@ func testUUID(tb testing.TB) string {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return fmt.Sprintf("%s", u)
+	return string(u[:])
 }
 
 func TestKMSKeyTrimVersion(t *testing.T) {
@@ -162,7 +162,7 @@ func TestKMSKeyTrimVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if act, exp := KMSKeyTrimVersion(tc.i), tc.o; act != exp {
+			if act, exp := kmsKeyTrimVersion(tc.i), tc.o; act != exp {
 				t.Errorf("expected %q to be %q", act, exp)
 			}
 		})
