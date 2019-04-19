@@ -30,7 +30,7 @@ and other popular tools pre-installed.
 
     This will open a web browser and prompt for a login to your Google account.
     On headless devices, you will need to create a service account. For more
-    information, please see the [aithentication](#authentication) section.
+    information, please see the [authentication](#authentication) section.
 
 1. Install the `berglas` CLI using **one** of the following methods:
 
