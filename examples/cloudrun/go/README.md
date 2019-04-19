@@ -13,7 +13,7 @@ Storage bucket, and Cloud KMS key.
     ```text
     export PROJECT_ID=my-project
     export BUCKET_ID=my-bucket
-    export KMS_KEY=projects/${PROJECT_ID}/locations/${KMS_LOCATION}/keyRings/${KMS_KEYRING}/cryptoKeys/${KMS_CRYPTO_KEY}
+    export KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     ```
 
 1. Create two secrets using the `berglas` CLI (see README for installation
