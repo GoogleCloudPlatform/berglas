@@ -31,6 +31,8 @@ import (
 )
 
 const (
+	// Name, Version, ProjectURL, and UserAgent are used to uniquely identify this
+	// package in logs and other binaries.
 	Name       = "berglas"
 	Version    = "0.1.0"
 	ProjectURL = "https://github.com/GoogleCloudPlatform/berglas"
@@ -43,9 +45,9 @@ const (
 	// be immediately available.
 	CacheControl = "private, no-cache, no-store, no-transform, max-age=0"
 
-	// MeatadataIDKey is a key in the object metadata that identifies an
-	// object as a secret. This is used when enumerating secrets in a bucket, in
-	// case non-secrets also reside in the bucket.
+	// MetadataIDKey is a key in the object metadata that identifies an object as
+	// a secret. This is used when enumerating secrets in a bucket, in case
+	// non-secrets also reside in the bucket.
 	MetadataIDKey = "berglas-secret"
 
 	// MetadataKMSKey is the key in the metadata where the name of the KMS key is
