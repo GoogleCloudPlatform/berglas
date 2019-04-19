@@ -45,5 +45,5 @@ test:
 .PHONY: test
 
 test-acc:
-	@go test -mod=vendor -parallel=40 ./...
+	@go test -mod=vendor -parallel=40 -count=1 ./...
 .PHONY: test-acc
