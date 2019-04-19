@@ -101,6 +101,10 @@ secrets.
     globally unique across all of Google Cloud. You can also create a bucket
     using the Google Cloud Console from the web.
 
+    **It is strongly recommended that you create a new bucket instead of using
+    an existing one. Berglas should be the only entity managing IAM permissions
+    on the bucket.**
+
 
     ```text
     gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
