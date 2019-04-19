@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// auto defines a package that, when imported, automatically parses environment
-// variables for functions and replaces their values.
+// Package auto automatically parses berglas references when imported.
 //
 //     import (
 //       _ "github.com/GoogleCloudPlatform/berglas/auto"
