@@ -22,6 +22,10 @@ builders:
 		  .
 .PHONY: builders
 
+cleanup-gcr:
+	@./bin/cleanup-gcr
+.PHONY: cleanup-gcr
+
 deps:
 	@go get -u ./...
 	@go mod vendor
