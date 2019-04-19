@@ -74,7 +74,7 @@ environment variables:
       --allow-unauthenticated
     ```
 
-1. Access the function:
+1. Access the service:
 
     ```text
     curl $(gcloud beta run services describe berglas-example-python --project ${PROJECT_ID} --region us-central1 --format 'value(status.domain)')
