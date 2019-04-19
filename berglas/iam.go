@@ -18,12 +18,9 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
 	"cloud.google.com/go/iam"
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2/google"
-	iamv1 "google.golang.org/api/iam/v1"
 	storagev1 "google.golang.org/api/storage/v1"
 	iampb "google.golang.org/genproto/googleapis/iam/v1"
 )
@@ -33,23 +30,11 @@ const (
 	iamKMSDecrypt   = "roles/cloudkms.cryptoKeyDecrypter"
 )
 
-// iamHandle returns an iam.Handle compatible wrapper since one does not exist
-// in the storage libray.
-func iamHandle(bucket, object string) (*iam.Handle, error) {
-	ctx := context.Background()
-	httpClient, err := google.DefaultClient(ctx, iamv1.CloudPlatformScope)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create Storage IAM HTTP client")
-	}
-	httpClient.Timeout = 15 * time.Second
-
-	client, err := storagev1.New(httpClient)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create Storage IAM client")
-	}
-
+// storageIAM returns an IAM storage handle to the given object since one does
+// not exist in the storage libray.
+func (c *Client) storageIAM(bucket, object string) (*iam.Handle, error) {
 	return iam.InternalNewHandleClient(&iamClient{
-		raw: client,
+		raw: c.storageIAMClient,
 	}, bucket+"/"+object), nil
 }
 

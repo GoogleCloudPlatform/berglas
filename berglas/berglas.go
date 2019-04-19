@@ -21,13 +21,13 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	"regexp"
 	"strings"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/api/option"
+	storagev1 "google.golang.org/api/storage/v1"
 )
 
 const (
@@ -57,8 +57,9 @@ const (
 
 // Client is a berglas client
 type Client struct {
-	kmsClient     *kms.KeyManagementClient
-	storageClient *storage.Client
+	kmsClient        *kms.KeyManagementClient
+	storageClient    *storage.Client
+	storageIAMClient *storagev1.Service
 }
 
 // New creates a new berglas client.
@@ -79,50 +80,29 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 	}
 	c.storageClient = storageClient
 
+	storageIAMClient, err := storagev1.NewService(ctx, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create storagev1 client")
+	}
+	c.storageIAMClient = storageIAMClient
+
 	return &c, nil
 }
 
-// KMSKeyIncludesVersion returns true if the given KMS key reference includes
+// kmsKeyIncludesVersion returns true if the given KMS key reference includes
 // a version.
-func KMSKeyIncludesVersion(s string) bool {
+func kmsKeyIncludesVersion(s string) bool {
 	return strings.Count(s, "/") > 7
 }
 
-// KMSKeyTrimVersion trims the version from a KMS key reference if it exists.
-func KMSKeyTrimVersion(s string) string {
-	if !KMSKeyIncludesVersion(s) {
+// kmsKeyTrimVersion trims the version from a KMS key reference if it exists.
+func kmsKeyTrimVersion(s string) string {
+	if !kmsKeyIncludesVersion(s) {
 		return s
 	}
 
 	parts := strings.SplitN(s, "/", 9)
 	return strings.Join(parts[0:8], "/")
-}
-
-type kmsRef struct {
-	project, location, keyRing, cryptoKey, version string
-}
-
-var (
-	kmsRe = regexp.MustCompile(`projects/(?P<project>[^/]+)/locations/(?P<location>[^/]+)/keyRings/(?P<keyRing>[^/]+)/cryptoKeys/(?P<cryptoKey>[^/]+)(/cryptoKeyVersions/(?P<version>[^/]+))?`)
-)
-
-func parseKMSRef(s string) (*kmsRef, error) {
-	parts := kmsRe.FindStringSubmatch(s)
-	if len(parts) < 5 {
-		return nil, errors.Errorf("malformed KMS key: %s", s)
-	}
-
-	var k kmsRef
-	k.project = parts[1]
-	k.location = parts[2]
-	k.keyRing = parts[3]
-	k.cryptoKey = parts[4]
-
-	if len(parts) > 5 {
-		k.version = parts[5]
-	}
-
-	return &k, nil
 }
 
 // envelopeDecrypt decrypts the data with the dek, returning the plaintext and

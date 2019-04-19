@@ -19,7 +19,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 // Grant is a top-level package function for granting access to a secret. For
@@ -82,7 +81,7 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	key := attrs.Metadata[MetadataKMSKey]
 
 	// Grant access to storage
-	storageHandle, err := iamHandle(bucket, object)
+	storageHandle, err := c.storageIAM(bucket, object)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Storage IAM client")
 	}
@@ -101,7 +100,7 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	}
 
 	// Grant access to KMS
-	kmsHandle := c.kmsClient.CryptoKeyIAM(&kmspb.CryptoKey{Name: key})
+	kmsHandle := c.kmsClient.ResourceIAM(key)
 	kmsP, err := kmsHandle.Policy(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to get KMS IAM policy")
