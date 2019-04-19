@@ -1,7 +1,7 @@
 # Berglas
 
 [![Build Status](https://travis-ci.com/GoogleCloudPlatform/berglas.svg?branch=master)](https://travis-ci.com/GoogleCloudPlatform/berglas)
-[![GoDoc](https://godoc.org/github.com/GoogleCloudPlatform/berglas?status.svg)](https://godoc.org/github.com/GoogleCloudPlatform/berglas)
+[![GoDoc](https://godoc.org/github.com/GoogleCloudPlatform/berglas?status.svg)][berglas-godoc]
 
 Berglas is a command line tool and library for storing and and retrieving
 secrets on Google Cloud. Secrets are encrypted with [Cloud KMS][cloud-kms] and
@@ -60,7 +60,7 @@ guide assumes this environment variable is set:
     export PROJECT_ID=my-gcp-project-id
     ```
 
-    Please note, this is the project **ID**, not the project _name_ or project
+    Please note, this is the project _ID_, not the project _name_ or project
     _number_. You can find the project ID by running `gcloud projects list` or
     in the web UI.
 
@@ -68,27 +68,27 @@ guide assumes this environment variable is set:
 
     ```text
     gcloud services enable --project ${PROJECT_ID} \
-        compute.googleapis.com \
-        cloudkms.googleapis.com \
-        storage-api.googleapis.com \
-        storage-component.googleapis.com
+      compute.googleapis.com \
+      cloudkms.googleapis.com \
+      storage-api.googleapis.com \
+      storage-component.googleapis.com
     ```
 
 1. Create a [Cloud KMS][cloud-kms] keyring and crypto key for encrypting
-secrets.
+secrets:
 
     ```text
     gcloud kms keyrings create my-keyring \
-        --project ${PROJECT_ID} \
-        --location global
+      --project ${PROJECT_ID} \
+      --location global
     ```
 
     ```text
     gcloud kms keys create my-key \
-        --project ${PROJECT_ID} \
-        --location global \
-        --keyring my-keyring \
-        --purpose encryption
+      --project ${PROJECT_ID} \
+      --location global \
+      --keyring my-keyring \
+      --purpose encryption
     ```
 
 1. Create a [Cloud Storage][cloud-storage] bucket for storing secrets:
@@ -101,16 +101,15 @@ secrets.
     globally unique across all of Google Cloud. You can also create a bucket
     using the Google Cloud Console from the web.
 
-    **It is strongly recommended that you create a new bucket instead of using
-    an existing one. Berglas should be the only entity managing IAM permissions
-    on the bucket.**
-
-
     ```text
     gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
     ```
 
-1. Set the default ACL permissions on the bucket to "private":
+    **It is strongly recommended that you create a new bucket instead of using
+    an existing one. Berglas should be the only entity managing IAM permissions
+    on the bucket.**
+
+1. Set the default ACL permissions on the bucket to private:
 
     ```text
     gsutil defacl set private gs://${BUCKET_ID}
@@ -125,9 +124,10 @@ secrets.
     bucket to the bucket creator (you). Everyone else must be granted explicit
     access via IAM to the bucket or an object inside the bucket.
 
-1. (Optional) Enable [Cloud Audit logging][cloud-audit] on the bucket. Please
-note this will enable audit logging on all Cloud KMS keys and all Cloud Storage
-buckets in the project, which may incur costs.
+1. _(Optional)_ Enable [Cloud Audit logging][cloud-audit] on the bucket:
+
+    Please note this will enable audit logging on all Cloud KMS keys and all
+   Cloud Storage buckets in the project, which may incur costs.
 
     Download the exiting project IAM policy:
 
@@ -159,7 +159,7 @@ buckets in the project, which may incur costs.
     gcloud projects set-iam-policy ${PROJECT_ID} policy.yaml
     ```
 
-    (Optional): Remove the updated policy from local disk:
+    Remove the updated policy from local disk:
 
     ```text
     rm policy.yaml
@@ -177,7 +177,7 @@ Examples are available in the [`examples/` folder](examples).
 
     ```text
     berglas create my-secrets/foo my-secret-data \
-        --key projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+      --key projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
     Successfully created secret: foo
     ```
 
@@ -456,6 +456,6 @@ This library is licensed under Apache 2.0. Full license text is available in
 [reference-syntax]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/reference-syntax.md
 [threat-model]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/threat-model.md
 [releases]: https://github.com/GoogleCloudPlatform/berglas/releases
-[berglas-godoc]: https://godoc.org/github.com/GoogleCloudPlatform/go-password/berglas/berglas
+[berglas-godoc]: https://godoc.org/github.com/GoogleCloudPlatform/berglas
 [gcm-limits]: https://crypto.stackexchange.com/questions/31793/plain-text-size-limits-for-aes-gcm-mode-just-64gb
 [iam-service-accounts]: https://cloud.google.com/iam/docs/service-accounts
