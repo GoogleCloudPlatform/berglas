@@ -1,5 +1,5 @@
-module berglas-example-go
+module github.com/GoogleCloudPlatform/berglas/examples/cloudrun/go
 
 go 1.12
 
-require github.com/GoogleCloudPlatform/berglas v0.0.0-20190416162907-389edfe7e309
+require github.com/GoogleCloudPlatform/berglas v0.0.0-20190418221342-65552e561ec3

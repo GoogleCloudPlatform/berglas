@@ -48,11 +48,10 @@ func main() {
 		}
 	}()
 
-	signalCh := make(chan os.Signal)
+	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh,
 		syscall.SIGINT,
 		syscall.SIGTERM,
-		syscall.SIGKILL,
 	)
 
 	<-signalCh

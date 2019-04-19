@@ -1,7 +1,7 @@
 # cloud.google.com/go v0.37.4
+cloud.google.com/go/iam
 cloud.google.com/go/kms/apiv1
 cloud.google.com/go/storage
-cloud.google.com/go/iam
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
@@ -76,8 +76,8 @@ google.golang.org/api/googleapi
 google.golang.org/api/iam/v1
 google.golang.org/api/iterator
 google.golang.org/api/option
-google.golang.org/api/transport
 google.golang.org/api/storage/v1
+google.golang.org/api/transport
 google.golang.org/api/transport/http
 google.golang.org/api/gensupport
 google.golang.org/api/googleapi/internal/uritemplates
@@ -134,8 +134,8 @@ google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/stats
 google.golang.org/grpc/tap
-google.golang.org/grpc/credentials/oauth
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
+google.golang.org/grpc/credentials/oauth
