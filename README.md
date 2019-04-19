@@ -22,6 +22,16 @@ stored in [Cloud Storage][cloud-storage].
 you can run these commands from [Cloud Shell][cloud-shell], which has the SDK
 and other popular tools pre-installed.
 
+    If you are running from your local machine, you also need Default Application Credentials:
+
+    ```text
+    gcloud auth application-default login
+    ```
+
+    This will open a web browser and prompt for a login to your Google account.
+    On headless devices, you will need to create a service account. For more
+    information, please see the [aithentication](#authentication) section.
+
 1. Install the `berglas` CLI using **one** of the following methods:
 
     - Install a pre-compiled binary for your operating system:
@@ -278,11 +288,15 @@ account attached to the resource.
 
 To use a specific service account, set the `GOOGLE_APPLICATION_CREDENTIALS`
 environment variable to the _filepath_ to the JSON file where your credentials
-live:
+reside on disk:
 
 ```text
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/my/credentials.json
 ```
+
+To learn more, please see the [Google Cloud Service Account
+documentation][iam-service-accounts].
+
 
 ## Authorization
 
@@ -440,3 +454,4 @@ This library is licensed under Apache 2.0. Full license text is available in
 [releases]: https://github.com/GoogleCloudPlatform/berglas/releases
 [berglas-godoc]: https://godoc.org/github.com/GoogleCloudPlatform/go-password/berglas/berglas
 [gcm-limits]: https://crypto.stackexchange.com/questions/31793/plain-text-size-limits-for-aes-gcm-mode-just-64gb
+[iam-service-accounts]: https://cloud.google.com/iam/docs/service-accounts
