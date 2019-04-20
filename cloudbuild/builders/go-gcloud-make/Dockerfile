@@ -14,8 +14,8 @@
 
 FROM gcr.io/cloud-builders/go:alpine
 
-RUN apk --no-cache --quiet add curl bash
-RUN curl -sfL https://sdk.cloud.google.com | bash && \
+RUN apk --no-cache --quiet add curl bash && \
+  curl -sfL https://sdk.cloud.google.com | bash && \
   rm -rf ~/.config/gcloud
 
 ENV PATH="/root/google-cloud-sdk/bin/:${PATH}"

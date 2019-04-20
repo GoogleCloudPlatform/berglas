@@ -15,6 +15,7 @@
 FROM ruby:2.6
 
 ENV APP_ENV=production
+
 WORKDIR /usr/src/app
 
 COPY Gemfile Gemfile.lock ./

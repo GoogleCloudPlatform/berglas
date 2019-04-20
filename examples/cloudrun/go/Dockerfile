@@ -14,10 +14,10 @@
 
 FROM golang:1.12 AS builder
 
-ENV GO111MODULE=on
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-ENV GOARCH=amd64
+ENV GO111MODULE=on \
+  CGO_ENABLED=0 \
+  GOOS=linux \
+  GOARCH=amd64
 
 WORKDIR /src
 COPY . .

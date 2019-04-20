@@ -14,10 +14,10 @@
 
 FROM golang:1.12 AS builder
 
-ENV GO111MODULE=on
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-ENV GOARCH=amd64
+ENV GO111MODULE=on \
+  CGO_ENABLED=0 \
+  GOOS=linux \
+  GOARCH=amd64
 
 WORKDIR /src
 COPY . .
@@ -37,9 +37,5 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates && \
   update-ca-certificates
 
-RUN addgroup -g 1001 berglasgroup && \
-  adduser -H -D -s /bin/false -G berglasgroup -u 1001 berglasuser
-
-USER 1001:1001
 COPY --from=builder /bin/berglas /bin/berglas
 ENTRYPOINT ["/bin/berglas"]

@@ -14,9 +14,10 @@
 
 FROM python:3.7
 
-ENV APP_ENV=production
-ENV PATH="/home/appuser/.local/bin:${PATH}"
-ENV PORT=8080
+ENV APP_ENV=production \
+  PATH="/home/appuser/.local/bin:${PATH}" \
+  PORT=8080
+
 WORKDIR /usr/src/app
 
 COPY requirements.txt ./
