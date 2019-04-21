@@ -25,7 +25,7 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/GoogleCloudPlatform/berglas/auto"
+	_ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
 )
 
 func main() {

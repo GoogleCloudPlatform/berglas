@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/GoogleCloudPlatform/berglas/berglas"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 )
 
 func init() {
@@ -48,7 +48,7 @@ func resolve() {
 	}
 
 	if len(envvarRefs) == 0 {
-		log.Printf("[WARN] berglas/auto was included, but no secrets were found in the environment")
+		log.Printf("[WARN] berglas auto was included, but no secrets were found in the environment")
 		return
 	}
 

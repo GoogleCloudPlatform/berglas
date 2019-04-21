@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/GoogleCloudPlatform/berglas/auto"
+	_ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
 )
 
 func F(w http.ResponseWriter, r *http.Request) {

@@ -225,7 +225,7 @@ Berglas is also a Go library that can be imported in Go projects:
 
 ```go
 import (
-	_ "github.com/GoogleCloudPlatform/berglas/auto"
+	_ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
 )
 ```
 
@@ -247,7 +247,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/GoogleCloudPlatform/berglas/berglas"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 )
 
 func main() {

@@ -5,6 +5,7 @@ cloud.google.com/go v0.37.4/go.mod h1:NHPJ89PdicEuT9hdPXMROBD91xc5uRDxsMtSB16k7h
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/GoogleCloudPlatform/berglas v0.0.0-20190417032100-0814b45ed660 h1:q7aBorDMqntwxruNNfST/VRskaB7EtmJQZlZJywfJgM=
 github.com/GoogleCloudPlatform/berglas v0.0.0-20190417032100-0814b45ed660/go.mod h1:mAcML8s5iYetciEIeXyQ69AK5UNl8Tz0k0iHOPWuirE=
+github.com/GoogleCloudPlatform/berglas v0.0.0-20190420150428-4f4ef804428a h1:nyrTcf72Vz+cEMfyG0lA8yEfH1UJM9dUllCMpAz/A4w=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

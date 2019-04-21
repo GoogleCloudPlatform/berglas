@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/GoogleCloudPlatform/berglas/berglas"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	kwhhttp "github.com/slok/kubewebhook/pkg/http"
 	kwhlog "github.com/slok/kubewebhook/pkg/log"
 	kwhmutating "github.com/slok/kubewebhook/pkg/webhook/mutating"

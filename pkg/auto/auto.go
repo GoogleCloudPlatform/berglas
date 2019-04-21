@@ -15,7 +15,7 @@
 // Package auto automatically parses berglas references when imported.
 //
 //     import (
-//       _ "github.com/GoogleCloudPlatform/berglas/auto"
+//       _ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
 //     )
 //
 // Set environment variables on your deployment using the berglas:// prefix in

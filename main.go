@@ -26,7 +26,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/GoogleCloudPlatform/berglas/berglas"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
