@@ -1,7 +1,7 @@
 # Berglas
 
-[![Build Status](https://travis-ci.com/GoogleCloudPlatform/berglas.svg?branch=master)](https://travis-ci.com/GoogleCloudPlatform/berglas)
-[![GoDoc](https://godoc.org/github.com/GoogleCloudPlatform/berglas?status.svg)][berglas-godoc]
+[![Build Status](https://img.shields.io/travis/com/GoogleCloudPlatform/berglas/master.svg?style=flat-square)](https://travis-ci.com/GoogleCloudPlatform/berglas)
+[![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)][berglas-godoc]
 
 ![Berglas Logo](/logos/berglas.svg)
 
