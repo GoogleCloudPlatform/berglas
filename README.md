@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.com/GoogleCloudPlatform/berglas.svg?branch=master)](https://travis-ci.com/GoogleCloudPlatform/berglas)
 [![GoDoc](https://godoc.org/github.com/GoogleCloudPlatform/berglas?status.svg)][berglas-godoc]
 
+![Berglas Logo](/logos/berglas.svg)
+
 Berglas is a command line tool and library for storing and and retrieving
 secrets on Google Cloud. Secrets are encrypted with [Cloud KMS][cloud-kms] and
 stored in [Cloud Storage][cloud-storage].
