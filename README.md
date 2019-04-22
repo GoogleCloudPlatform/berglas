@@ -168,11 +168,6 @@ secrets:
     ```
 
 
-## Examples
-
-Examples are available in the [`examples/` folder](examples).
-
-
 ## CLI Usage
 
 1. Create a secret:
@@ -219,6 +214,40 @@ Examples are available in the [`examples/` folder](examples).
     berglas delete my-secrets/foo
     Successfully deleted secret if it existed: foo
     ```
+
+## Integrations
+
+- **Cloud Run** - When invoked via [Cloud Run][cloud-run], Berglas resolves
+  environment variables to their plaintext values using the [`berglas://`
+  reference syntax][reference-syntax]. This integration works with any language
+  runtime because berglas serves as the entrypoint to the Docker container. See
+  [examples/cloudrun](examples/cloudrun) for examples and invocations.
+
+- **Cloud Functions** - When invoked via [Cloud Functions][cloud-functions],
+  Berglas resolves environment variables to their plainext values using the
+  [`berglas://` reference syntax][reference-syntax]. This integration only works
+  with the Go language runtime because it requires importing the `auto/`
+  package. See [examples/cloudfunctions](examples/cloudfunctions) for examples
+  and invocations.
+
+- **Kubernetes** - Kubernetes pods can consume Berglas secrets by installing a
+  [MutatingWebhook][k8s-mutating]. This webhook mutates incoming pods with the
+  [`berglas://` reference syntax][reference-syntax] in environment references to
+  resolve at runtime. This integration works with any container, but all pods
+  requesting berglas secrets must set an command in their Kubernetes manifests.
+  See [examples/kubernetes](examples/kubernetes) for samples and installation
+  instructions.
+
+- **Anything** - Wrap any process with `berglas exec --local` and Berglas will
+  parse any local environment variables with the [`berglas://` reference
+  syntax][reference-syntax] and spawn your app as a subprocess with the
+  plaintext environment replaced. This is great for initd, systemd, or
+  non-containerized workloads.
+
+
+## Examples
+
+Examples are available in the [`examples/` folder](examples).
 
 
 ## Library Usage
@@ -448,11 +477,14 @@ This library is licensed under Apache 2.0. Full license text is available in
 [cloud-audit]: https://cloud.google.com/logging/docs/audit/configure-data-access#config-api
 [cloud-kms]: https://cloud.google.com/kms
 [cloud-kms-iam]: https://cloud.google.com/kms/docs/iam
+[cloud-functions]: https://cloud.google.com/functions
 [cloud-iam]: https://cloud.google.com/iam
+[cloud-run]: https://cloud.google.com/run
 [cloud-storage]: https://cloud.google.com/storage
 [cloud-storage-iam]: https://cloud.google.com/storage/docs/access-control/iam
 [cloud-shell]: https://cloud.google.com/shell
 [cloud-sdk]: https://cloud.google.com/sdk
+[k8s-mutating]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
 [go-crypto]: https://golang.org/pkg/crypto/
 [envelope-encryption]: https://cloud.google.com/kms/docs/envelope-encryption
 [reference-syntax]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/reference-syntax.md
