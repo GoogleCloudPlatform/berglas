@@ -42,11 +42,18 @@ and other popular tools pre-installed.
         - [linux/amd64](https://storage.googleapis.com/berglas/master/linux_amd64/berglas)
         - [windows/amd64](https://storage.googleapis.com/berglas/master/windows_amd64/berglas)
 
+      This will download the latest version built against the master branch. To
+      download a specific version, specify a git tag in place of "master" in the
+      URL.
+
     - Use the official Docker container:
 
       ```text
-      docker pull gcr.io/berglas/berglas
+      docker pull gcr.io/berglas/berglas:latest
       ```
+
+      This will pull the latest version built against the master branch. To use
+      a specific version, specify a git tag in place of "latest" in the URL.
 
     - Install from source (requires a working Go installation):
 
