@@ -4,3 +4,5 @@ build/
 
 examples/**/vendor/
 examples/**/node_modules/
+
+test
