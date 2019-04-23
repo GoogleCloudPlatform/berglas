@@ -85,6 +85,15 @@ stored in [Cloud Storage][cloud-storage].
     Replace `my-secrets` with the name of your bucket. **This bucket should not
     exist yet!**
 
+1. Enable required services on the project:
+
+    ```text
+    gcloud services enable --project ${PROJECT_ID} \
+      cloudkms.googleapis.com \
+      storage-api.googleapis.com \
+      storage-component.googleapis.com
+    ```
+
 1. Bootstrap a Berglas environment. This will create a new Cloud Storage bucket
    for storing secrets and a Cloud KMS key for encrypting data.
 
