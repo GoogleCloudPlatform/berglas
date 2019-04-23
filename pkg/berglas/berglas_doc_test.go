@@ -50,6 +50,17 @@ func ExampleClient_Access() {
 	log.Println(string(secret)) // "my secret data"
 }
 
+func ExampleClient_Bootstrap() {
+	err = client.Bootstrap(ctx, &berglas.BootstrapRequest{
+		ProjectID:      "my-project",
+		Bucket:         bucket,
+		BucketLocation: "US",
+		KMSLocation:    "global",
+		KMSKeyRing:     "berglas",
+		KMSCryptoKey:   "berglas-key",
+	})
+}
+
 func ExampleClient_Grant() {
 	err = client.Grant(ctx, &berglas.GrantRequest{
 		Bucket: bucket,

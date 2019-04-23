@@ -40,6 +40,13 @@ var (
 	execLocal bool
 
 	members []string
+
+	projectID      string
+	bucket         string
+	bucketLocation string
+	kmsLocation    string
+	kmsKeyRing     string
+	kmsCryptoKey   string
 )
 
 var rootCmd = &cobra.Command{
@@ -79,6 +86,32 @@ characters.
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  accessRun,
+}
+
+var bootstrapCmd = &cobra.Command{
+	Use:   "bootstrap",
+	Short: "Bootstrap a berglas environment",
+	Long: strings.Trim(`
+Bootstrap a Berglas environment by creating a Cloud Storage bucket and a Cloud
+KMS key with properly scoped permissions to the caller.
+
+This command will create a new Cloud Storage bucket with "private" ACLs and
+grant permission only to the caller in the specified project. It will enable
+versioning on the bucket, configured to retain the last 10 verions. If the
+bucket already exists, an error is returned.
+
+This command will also create a Cloud KMS key ring and crypto key in the
+specified project. If the key ring or crypto key already exist, no errors are
+returned.
+`, "\n"),
+	Example: strings.Trim(`
+  # Bootstrap a berglas environment
+  berglas bootstrap my-secrets/api-key \
+    --project my-project \
+    --bucket my-bucket
+`, "\n"),
+	Args: cobra.ExactArgs(0),
+	Run:  bootstrapRun,
 }
 
 var createCmd = &cobra.Command{
@@ -256,6 +289,22 @@ Show berglas version.
 func main() {
 	rootCmd.AddCommand(accessCmd)
 
+	rootCmd.AddCommand(bootstrapCmd)
+	bootstrapCmd.Flags().StringVarP(&projectID, "project", "p", "",
+		"Google Cloud Project ID")
+	createCmd.MarkFlagRequired("project")
+	bootstrapCmd.Flags().StringVarP(&bucket, "bucket", "b", "",
+		"Name of the Cloud Storage bucket to create")
+	createCmd.MarkFlagRequired("bucket")
+	bootstrapCmd.Flags().StringVarP(&bucketLocation, "bucket-location", "l", "US",
+		"Location in which to create Cloud Storage bucket")
+	bootstrapCmd.Flags().StringVarP(&kmsLocation, "kms-location", "m", "global",
+		"Location in which to create the Cloud KMS key ring")
+	bootstrapCmd.Flags().StringVarP(&kmsKeyRing, "kms-keyring", "r", "berglas",
+		"Name of the KMS key ring to create")
+	bootstrapCmd.Flags().StringVarP(&kmsCryptoKey, "kms-key", "k", "berglas-key",
+		"Name of the KMS key to create")
+
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&key, "key", "k", "",
 		"KMS key to use for encryption")
@@ -298,6 +347,40 @@ func accessRun(_ *cobra.Command, args []string) {
 	}
 
 	fmt.Fprintf(stdout, "%s", plaintext)
+}
+
+func bootstrapRun(_ *cobra.Command, args []string) {
+	ctx := cliCtx()
+	if err := berglas.Bootstrap(ctx, &berglas.BootstrapRequest{
+		ProjectID:      projectID,
+		Bucket:         bucket,
+		BucketLocation: bucketLocation,
+		KMSLocation:    kmsLocation,
+		KMSKeyRing:     kmsKeyRing,
+		KMSCryptoKey:   kmsCryptoKey,
+	}); err != nil {
+		handleError(err, 1)
+	}
+
+	kmsKeyID := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
+		projectID, kmsLocation, kmsKeyRing, kmsCryptoKey)
+
+	fmt.Fprintf(stdout, "Successfully created berglas environment:\n")
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "  Bucket: %s\n", bucket)
+	fmt.Fprintf(stdout, "  KMS key: %s\n", kmsKeyID)
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "To create a secret:\n")
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "  berglas create %s/my-secret abcd1234 \\\n", bucket)
+	fmt.Fprintf(stdout, "    --key %s\n", kmsKeyID)
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "To grant access to that secret:\n")
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "  berglas grant %s/my-secret \\\n", bucket)
+	fmt.Fprintf(stdout, "    --member user:jane.doe@mycompany.com\n")
+	fmt.Fprintf(stdout, "\n")
+	fmt.Fprintf(stdout, "For more help and examples, please run \"berglas -h\".\n")
 }
 
 func createRun(_ *cobra.Command, args []string) {

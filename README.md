@@ -21,10 +21,11 @@ stored in [Cloud Storage][cloud-storage].
 ## Setup
 
 1. Install the [Cloud SDK][cloud-sdk] for your operating system. Alternatively,
-you can run these commands from [Cloud Shell][cloud-shell], which has the SDK
-and other popular tools pre-installed.
+   you can run these commands from [Cloud Shell][cloud-shell], which has the SDK
+   and other popular tools pre-installed.
 
-    If you are running from your local machine, you also need Default Application Credentials:
+    If you are running from your local machine, you also need Default
+    Application Credentials:
 
     ```text
     gcloud auth application-default login
@@ -63,7 +64,7 @@ and other popular tools pre-installed.
       ```
 
 1. Export your project ID as an environment variable. The rest of this setup
-guide assumes this environment variable is set:
+   guide assumes this environment variable is set:
 
     ```text
     export PROJECT_ID=my-gcp-project-id
@@ -73,106 +74,72 @@ guide assumes this environment variable is set:
     _number_. You can find the project ID by running `gcloud projects list` or
     in the web UI.
 
-1. Enable required services on the project:
+1. Export your desired Cloud Storage bucket name. The rest of this setup guide
+   assumes this environment variable is set:
 
-    ```text
-    gcloud services enable --project ${PROJECT_ID} \
-      compute.googleapis.com \
-      cloudkms.googleapis.com \
-      storage-api.googleapis.com \
-      storage-component.googleapis.com
-    ```
-
-1. Create a [Cloud KMS][cloud-kms] keyring and crypto key for encrypting
-secrets:
-
-    ```text
-    gcloud kms keyrings create my-keyring \
-      --project ${PROJECT_ID} \
-      --location global
-    ```
-
-    ```text
-    gcloud kms keys create my-key \
-      --project ${PROJECT_ID} \
-      --location global \
-      --keyring my-keyring \
-      --purpose encryption
-    ```
-
-1. Create a [Cloud Storage][cloud-storage] bucket for storing secrets:
 
     ```text
     export BUCKET_ID=my-secrets
     ```
 
-    Replace `my-secrets` with the name of your bucket. Bucket names must be
-    globally unique across all of Google Cloud. You can also create a bucket
-    using the Google Cloud Console from the web.
+    Replace `my-secrets` with the name of your bucket. **This bucket should not
+    exist yet!**
+
+1. Bootstrap a Berglas environment. This will create a new Cloud Storage bucket
+   for storing secrets and a Cloud KMS key for encrypting data.
+
 
     ```text
-    gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
+    berglas bootstrap --project $PROJECT_ID --bucket $BUCKET_ID
     ```
 
-    **It is strongly recommended that you create a new bucket instead of using
-    an existing one. Berglas should be the only entity managing IAM permissions
-    on the bucket.**
+    This command uses the default values. You can customize the storage bucket
+    and KMS key configuration using the optional flags. Run `berglas bootstrap
+    -h` for more details.
 
-1. Set the default ACL permissions on the bucket to private:
-
-    ```text
-    gsutil defacl set private gs://${BUCKET_ID}
-    ```
-
-    ```text
-    gsutil acl set private gs://${BUCKET_ID}
-    ```
-
-    The default permissions grant anyone with Owner/Editor access on the project
-    access to the bucket and its objects. These commands restrict access to the
-    bucket to the bucket creator (you). Everyone else must be granted explicit
-    access via IAM to the bucket or an object inside the bucket.
+    If you want full control over the creation of the Cloud Storage and Cloud
+    KMS keys, please see the [custom setup documentation][custom-setup].
 
 1. _(Optional)_ Enable [Cloud Audit logging][cloud-audit] on the bucket:
 
     Please note this will enable audit logging on all Cloud KMS keys and all
-   Cloud Storage buckets in the project, which may incur costs.
+    Cloud Storage buckets in the project, which may incur additional costs.
 
-    Download the exiting project IAM policy:
+    1. Download the exiting project IAM policy:
 
-    ```text
-    gcloud projects get-iam-policy ${PROJECT_ID} > policy.yaml
-    ```
+        ```text
+        gcloud projects get-iam-policy ${PROJECT_ID} > policy.yaml
+        ```
 
-    Add Cloud Audit logging for Cloud KMS and Cloud Storage:
+    1. Add Cloud Audit logging for Cloud KMS and Cloud Storage:
 
-    ```text
-    cat <<EOF >> policy.yaml
-    auditConfigs:
-    - auditLogConfigs:
-      - logType: DATA_READ
-      - logType: ADMIN_READ
-      - logType: DATA_WRITE
-      service: cloudkms.googleapis.com
-    - auditLogConfigs:
-      - logType: ADMIN_READ
-      - logType: DATA_READ
-      - logType: DATA_WRITE
-      service: storage.googleapis.com
-    EOF
-    ```
+        ```text
+        cat <<EOF >> policy.yaml
+        auditConfigs:
+        - auditLogConfigs:
+          - logType: DATA_READ
+          - logType: ADMIN_READ
+          - logType: DATA_WRITE
+          service: cloudkms.googleapis.com
+        - auditLogConfigs:
+          - logType: ADMIN_READ
+          - logType: DATA_READ
+          - logType: DATA_WRITE
+          service: storage.googleapis.com
+        EOF
+        ```
 
-    Submit the new policy:
+    1. Submit the new policy:
 
-    ```text
-    gcloud projects set-iam-policy ${PROJECT_ID} policy.yaml
-    ```
+        ```text
+        gcloud projects set-iam-policy ${PROJECT_ID} policy.yaml
+        ```
 
-    Remove the updated policy from local disk:
+    1. Remove the updated policy from local disk:
 
-    ```text
-    rm policy.yaml
-    ```
+        ```text
+        rm policy.yaml
+        ```
 
 
 ## CLI Usage
@@ -494,6 +461,7 @@ This library is licensed under Apache 2.0. Full license text is available in
 [k8s-mutating]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
 [go-crypto]: https://golang.org/pkg/crypto/
 [envelope-encryption]: https://cloud.google.com/kms/docs/envelope-encryption
+[custom-setup]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/custom-setup.md
 [reference-syntax]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/reference-syntax.md
 [threat-model]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/threat-model.md
 [releases]: https://github.com/GoogleCloudPlatform/berglas/releases
