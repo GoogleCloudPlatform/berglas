@@ -371,7 +371,7 @@ package][go-crypto] for each secret. (N.B. each secret has its own, unique DEK).
 1. Berglas encrypts the plaintext data using the locally-generated DEK,
 producing encrypted ciphertext, prepended with the AES-GCM nonce.
 
-1. Berglas encrypts the DEK using the specified Cloud KMS key, also know as a
+1. Berglas encrypts the DEK using the specified Cloud KMS key, also known as a
 key encryption key (KEK). This process is called [envelope
 encryption][envelope-encryption].
 
