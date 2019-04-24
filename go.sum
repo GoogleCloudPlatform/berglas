@@ -3,6 +3,9 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.37.4 h1:glPeL3BQJsbF6aIIYfZizMwc5LTYz250bDMjttbBGAU=
 cloud.google.com/go v0.37.4/go.mod h1:NHPJ89PdicEuT9hdPXMROBD91xc5uRDxsMtSB16k7hw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/GoogleCloudPlatform/berglas v0.0.0-20190418221342-65552e561ec3/go.mod h1:2eHLAnRlgTCRLNoe9Zfy06wfIachjr6DR21ykUK/KaM=
+github.com/GoogleCloudPlatform/berglas/examples/cloudrun/go v0.0.0-20190424021200-7aa8a2613e06 h1:XxigpXbTIVw9rxNbBrRjZq7CfGRbJ3g+Nt1NMDpT5wU=
+github.com/GoogleCloudPlatform/berglas/examples/cloudrun/go v0.0.0-20190424021200-7aa8a2613e06/go.mod h1:ifvR2dge4TqwMhzQPE0X/Hhn1Ngd0jokWPsnXZ8m8dQ=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

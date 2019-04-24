@@ -213,6 +213,12 @@ stored in [Cloud Storage][cloud-storage].
   package. See [examples/cloudfunctions](examples/cloudfunctions) for examples
   and invocations.
 
+- **Cloud Build** - When invoked via [Cloud Build][cloud-build], Berglas
+  resolves environment variables to plainext values using the [`berglas://`
+  reference syntax][reference-syntax]. This integration only works with volume
+  mounts, so all Berglas secrets need to specify the `?destination` parameter.
+  See [examples/cloudbuild](examples/cloudbuild) for examples and invocations.
+
 - **Kubernetes** - Kubernetes pods can consume Berglas secrets by installing a
   [MutatingWebhook][k8s-mutating]. This webhook mutates incoming pods with the
   [`berglas://` reference syntax][reference-syntax] in environment references to
@@ -458,6 +464,7 @@ This library is licensed under Apache 2.0. Full license text is available in
 
 
 [cloud-audit]: https://cloud.google.com/logging/docs/audit/configure-data-access#config-api
+[cloud-build]: https://cloud.google.com/cloud-build
 [cloud-kms]: https://cloud.google.com/kms
 [cloud-kms-iam]: https://cloud.google.com/kms/docs/iam
 [cloud-functions]: https://cloud.google.com/functions
