@@ -156,21 +156,21 @@ stored in [Cloud Storage][cloud-storage].
 1. Create a secret:
 
     ```text
-    berglas create my-secrets/foo my-secret-data \
-      --key projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+    berglas create ${BUCKET_ID}/foo my-secret-data \
+      --key projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
     Successfully created secret: foo
     ```
 
 1. Grant access to a secret:
 
     ```text
-    berglas grant my-secrets/foo --member user:user@mydomain.com
+    berglas grant ${BUCKET_ID}/foo --member user:user@mydomain.com
     ```
 
 1. Access a secret's data:
 
     ```text
-    berglas access my-secrets/foo
+    berglas access ${BUCKET_ID}/foo
     my-secret-data
     ```
 
@@ -188,13 +188,13 @@ stored in [Cloud Storage][cloud-storage].
 1. Revoke access to a secret:
 
     ```text
-    berglas revoke my-secrets/foo --member user:user@mydomain.com
+    berglas revoke ${BUCKET_ID}/foo --member user:user@mydomain.com
     ```
 
 1. Delete a secret:
 
     ```text
-    berglas delete my-secrets/foo
+    berglas delete ${BUCKET_ID}/foo
     Successfully deleted secret if it existed: foo
     ```
 
