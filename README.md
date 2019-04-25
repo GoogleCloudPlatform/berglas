@@ -409,7 +409,7 @@ Berglas makes certain security tradeoffs in exchange for a better UX. In
 particular, KMS crypto key IDs are stored on the secret object's metadata. **An
 attacker with permission to write objects to your Cloud Storage bucket could
 overwrite existing secrets.** As such, you should follow the principles of least
-privilege as revoke default ACLs on the bucket as described in the setup guide.
+privilege and revoke default ACLs on the bucket as described in the setup guide.
 
 For more information, please see the [security and threat model][threat-model].
 
