@@ -1,0 +1,4 @@
+daysUntilStale: 14
+daysUntilClose: 14
+staleLabel: stale
+closeComment: false
