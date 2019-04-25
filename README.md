@@ -207,14 +207,14 @@ stored in [Cloud Storage][cloud-storage].
   [examples/cloudrun](examples/cloudrun) for examples and invocations.
 
 - **Cloud Functions** - When invoked via [Cloud Functions][cloud-functions],
-  Berglas resolves environment variables to their plainext values using the
+  Berglas resolves environment variables to their plaintext values using the
   [`berglas://` reference syntax][reference-syntax]. This integration only works
   with the Go language runtime because it requires importing the `auto/`
   package. See [examples/cloudfunctions](examples/cloudfunctions) for examples
   and invocations.
 
 - **Cloud Build** - When invoked via [Cloud Build][cloud-build], Berglas
-  resolves environment variables to plainext values using the [`berglas://`
+  resolves environment variables to plaintext values using the [`berglas://`
   reference syntax][reference-syntax]. This integration only works with volume
   mounts, so all Berglas secrets need to specify the `?destination` parameter.
   See [examples/cloudbuild](examples/cloudbuild) for examples and invocations.
