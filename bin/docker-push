@@ -18,7 +18,7 @@ set -e
 set -o pipefail
 
 # Exit if this is not a tag or master
-DOCKER_TAG="${TAG_NAME}"
+DOCKER_TAG="${TAG_NAME//v}"
 if [ -z "${DOCKER_TAG}" ] && [ "${BRANCH_NAME}" == "master" ]; then
   DOCKER_TAG="latest"
 fi
