@@ -25,6 +25,16 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
+// Hacky, but we have to set these _before_ init() runs in the main package, and
+// variables are one of the only things initialized prior to package init
+// functions being run.
+var _ = func() interface{} {
+	retryBase = 5 * time.Millisecond
+	retryTries = 5
+	continueOnError = true
+	return nil
+}()
+
 type testRuntime struct{}
 
 func (r *testRuntime) EnvVars(ctx context.Context) (map[string]string, error) {
@@ -61,9 +71,6 @@ func (r *retryableErrorRuntime) EnvVars(ctx context.Context) (map[string]string,
 
 func TestResolve(t *testing.T) {
 	t.Parallel()
-
-	retryBase = 5 * time.Millisecond
-	retryTries = 5
 
 	t.Run("normal", func(t *testing.T) {
 		t.Parallel()
