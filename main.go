@@ -106,9 +106,7 @@ returned.
 `, "\n"),
 	Example: strings.Trim(`
   # Bootstrap a berglas environment
-  berglas bootstrap my-secrets/api-key \
-    --project my-project \
-    --bucket my-bucket
+  berglas bootstrap --project my-project --bucket my-bucket
 `, "\n"),
 	Args: cobra.ExactArgs(0),
 	Run:  bootstrapRun,
