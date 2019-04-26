@@ -17,6 +17,8 @@ package auto
 import (
 	"context"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
@@ -28,6 +30,10 @@ import (
 var (
 	retryBase  = 500 * time.Millisecond
 	retryTries = 5
+
+	// continueOnError controls whether Berglas should continue on error or panic.
+	// The default behavior is to panic.
+	continueOnError, _ = strconv.ParseBool(os.Getenv("BERGLAS_CONTINUE_ON_ERROR"))
 )
 
 func init() {
@@ -35,13 +41,13 @@ func init() {
 
 	runtimeEnv, err := berglas.DetectRuntimeEnvironment()
 	if err != nil {
-		log.Printf("[ERR] failed to detect environment: %s", err)
+		handleError(errors.Wrap(err, "failed to detect environment"))
 		return
 	}
 
 	envvarRefs, err := Resolve(ctx, runtimeEnv)
 	if err != nil {
-		log.Printf("[ERR] %s", err)
+		handleError(errors.Wrap(err, "failed to resolve environment variables"))
 		return
 	}
 
@@ -52,17 +58,20 @@ func init() {
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		log.Printf("[ERR] failed to initialize berglas client: %s", err)
+		handleError(errors.Wrap(err, "failed to initialize berglas client"))
 		return
 	}
 
 	for k := range envvarRefs {
 		if err := client.Replace(ctx, k); err != nil {
-			log.Printf("[ERR] failed to set %s: %s", k, err)
+			handleError(errors.Wrapf(err, "failed to set %s", k))
 		}
 	}
 }
 
+// Resolve resolves the environment variables. Importing the package calls
+// Resolve. It's a separate method primarily for testing. Implementers should
+// not call this method.
 func Resolve(ctx context.Context, runtimeEnv berglas.RuntimeEnvironment) (map[string]string, error) {
 	var envvars map[string]string
 	var err error
@@ -91,4 +100,11 @@ func Resolve(ctx context.Context, runtimeEnv berglas.RuntimeEnvironment) (map[st
 	}
 
 	return envvarRefs, nil
+}
+
+func handleError(err error) {
+	log.Printf("%s\n", err)
+	if !continueOnError {
+		panic(err)
+	}
 }
