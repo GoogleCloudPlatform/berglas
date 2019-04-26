@@ -1,0 +1,22 @@
+PATH
+  remote: .
+  specs:
+    berglas (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    rake (10.5.0)
+    yard (0.9.19)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  berglas!
+  bundler (~> 2.0)
+  rake (~> 10.0)
+  yard
+
+BUNDLED WITH
+   2.0.1
