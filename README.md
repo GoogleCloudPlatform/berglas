@@ -47,6 +47,12 @@ stored in [Cloud Storage][cloud-storage].
       download a specific version, specify a git tag in place of "master" in the
       URL.
 
+      Depending on your operating system, you may need to mark the downloaded binary as executable:
+
+        ```text
+        chmod +x /path/to/berglas
+        ```
+
     - Use the official Docker container:
 
       ```text

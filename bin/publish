@@ -43,6 +43,8 @@ for GOOS in ${GOOSES}; do
         -mod vendor \
         -o build/${GOOS}_${GOARCH}/berglas \
         .
+
+    chmod +x build/${GOOS}_${GOARCH}/berglas
   done
 done
 

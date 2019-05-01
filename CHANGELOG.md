@@ -7,6 +7,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 - pkg/auto: Panic on error. The former behavior of logging but not throwing an
   error can be restored by setting the environment variable
   `BERGLAS_CONTINUE_ON_ERROR` to `true`.
+- dist: mark published binaries are executable
 
 ## [0.1.1] 2019-04-25
 ### Added
