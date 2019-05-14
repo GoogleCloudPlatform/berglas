@@ -88,7 +88,7 @@ stored in [Cloud Storage][cloud-storage].
     export BUCKET_ID=my-secrets
     ```
 
-    Replace `my-secrets` with the name of your bucket. **This bucket should not
+    Replace `my-secrets` with the name of your bucket. Set only the name, without the `gs://` prefix. **This bucket should not
     exist yet!**
 
 1. Enable required services on the project:
