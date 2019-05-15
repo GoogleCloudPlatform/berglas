@@ -2,9 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.1.3] Unreleased
-
-## [0.1.2] 2019-05-15
+## [0.1.2] Unreleased
 ### Changed
 - core: update dependencies to latest version
 - dist: mark published binaries as executable
