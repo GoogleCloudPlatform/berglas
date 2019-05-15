@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Note: if you switch to a slim base image, like an alpine-based image, you
+# will need to add the ca-certificates package for Berglas to work.
 FROM ruby:2.6
 
 ENV APP_ENV=production
