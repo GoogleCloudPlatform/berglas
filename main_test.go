@@ -118,6 +118,18 @@ func Test_parseRef(t *testing.T) {
 			"foo", "bar/baz/bacon",
 			false,
 		},
+		{
+			"berglas-prefix",
+			"berglas://foo/bar",
+			"foo", "bar",
+			false,
+		},
+		{
+			"berglas + folder",
+			"berglas://foo/bar/baz/bacon",
+			"foo", "bar/baz/bacon",
+			false,
+		},
 	}
 
 	for _, tc := range cases {

@@ -614,10 +614,11 @@ func readData(s string) ([]byte, error) {
 // parseRef parses a secret ref into a bucket, secret path, and any errors.
 func parseRef(s string) (string, string, error) {
 	s = strings.TrimPrefix(s, "gs://")
+	s = strings.TrimPrefix(s, "berglas://")
 
 	ss := strings.SplitN(s, "/", 2)
 	if len(ss) < 2 {
-		return "", "", errors.Errorf("secret does not match format gs://<bucket>/<secret>: %s", s)
+		return "", "", errors.Errorf("secret does not match format gs://<bucket>/<secret> or the format berglas://<bucket>/<secret>: %s", s)
 	}
 
 	return ss[0], ss[1], nil
