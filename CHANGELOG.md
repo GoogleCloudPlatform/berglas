@@ -4,6 +4,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 
 ## [0.1.3] Unreleased
 ### Changed
+- cli: also allow `berlgas://` prefixes
 
 ## [0.1.2] 2019-05-17
 ### Changed
