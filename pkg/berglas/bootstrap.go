@@ -120,7 +120,7 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 			RotationSchedule: &kmspb.CryptoKey_RotationPeriod{
 				RotationPeriod: &duration.Duration{
-					Seconds: int64(rotationPeriod),
+					Seconds: int64(rotationPeriod.Seconds()),
 				},
 			},
 			NextRotationTime: &timestamp.Timestamp{
