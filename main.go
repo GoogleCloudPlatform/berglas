@@ -226,7 +226,7 @@ read their values, only their key names. To retrieve the value of a secret, use
 the "access" command instead.
 `, "\n"),
 	Example: strings.Trim(`
-  # List all secrets in the bucket "foo"
+  # List all secrets in the bucket "my-secrets"
   berglas list my-secrets
 `, "\n"),
 	Args: cobra.ExactArgs(1),
