@@ -75,7 +75,7 @@ On Google Cloud, it is strongly recommended that you have a dedicated service ac
     ```text
     PROJECT_ID=berglas-test
     BUCKET_ID=berglas-test-secrets
-    KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+    KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
     ```
 
 1. Create a service account:
