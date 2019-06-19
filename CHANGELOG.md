@@ -2,6 +2,9 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
+## [0.1.4] Unreleased
+### Changed
+
 ## [0.1.3] 2019-06-18
 ### Changed
 - cli: also allow `berlgas://` prefixes
