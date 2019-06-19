@@ -141,8 +141,15 @@ func (e *cloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 		return nil, err
 	}
 
+	// v1alpha1 API can return a list or single container. When we migrate to the
+	// beta API, it will always return a list.
+	container := s.Spec.Container
+	if len(s.Spec.Containers) > 0 {
+		container = s.Spec.Containers[0]
+	}
+
 	envvars := make(map[string]string)
-	for _, env := range s.Spec.Container.Env {
+	for _, env := range container.Env {
 		envvars[env.Name] = env.Value
 	}
 
@@ -187,11 +194,14 @@ func valueFromMetadata(ctx context.Context, path string) (string, error) {
 
 type cloudRunService struct {
 	Spec struct {
-		Container struct {
-			Env []struct {
-				Name  string `json:"name"`
-				Value string `json:"value"`
-			} `json:"env"`
-		} `json:"container"`
+		Containers []cloudRunContainer `json:"containers"`
+		Container  cloudRunContainer   `json:"container"`
 	} `json:"spec"`
+}
+
+type cloudRunContainer struct {
+	Env []struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	} `json:"env"`
 }
