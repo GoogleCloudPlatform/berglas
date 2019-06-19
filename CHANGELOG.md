@@ -2,7 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.1.3] Unreleased
+## [0.1.3] 2019-06-18
 ### Changed
 - cli: also allow `berlgas://` prefixes
 - core: properly convert to seconds for KMS rotation period during bootstrap
