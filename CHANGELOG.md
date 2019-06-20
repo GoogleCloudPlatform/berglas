@@ -7,7 +7,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 
 ## [0.1.3] 2019-06-18
 ### Changed
-- cli: also allow `berlgas://` prefixes
+- cli: also allow `berglas://` prefixes
 - core: properly convert to seconds for KMS rotation period during bootstrap
 - core: support multiple containers being returned from the v1alpha API
 - doc: update to match auto-generated KMS keyring
