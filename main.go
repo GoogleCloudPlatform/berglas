@@ -240,8 +240,8 @@ the "access" command instead.
   # List all secrets with names starting with "secret" in the bucket "my-secrets"
   berglas list my-secrets --prefix secret
 
-  # List all versions of all secrets in the bucket "my-secrets"
-  berglas list my-secrets --versions
+  # List all generations of all secrets in the bucket "my-secrets"
+  berglas list my-secrets --generations
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  listRun,
@@ -415,7 +415,8 @@ func createRun(_ *cobra.Command, args []string) {
 	}
 
 	ctx := cliCtx()
-	if err := berglas.Create(ctx, &berglas.CreateRequest{
+	var generation int64
+	if generation, err = berglas.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    object,
 		Key:       key,
@@ -424,7 +425,7 @@ func createRun(_ *cobra.Command, args []string) {
 		handleError(err, 1)
 	}
 
-	fmt.Fprintf(stdout, "Successfully created secret: %s\n", object)
+	fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, generation)
 }
 
 func deleteRun(_ *cobra.Command, args []string) {
@@ -561,9 +562,9 @@ func listRun(_ *cobra.Command, args []string) {
 
 	ctx := cliCtx()
 	secrets, err := berglas.List(ctx, &berglas.ListRequest{
-		Bucket:   bucket,
-		Prefix:   listPrefix,
-		Versions: listGenerations,
+		Bucket:      bucket,
+		Prefix:      listPrefix,
+		Generations: listGenerations,
 	})
 	if err != nil {
 		handleError(err, 1)

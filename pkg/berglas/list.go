@@ -75,8 +75,8 @@ type ListRequest struct {
 	// Prefix matches secret names to filter
 	Prefix string
 
-	// Versions indicates that all versions of secrets should be listed
-	Versions bool
+	// Generations indicates that all generations of secrets should be listed
+	Generations bool
 }
 
 // List lists all secrets in the bucket.
@@ -94,7 +94,7 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) 
 
 	query := storage.Query{
 		Prefix:   i.Prefix,
-		Versions: i.Versions,
+		Versions: i.Generations,
 	}
 
 	// List all objects

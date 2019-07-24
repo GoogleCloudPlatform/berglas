@@ -26,9 +26,10 @@ var (
 	ctx       = context.Background()
 	client, _ = berglas.New(ctx)
 
-	err     error
-	secret  []byte
-	secrets []string
+	err        error
+	secret     []byte
+	secrets    berglas.SecretSlice
+	generation int64
 
 	bucket = os.Getenv("GOOGLE_CLOUD_BUCKET")
 	key    = os.Getenv("GOOGLE_CLOUD_KMS_KEY")
@@ -39,12 +40,14 @@ func ExampleNew() {
 }
 
 func ExampleClient_Create() {
-	err = client.Create(ctx, &berglas.CreateRequest{
+	generation, err = client.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    "my-secret",
 		Key:       key,
 		Plaintext: []byte("my secret data"),
 	})
+
+	log.Println(string(generation))
 }
 
 func ExampleClient_List() {
