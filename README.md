@@ -195,7 +195,7 @@ stored in [Cloud Storage][cloud-storage].
 
     ```text
     berglas access ${BUCKET_ID}/foo --generation 1563925940580201
-    my-old-secret-data
+    my-previous-secret-data
     ```
 
 1. Revoke access to a secret:

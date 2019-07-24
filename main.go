@@ -415,8 +415,8 @@ func createRun(_ *cobra.Command, args []string) {
 	}
 
 	ctx := cliCtx()
-	var generation int64
-	if generation, err = berglas.Create(ctx, &berglas.CreateRequest{
+	var secret *berglas.Secret
+	if secret, err = berglas.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    object,
 		Key:       key,
@@ -425,7 +425,7 @@ func createRun(_ *cobra.Command, args []string) {
 		handleError(err, 1)
 	}
 
-	fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, generation)
+	fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, secret.Generation)
 }
 
 func deleteRun(_ *cobra.Command, args []string) {
@@ -571,7 +571,7 @@ func listRun(_ *cobra.Command, args []string) {
 	}
 
 	for _, s := range secrets {
-		fmt.Fprintf(stdout, "%v\n", s)
+		fmt.Fprintf(stdout, "%s (updated %s) (generation %d)\n", s.Name, s.UpdatedAt.Local(), s.Generation)
 	}
 }
 

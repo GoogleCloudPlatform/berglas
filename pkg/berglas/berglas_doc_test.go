@@ -26,10 +26,10 @@ var (
 	ctx       = context.Background()
 	client, _ = berglas.New(ctx)
 
-	err        error
-	secret     []byte
-	secrets    berglas.SecretSlice
-	generation int64
+	err       error
+	secret    *berglas.Secret
+	plaintext []byte
+	secrets   berglas.SecretSlice
 
 	bucket = os.Getenv("GOOGLE_CLOUD_BUCKET")
 	key    = os.Getenv("GOOGLE_CLOUD_KMS_KEY")
@@ -40,14 +40,14 @@ func ExampleNew() {
 }
 
 func ExampleClient_Create() {
-	generation, err = client.Create(ctx, &berglas.CreateRequest{
+	secret, err = client.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    "my-secret",
 		Key:       key,
 		Plaintext: []byte("my secret data"),
 	})
 
-	log.Println(string(generation))
+	log.Printf("%v\n", secret)
 }
 
 func ExampleClient_List() {
@@ -59,12 +59,12 @@ func ExampleClient_List() {
 }
 
 func ExampleClient_Access() {
-	secret, err = client.Access(ctx, &berglas.AccessRequest{
+	plaintext, err = client.Access(ctx, &berglas.AccessRequest{
 		Bucket: bucket,
 		Object: "my-secret",
 	})
 
-	log.Println(string(secret)) // "my secret data"
+	log.Println(string(plaintext)) // "my secret data"
 }
 
 func ExampleClient_Bootstrap() {
@@ -110,5 +110,5 @@ func ExampleClient_Replace() {
 }
 
 func ExampleClient_Resolve() {
-	secret, err = client.Resolve(ctx, "berglas://my-bucket/my-secret")
+	plaintext, err = client.Resolve(ctx, "berglas://my-bucket/my-secret")
 }

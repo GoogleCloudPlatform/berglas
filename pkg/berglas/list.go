@@ -17,7 +17,6 @@ package berglas
 import (
 	"cloud.google.com/go/storage"
 	"context"
-	"fmt"
 	"sort"
 	"time"
 
@@ -25,6 +24,8 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// Secret represents a specific secret stored in Google Cloud Storage
+// The attributes on this object should ideally map 1:1 with storage.ObjectAttrs
 type Secret struct {
 	// Name of the secret
 	Name string
@@ -36,17 +37,16 @@ type Secret struct {
 	Generation int64
 }
 
-func (s Secret) String() string {
-	return fmt.Sprintf("%s (updated %s) (generation %d)",
-		s.Name, s.UpdatedAt.Local(), s.Generation)
-}
-
+// SecretSlice is a list of secrets
 type SecretSlice []Secret
 
+// Len is the number of elements in the collection.
 func (s SecretSlice) Len() int {
 	return len(s)
 }
 
+// Less reports whether the element with
+// index i should sort before the element with index j.
 func (s SecretSlice) Less(i, j int) bool {
 	if s[i].Name == s[j].Name {
 		return s[i].Generation > s[j].Generation
@@ -54,6 +54,7 @@ func (s SecretSlice) Less(i, j int) bool {
 	return s[i].Name > s[j].Name
 }
 
+// Swap swaps the elements with indexes i and j.
 func (s SecretSlice) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
@@ -92,7 +93,7 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) 
 
 	var result SecretSlice
 
-	query := storage.Query{
+	query := &storage.Query{
 		Prefix:   i.Prefix,
 		Versions: i.Generations,
 	}
@@ -100,7 +101,7 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) 
 	// List all objects
 	it := c.storageClient.
 		Bucket(bucket).
-		Objects(ctx, &query)
+		Objects(ctx, query)
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {

@@ -27,10 +27,10 @@ import (
 
 // Create is a top-level package function for creating a secret. For large
 // volumes of secrets, please create a client instead.
-func Create(ctx context.Context, i *CreateRequest) (int64, error) {
+func Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
 	client, err := New(ctx)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 	return client.Create(ctx, i)
 }
@@ -52,36 +52,36 @@ type CreateRequest struct {
 
 // Create reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
-func (c *Client) Create(ctx context.Context, i *CreateRequest) (int64, error) {
+func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
 	if i == nil {
-		return -1, errors.New("missing request")
+		return nil, errors.New("missing request")
 	}
 
 	bucket := i.Bucket
 	if bucket == "" {
-		return -1, errors.New("missing bucket name")
+		return nil, errors.New("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return -1, errors.New("missing object name")
+		return nil, errors.New("missing object name")
 	}
 
 	key := i.Key
 	if key == "" {
-		return -1, errors.New("missing key name")
+		return nil, errors.New("missing key name")
 	}
 
 	plaintext := i.Plaintext
 	if plaintext == nil {
-		return -1, errors.New("missing plaintext")
+		return nil, errors.New("missing plaintext")
 	}
 
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
 	// pieces of data).
 	dek, ciphertext, err := envelopeEncrypt(plaintext)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed to perform envelope encryption")
+		return nil, errors.Wrap(err, "failed to perform envelope encryption")
 	}
 
 	// Encrypt the plaintext using a KMS key
@@ -91,7 +91,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (int64, error) {
 		AdditionalAuthenticatedData: []byte(object),
 	})
 	if err != nil {
-		return -1, errors.Wrap(err, "failed to encrypt secret")
+		return nil, errors.Wrap(err, "failed to encrypt secret")
 	}
 	encDEK := kmsResp.Ciphertext
 
@@ -115,7 +115,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (int64, error) {
 	case storage.ErrObjectNotExist:
 		conds.DoesNotExist = true
 	default:
-		return -1, errors.Wrap(err, "failed to get object")
+		return nil, errors.Wrap(err, "failed to get object")
 	}
 
 	// Write the object with CAS
@@ -139,7 +139,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (int64, error) {
 	iow.Metadata[MetadataKMSKey] = kmsKeyTrimVersion(key)
 
 	if _, err := iow.Write([]byte(blob)); err != nil {
-		return -1, errors.Wrap(err, "failed save encrypted ciphertext to storage")
+		return nil, errors.Wrap(err, "failed save encrypted ciphertext to storage")
 	}
 
 	// Close, handling any errors
@@ -147,14 +147,18 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (int64, error) {
 		if terr, ok := err.(*googleapi.Error); ok {
 			switch terr.Code {
 			case 404:
-				return -1, errors.New("bucket does not exist")
+				return nil, errors.New("bucket does not exist")
 			case 412:
-				return -1, errors.New("secret modified between read and write")
+				return nil, errors.New("secret modified between read and write")
 			}
 		}
 
-		return -1, errors.Wrap(err, "failed to close writer")
+		return nil, errors.Wrap(err, "failed to close writer")
 	}
 
-	return iow.Attrs().Generation, nil
+	return &Secret{
+		Name:       iow.Attrs().Name,
+		Generation: iow.Attrs().Generation,
+		UpdatedAt:  iow.Attrs().Updated,
+	}, nil
 }
