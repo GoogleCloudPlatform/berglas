@@ -15,15 +15,51 @@
 package berglas
 
 import (
+	"cloud.google.com/go/storage"
 	"context"
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
 
+type Secret struct {
+	// Name of the secret
+	Name string
+
+	// UpdatedAt indicates when a secret was last updated
+	UpdatedAt time.Time
+
+	// Generation indicates a secret's version
+	Generation int64
+}
+
+func (s Secret) String() string {
+	return fmt.Sprintf("%s (updated %s) (generation %d)",
+		s.Name, s.UpdatedAt.Local(), s.Generation)
+}
+
+type SecretSlice []Secret
+
+func (s SecretSlice) Len() int {
+	return len(s)
+}
+
+func (s SecretSlice) Less(i, j int) bool {
+	if s[i].Name == s[j].Name {
+		return s[i].Generation > s[j].Generation
+	}
+	return s[i].Name > s[j].Name
+}
+
+func (s SecretSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 // List is a top-level package function for listing secrets.
-func List(ctx context.Context, i *ListRequest) ([]string, error) {
+func List(ctx context.Context, i *ListRequest) (SecretSlice, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
@@ -35,10 +71,16 @@ func List(ctx context.Context, i *ListRequest) ([]string, error) {
 type ListRequest struct {
 	// Bucket is the name of the bucket where the secrets live.
 	Bucket string
+
+	// Prefix matches secret names to filter
+	Prefix string
+
+	// Versions indicates that all versions of secrets should be listed
+	Versions bool
 }
 
 // List lists all secrets in the bucket.
-func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
+func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
@@ -48,12 +90,17 @@ func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
 		return nil, errors.New("missing bucket name")
 	}
 
-	var result []string
+	var result SecretSlice
+
+	query := storage.Query{
+		Prefix:   i.Prefix,
+		Versions: i.Versions,
+	}
 
 	// List all objects
 	it := c.storageClient.
 		Bucket(bucket).
-		Objects(ctx, nil)
+		Objects(ctx, &query)
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
@@ -65,11 +112,16 @@ func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
 
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			result = append(result, obj.Name)
+			secret := Secret{
+				Name:       obj.Name,
+				UpdatedAt:  obj.Updated,
+				Generation: obj.Generation,
+			}
+			result = append(result, secret)
 		}
 	}
 
-	sort.Strings(result)
+	sort.Sort(result)
 
 	return result, nil
 }
