@@ -206,6 +206,12 @@ stored in [Cloud Storage][cloud-storage].
 
 ## Integrations
 
+- **App Engine** - When invoked via [App Engine][app-engine], Berglas resolves
+  environment variables to their plaintext values using the [`berglas://`
+  reference syntax][reference-syntax]. This integration works with any language
+  runtime because berglas serves as the entrypoint to the Docker container. See
+  [examples/cloudrun](examples/appengine) for examples and invocations.
+
 - **Cloud Run** - When invoked via [Cloud Run][cloud-run], Berglas resolves
   environment variables to their plaintext values using the [`berglas://`
   reference syntax][reference-syntax]. This integration works with any language
@@ -469,6 +475,7 @@ This library is licensed under Apache 2.0. Full license text is available in
 
 
 
+[app-engine]: https://cloud.google.com/appengine/
 [cloud-audit]: https://cloud.google.com/logging/docs/audit/configure-data-access#config-api
 [cloud-build]: https://cloud.google.com/cloud-build
 [cloud-kms]: https://cloud.google.com/kms
