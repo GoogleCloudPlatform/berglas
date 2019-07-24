@@ -89,8 +89,8 @@ characters.
   # Read a secret named "api-key" from the bucket "my-secrets"
   berglas access my-secrets/api-key
 
-  # Read generation 1234 of a secret named "api-key" from the bucket "my-secrets"
-  berglas access my-secrets/api-key --generation 1234
+  # Read generation 1563925940580201 of a secret named "api-key" from the bucket "my-secrets"
+  berglas access my-secrets/api-key --generation 1563925940580201
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  accessRun,

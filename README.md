@@ -191,6 +191,13 @@ stored in [Cloud Storage][cloud-storage].
     variables, use the `--local` flag. For more information, please run `berglas
     exec -h`.
 
+1. Access data from a specific generation of a secret:
+
+    ```text
+    berglas access ${BUCKET_ID}/foo --generation 1563925940580201
+    my-old-secret-data
+    ```
+
 1. Revoke access to a secret:
 
     ```text
