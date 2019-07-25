@@ -25,4 +25,4 @@ RUN npm install --only=production
 COPY . ./
 COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
 
-ENTRYPOINT exec /bin/berglas exec --local -- npm start
+ENTRYPOINT exec /bin/berglas exec -- npm start
