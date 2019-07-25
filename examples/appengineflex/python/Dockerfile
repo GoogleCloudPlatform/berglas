@@ -28,4 +28,4 @@ RUN pip install -r requirements.txt
 COPY . ./
 COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
 
-ENTRYPOINT exec /bin/berglas exec --local -- gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 8 app:app
+ENTRYPOINT exec /bin/berglas exec -- gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 8 app:app

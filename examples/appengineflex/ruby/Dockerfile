@@ -33,4 +33,4 @@ RUN bundle install \
 COPY . ./
 COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
 
-ENTRYPOINT exec /bin/berglas exec --local -- ./bin/bundle exec ruby app.rb
+ENTRYPOINT exec /bin/berglas exec -- ./bin/bundle exec ruby app.rb
