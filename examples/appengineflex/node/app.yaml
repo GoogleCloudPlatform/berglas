@@ -1,0 +1,5 @@
+runtime: custom
+service: berglas-example-node
+env: flex
+includes:
+  - env.yaml

@@ -1,0 +1,4 @@
+runtime: go112
+service: berglas-example-go
+includes:
+  - env.yaml
