@@ -8,6 +8,13 @@ Storage bucket, and Cloud KMS key.
 
 1. Make sure you are in the `examples/appengineflex/node` folder before continuing!
 
+1. Enable the App Engine Flex API (this only needs to be done once per project):
+
+    ```text
+    gcloud services enable --project ${PROJECT_ID} \
+      appengineflex.googleapis.com
+    ```
+
 1. Export the environment variables for your configuration:
 
     ```text
@@ -51,7 +58,7 @@ instructions):
       .
     ```
 
-1. Create GAE environment:
+1. Create environment:
 
     ```text
     echo -en "env_variables:\n\
@@ -80,7 +87,9 @@ instructions):
     gcloud app services delete berglas-example-node \
       --quiet \
       --project ${PROJECT_ID}
-
+    ```
+   
+    ```text
     IMAGE=gcr.io/${PROJECT_ID}/berglas-example-node
     for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
       gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"

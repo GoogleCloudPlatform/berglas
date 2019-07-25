@@ -213,9 +213,9 @@ stored in [Cloud Storage][cloud-storage].
   container. See [examples/appengineflex](examples/appengineflex) for examples
   and invocations.
 
-- **App Engine** - When invoked via [App Engine][app-engine], Berglas resolves
-  environment variables to their plaintext values using the [`berglas://`
-  reference syntax][reference-syntax]. This integration only works
+- **App Engine (Standard) ** - When invoked via [App Engine][app-engine],
+  Berglas resolves environment variables to their plaintext values using the
+  [`berglas://`reference syntax][reference-syntax]. This integration only works
   with the Go language runtime because it requires importing the `auto/`
   package. See [examples/appengine](examples/appengine) for examples
   and invocations.

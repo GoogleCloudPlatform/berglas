@@ -1,4 +1,4 @@
-# Berglas App Engine Example - Go
+# Berglas App Engine (Standard) Example - Go
 
 This guide assumes you have followed the [setup instructions][setup] in the
 README. Specifically, it is assumed that you have created a project, Cloud
@@ -52,16 +52,7 @@ environment variables:
     berglas grant ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
-1. Build a container using Cloud Build and publish it to Container Registry:
-
-    ```text
-    gcloud builds submit \
-      --project ${PROJECT_ID} \
-      --tag gcr.io/${PROJECT_ID}/berglas-example-go:0.0.1 \
-      .
-    ```
-
-1. Create GAE environment:
+1. Create environment:
 
     ```text
     echo -en "env_variables:\n\
@@ -70,7 +61,7 @@ environment variables:
 " > env.yaml
     ```
 
-1. Deploy the container on GAE:
+1. Deploy the app on GAE:
 
     ```text
     gcloud app deploy \
@@ -81,6 +72,7 @@ environment variables:
 
     ```text
     curl $(gcloud app services browse berglas-example-go --no-launch-browser --project ${PROJECT_ID} --format 'value(url)')
+    curl $(gcloud app describe --project "${PROJECT_ID}" --format 'value(defaultHostname)')
     ```
 
 1. (Optional) Cleanup the deployment:
@@ -89,11 +81,6 @@ environment variables:
     gcloud app services delete berglas-example-go \
       --quiet \
       --project ${PROJECT_ID}
-
-    IMAGE=gcr.io/${PROJECT_ID}/berglas-example-go
-    for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
-      gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"
-    done
     ```
 
 1. (Optional) Revoke access to the secrets:
