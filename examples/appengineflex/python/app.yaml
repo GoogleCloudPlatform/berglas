@@ -1,0 +1,5 @@
+runtime: custom
+service: berglas-example-python
+env: flex
+includes:
+  - env.yaml

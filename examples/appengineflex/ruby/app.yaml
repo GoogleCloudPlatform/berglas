@@ -1,0 +1,5 @@
+runtime: custom
+service: berglas-example-ruby
+env: flex
+includes:
+  - env.yaml
