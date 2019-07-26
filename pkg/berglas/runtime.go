@@ -30,7 +30,6 @@ import (
 	cloudfunctions "google.golang.org/api/cloudfunctions/v1"
 	iam "google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
-	"google.golang.org/appengine"
 )
 
 // RuntimeEnvironment is an interface for getting the envvars of a runtime.
@@ -48,7 +47,7 @@ func DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
 		return new(cloudRunEnv), nil
 	}
 
-	if appengine.IsAppEngine() {
+	if os.Getenv("GAE_SERVICE") != "" || os.Getenv("GAE_INSTANCE") != "" {
 		return new(gaeEnv), nil
 	}
 
