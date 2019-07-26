@@ -62,8 +62,8 @@ func init() {
 		return
 	}
 
-	for k := range envvarRefs {
-		if err := client.Replace(ctx, k); err != nil {
+	for k, v := range envvarRefs {
+		if err := client.ReplaceValue(ctx, k, v); err != nil {
 			handleError(errors.Wrapf(err, "failed to set %s", k))
 		}
 	}
