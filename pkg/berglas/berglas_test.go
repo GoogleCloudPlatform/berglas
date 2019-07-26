@@ -186,6 +186,13 @@ func TestGsecretsIntegration(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+
+	if err := c.Delete(ctx, &DeleteRequest{
+		Bucket: bucket,
+		Object: object2,
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testStringInclude(l []*Secret, n string, g int64) bool {
