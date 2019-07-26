@@ -15,11 +15,11 @@
 package berglas
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"sort"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
