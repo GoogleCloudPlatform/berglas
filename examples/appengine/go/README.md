@@ -72,7 +72,6 @@ environment variables:
 
     ```text
     curl $(gcloud app services browse berglas-example-go --no-launch-browser --project ${PROJECT_ID} --format 'value(url)')
-    curl $(gcloud app describe --project "${PROJECT_ID}" --format 'value(defaultHostname)')
     ```
 
 1. (Optional) Cleanup the deployment:
