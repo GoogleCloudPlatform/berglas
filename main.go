@@ -241,7 +241,7 @@ the "access" command instead.
   berglas list my-secrets --prefix secret
 
   # List all generations of all secrets in the bucket "my-secrets"
-  berglas list my-secrets --generations
+  berglas list my-secrets --all-generations
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  listRun,
@@ -335,7 +335,7 @@ func main() {
 		"Member to add")
 
 	rootCmd.AddCommand(listCmd)
-	listCmd.Flags().BoolVar(&listGenerations, "generations", false,
+	listCmd.Flags().BoolVar(&listGenerations, "all-generations", false,
 		"List all versions of secrets")
 	listCmd.Flags().StringVar(&listPrefix, "prefix", "",
 		"List secrets that match prefix")
@@ -570,7 +570,7 @@ func listRun(_ *cobra.Command, args []string) {
 		handleError(err, 1)
 	}
 
-	for _, s := range secrets {
+	for _, s := range secrets.Secrets {
 		fmt.Fprintf(stdout, "%s (updated %s) (generation %d)\n", s.Name, s.UpdatedAt.Local(), s.Generation)
 	}
 }

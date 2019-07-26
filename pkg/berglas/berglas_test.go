@@ -93,10 +93,10 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !testStringInclude(secrets, object, secret.Generation) {
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
 		t.Errorf("expected %q to include %q", secrets, object)
 	}
-	if !testStringInclude(secrets, object2, 0) {
+	if !testStringInclude(secrets.Secrets, object2, 0) {
 		t.Errorf("expected %q to include %q", secrets, object2)
 	}
 
@@ -107,10 +107,10 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !testStringInclude(secrets, object, secret.Generation) {
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
 		t.Errorf("expected %q to include %q", secrets, object)
 	}
-	if testStringInclude(secrets, object2, secret.Generation) {
+	if testStringInclude(secrets.Secrets, object2, secret.Generation) {
 		t.Errorf("expected %q to not include %q", secrets, object)
 	}
 
@@ -134,10 +134,10 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !testStringInclude(secrets, object, updatedSecret.Generation) {
+	if !testStringInclude(secrets.Secrets, object, updatedSecret.Generation) {
 		t.Errorf("expected %q to include %q", secrets, object)
 	}
-	if !testStringInclude(secrets, object, secret.Generation) {
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
 		t.Errorf("expected %q to include %q", secrets, object)
 	}
 
@@ -188,7 +188,7 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 }
 
-func testStringInclude(l SecretSlice, n string, g int64) bool {
+func testStringInclude(l []Secret, n string, g int64) bool {
 	for _, v := range l {
 		if n == v.Name && (g == 0 || g == v.Generation) {
 			return true

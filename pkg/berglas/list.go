@@ -37,17 +37,21 @@ type Secret struct {
 	Generation int64
 }
 
-// SecretSlice is a list of secrets
-type SecretSlice []Secret
+type ListResponse struct {
+	Secrets []Secret
+}
+
+// secretList is a list of secrets
+type secretList []Secret
 
 // Len is the number of elements in the collection.
-func (s SecretSlice) Len() int {
+func (s secretList) Len() int {
 	return len(s)
 }
 
 // Less reports whether the element with
 // index i should sort before the element with index j.
-func (s SecretSlice) Less(i, j int) bool {
+func (s secretList) Less(i, j int) bool {
 	if s[i].Name == s[j].Name {
 		return s[i].Generation > s[j].Generation
 	}
@@ -55,12 +59,12 @@ func (s SecretSlice) Less(i, j int) bool {
 }
 
 // Swap swaps the elements with indexes i and j.
-func (s SecretSlice) Swap(i, j int) {
+func (s secretList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
 // List is a top-level package function for listing secrets.
-func List(ctx context.Context, i *ListRequest) (SecretSlice, error) {
+func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
@@ -81,7 +85,7 @@ type ListRequest struct {
 }
 
 // List lists all secrets in the bucket.
-func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) {
+func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
@@ -91,7 +95,7 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) 
 		return nil, errors.New("missing bucket name")
 	}
 
-	var result SecretSlice
+	var result secretList
 
 	query := &storage.Query{
 		Prefix:   i.Prefix,
@@ -124,5 +128,7 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (SecretSlice, error) 
 
 	sort.Sort(result)
 
-	return result, nil
+	return &ListResponse{
+		Secrets: result,
+	}, nil
 }
