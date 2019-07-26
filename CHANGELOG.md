@@ -2,8 +2,17 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.1.4] Unreleased
+## [0.1.5] Unreleased
 ### Changed
+
+## [0.1.4] 2019-07-26
+### Breaking
+- core: create now returns a respobse struct
+- core: list returns a struct with a list member instead of a raw list
+
+### Added
+- core: support multiple secret versions through GCS generation
+- core: support for Google App Engine (GAE) flex and standard environments
 
 ## [0.1.3] 2019-06-18
 ### Changed
