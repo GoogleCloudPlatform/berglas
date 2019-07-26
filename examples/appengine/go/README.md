@@ -16,6 +16,13 @@ Storage bucket, and Cloud KMS key.
     export KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
     ```
 
+1. Enable the required services:
+
+    ```text
+    gcloud services enable --project ${PROJECT_ID} \
+      appengine.googleapis.com
+    ```
+
 1. Create two secrets using the `berglas` CLI (see README for installation
 instructions):
 
@@ -32,8 +39,7 @@ instructions):
 1. Get the App Engine service account email:
 
     ```text
-    PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
-    export SA_EMAIL=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
+    export SA_EMAIL=${PROJECT_ID}@appspot.gserviceaccount.com
     ```
 
 1. Grant the service account access to read the App Engine deployment's
@@ -55,17 +61,20 @@ environment variables:
 1. Create environment:
 
     ```text
-    echo -en "env_variables:\n\
-  API_KEY: berglas://${BUCKET_ID}/api-key\n\
-  TLS_KEY: berglas://${BUCKET_ID}/tls-key?destination=tempfile\n\
-" > env.yaml
+    cat > env.yaml <<EOF
+    env_variables:
+      GO111MODULE: on
+      API_KEY: berglas://${BUCKET_ID}/api-key
+      TLS_KEY: berglas://${BUCKET_ID}/tls-key?destination=tempfile
+    EOF
     ```
 
 1. Deploy the app on GAE:
 
     ```text
     gcloud app deploy \
-      --project ${PROJECT_ID}
+      --project ${PROJECT_ID} \
+      --quiet
     ```
 
 1. Access the service:

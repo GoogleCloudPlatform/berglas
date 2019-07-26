@@ -59,6 +59,12 @@ environment variables:
     berglas grant ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
+1. Vendor the dependencies:
+
+    ```text
+    go mod vendor
+    ```
+
 1. Build a container using Cloud Build and publish it to Container Registry:
 
     ```text
@@ -71,10 +77,11 @@ environment variables:
 1. Create environment:
 
     ```text
-    echo -en "env_variables:\n\
-  API_KEY: berglas://${BUCKET_ID}/api-key\n\
-  TLS_KEY: berglas://${BUCKET_ID}/tls-key?destination=tempfile\n\
-" > env.yaml
+    cat > env.yaml <<EOF
+    env_variables:
+      API_KEY: berglas://${BUCKET_ID}/api-key
+      TLS_KEY: berglas://${BUCKET_ID}/tls-key?destination=tempfile
+    EOF
     ```
 
 1. Deploy the container on GAE:
@@ -82,7 +89,8 @@ environment variables:
     ```text
     gcloud app deploy \
       --project ${PROJECT_ID} \
-      --image-url gcr.io/${PROJECT_ID}/berglas-example-go:0.0.1
+      --image-url gcr.io/${PROJECT_ID}/berglas-example-go:0.0.1 \
+      --quiet
     ```
 
 1. Access the service:
@@ -98,7 +106,7 @@ environment variables:
       --quiet \
       --project ${PROJECT_ID}
     ```
-   
+
     ```text
     IMAGE=gcr.io/${PROJECT_ID}/berglas-example-go
     for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
