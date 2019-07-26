@@ -1,7 +1,7 @@
 import os
 
 from flask import Flask, Response
-import berglas.auto
+# import berglas.auto  # noqa
 
 app = Flask(__name__)
 

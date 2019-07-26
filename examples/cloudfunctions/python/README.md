@@ -1,4 +1,4 @@
-# Berglas Cloud Run Example - Python
+# Berglas Cloud Functions Example - Python
 
 This guide assumes you have followed the [setup instructions][setup] in the
 README. Specifically, it is assumed that you have created a project, Cloud
@@ -6,7 +6,8 @@ Storage bucket, and Cloud KMS key.
 
 [setup]: https://github.com/GoogleCloudPlatform/berglas#setup
 
-1. Make sure you are in the `examples/cloudrun/python` folder before continuing!
+1. Make sure you are in the `examples/cloudfunctions/python` folder before
+continuing!
 
 1. Export the environment variables for your configuration:
 
@@ -29,20 +30,27 @@ instructions):
       --key ${KMS_KEY}
     ```
 
-1. Get the Cloud Run service account email:
+1. Create a service account which will be assigned to the Cloud Function later:
 
     ```text
-    PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
-    export SA_EMAIL=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
+    gcloud iam service-accounts create berglas-service-account \
+      --project ${PROJECT_ID} \
+      --display-name "berglas Cloud Functions Example"
     ```
 
-1. Grant the service account access to read the Cloud Run deployment's
-environment variables:
+    Save the service account email because it will be used later:
+
+    ```text
+    export SA_EMAIL=berglas-service-account@${PROJECT_ID}.iam.gserviceaccount.com
+    ```
+
+1. Grant the service account access to read the Cloud Function's environment
+variables:
 
     ```text
     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
       --member serviceAccount:${SA_EMAIL} \
-      --role roles/run.viewer
+      --role roles/cloudfunctions.viewer
     ```
 
 1. Grant the service account access to the secrets:
@@ -52,51 +60,47 @@ environment variables:
     berglas grant ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
-1. Build a container using Cloud Build and publish it to Container Registry:
+1. Deploy the Cloud Function:
 
     ```text
-    gcloud builds submit \
-      --project ${PROJECT_ID} \
-      --tag gcr.io/${PROJECT_ID}/berglas-example-python:0.0.1 \
-      .
-    ```
-
-1. Deploy the container on Cloud Run:
-
-    ```text
-    gcloud beta run deploy berglas-example-python \
+    gcloud beta functions deploy berglas-example-python \
       --project ${PROJECT_ID} \
       --region us-central1 \
-      --image gcr.io/${PROJECT_ID}/berglas-example-python:0.0.1 \
+      --runtime python37 \
       --memory 1G \
-      --concurrency 10 \
+      --max-instances 10 \
+      --service-account ${SA_EMAIL} \
       --set-env-vars "API_KEY=berglas://${BUCKET_ID}/api-key,TLS_KEY=berglas://${BUCKET_ID}/tls-key?destination=tempfile" \
-      --allow-unauthenticated \
-      --platform managed
+      --entry-point handler \
+      --trigger-http
     ```
 
-1. Access the service:
+1. Make the Cloud Function accessible:
 
     ```text
-    curl $(gcloud beta run services describe berglas-example-python --project ${PROJECT_ID} --region us-central1 --platform managed --format 'value(status.domain)')
-    ```
-
-1. (Optional) Cleanup the deployment:
-
-    ```text
-    gcloud beta run services delete berglas-example-python \
-      --quiet \
+    gcloud alpha functions add-iam-policy-binding berglas-example-python \
       --project ${PROJECT_ID} \
-      --region us-central1 \
-      --platform managed
+      --role roles/cloudfunctions.invoker \
+      --member allUsers
     ```
-   
+
+    This example makes the function accessible to everyone, which might not be
+    desirable. You can grant finer-grained permissions, but that is not
+    discussed in this tutorial.
+
+1. Access the function:
+
     ```text
-    IMAGE=gcr.io/${PROJECT_ID}/berglas-example-python
-    for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
-      gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"
-    done
+    curl $(gcloud beta functions describe berglas-example-python --project ${PROJECT_ID} --format 'value(httpsTrigger.url)')
     ```
+
+1. (Optional) Delete the function:
+
+   ```text
+   gcloud functions delete berglas-example-python \
+     --project ${PROJECT_ID} \
+     --region us-central1
+   ```
 
 1. (Optional) Revoke access to the secrets:
 

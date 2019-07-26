@@ -1,2 +1,3 @@
+berglas==0.1.0a2
 Flask==1.0
 gunicorn==19.9
