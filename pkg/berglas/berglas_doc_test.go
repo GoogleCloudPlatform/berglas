@@ -55,7 +55,7 @@ func ExampleClient_List() {
 		Bucket: bucket,
 	})
 
-	log.Println(listResponse) // ["my secret data"]
+	log.Println(listResponse) // [&Secret{...}]
 }
 
 func ExampleClient_Access() {
