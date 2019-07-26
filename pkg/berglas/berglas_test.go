@@ -49,7 +49,17 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 	sa = fmt.Sprintf("serviceAccount:%s", sa)
 
-	object := testUUID(t)
+	object, object2 := testUUID(t), testUUID(t)
+	if len(object) < 3 || len(object2) < 3 {
+		t.Fatal("bad uuid created")
+	}
+	// ensure non-matching prefix
+	for i := 0; i < 10 && object[:3] == object2[:3]; i++ {
+		object2 = testUUID(t)
+	}
+	if object[:3] == object2[:3] {
+		t.Fatal("unable to generate non-prefix matching uuids")
+	}
 
 	c, err := New(ctx)
 	if err != nil {
@@ -57,10 +67,20 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 
 	original := []byte("original text")
+	var secret *Secret
 
-	if err := c.Create(ctx, &CreateRequest{
+	if secret, err = c.Create(ctx, &CreateRequest{
 		Bucket:    bucket,
 		Object:    object,
+		Key:       key,
+		Plaintext: original,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = c.Create(ctx, &CreateRequest{
+		Bucket:    bucket,
+		Object:    object2,
 		Key:       key,
 		Plaintext: original,
 	}); err != nil {
@@ -73,13 +93,69 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !testStringInclude(secrets, object) {
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
+		t.Errorf("expected %q to include %q", secrets, object)
+	}
+	if !testStringInclude(secrets.Secrets, object2, 0) {
+		t.Errorf("expected %q to include %q", secrets, object2)
+	}
+
+	secrets, err = c.List(ctx, &ListRequest{
+		Bucket: bucket,
+		Prefix: object[:3],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
+		t.Errorf("expected %q to include %q", secrets, object)
+	}
+	if testStringInclude(secrets.Secrets, object2, secret.Generation) {
+		t.Errorf("expected %q to not include %q", secrets, object)
+	}
+
+	updated := []byte("updated text")
+
+	var updatedSecret *Secret
+	if updatedSecret, err = c.Create(ctx, &CreateRequest{
+		Bucket:    bucket,
+		Object:    object,
+		Key:       key,
+		Plaintext: updated,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	secrets, err = c.List(ctx, &ListRequest{
+		Bucket:      bucket,
+		Prefix:      object,
+		Generations: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !testStringInclude(secrets.Secrets, object, updatedSecret.Generation) {
+		t.Errorf("expected %q to include %q", secrets, object)
+	}
+	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
 		t.Errorf("expected %q to include %q", secrets, object)
 	}
 
 	plaintext, err := c.Access(ctx, &AccessRequest{
 		Bucket: bucket,
 		Object: object,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(plaintext, updated) {
+		t.Errorf("expected %q to be %q", plaintext, updated)
+	}
+
+	plaintext, err = c.Access(ctx, &AccessRequest{
+		Bucket:     bucket,
+		Object:     object,
+		Generation: secret.Generation,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -112,9 +188,9 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 }
 
-func testStringInclude(l []string, n string) bool {
+func testStringInclude(l []Secret, n string, g int64) bool {
 	for _, v := range l {
-		if n == v {
+		if n == v.Name && (g == 0 || g == v.Generation) {
 			return true
 		}
 	}

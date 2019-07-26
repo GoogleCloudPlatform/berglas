@@ -42,6 +42,9 @@ type AccessRequest struct {
 
 	// Object is the name of the object in Cloud Storage.
 	Object string
+
+	// Generation of the object to fetch
+	Generation int64
 }
 
 // Access reads the contents of the secret from the bucket, decrypting the
@@ -62,10 +65,13 @@ func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
 	}
 
 	// Get attributes to find the KMS key
-	attrs, err := c.storageClient.
+	h := c.storageClient.
 		Bucket(bucket).
-		Object(object).
-		Attrs(ctx)
+		Object(object)
+	if i.Generation != 0 {
+		h = h.Generation(i.Generation)
+	}
+	attrs, err := h.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, errors.New("secret object not found")
 	}
@@ -78,10 +84,7 @@ func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
 	key := attrs.Metadata[MetadataKMSKey]
 
 	// Download the file from GCS
-	ior, err := c.storageClient.
-		Bucket(bucket).
-		Object(object).
-		NewReader(ctx)
+	ior, err := h.NewReader(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, errors.New("secret object not found")
 	}

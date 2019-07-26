@@ -36,6 +36,11 @@ var (
 	stderr = os.Stderr
 	stdin  = os.Stdin
 
+	accessGeneration int64
+
+	listGenerations bool
+	listPrefix      string
+
 	key       string
 	execLocal bool
 
@@ -75,7 +80,7 @@ var accessCmd = &cobra.Command{
 	Short: "Access a secret's contents",
 	Long: strings.Trim(`
 Accesses the contents of a secret by reading the encrypted data from Google
-Cloud Storage and decyrpting it with Google Cloud KMS.
+Cloud Storage and decrypting it with Google Cloud KMS.
 
 The result will be the raw value without any additional formatting or newline
 characters.
@@ -83,6 +88,9 @@ characters.
 	Example: strings.Trim(`
   # Read a secret named "api-key" from the bucket "my-secrets"
   berglas access my-secrets/api-key
+
+  # Read generation 1563925940580201 of a secret named "api-key" from the bucket "my-secrets"
+  berglas access my-secrets/api-key --generation 1563925940580201
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  accessRun,
@@ -117,7 +125,7 @@ var createCmd = &cobra.Command{
 	Short: "Create or overwrite a secret",
 	Long: strings.Trim(`
 Creates a new secret with the given name and contents, encrypted with the
-provided Cloud KMS key If the secret already exists, its contents are
+provided Cloud KMS key. If the secret already exists, its contents are
 overwritten.
 
 If a secret already exists at that location, its contents are overwritten.
@@ -228,6 +236,12 @@ the "access" command instead.
 	Example: strings.Trim(`
   # List all secrets in the bucket "my-secrets"
   berglas list my-secrets
+
+  # List all secrets with names starting with "secret" in the bucket "my-secrets"
+  berglas list my-secrets --prefix secret
+
+  # List all generations of all secrets in the bucket "my-secrets"
+  berglas list my-secrets --all-generations
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	Run:  listRun,
@@ -286,6 +300,8 @@ Show berglas version.
 
 func main() {
 	rootCmd.AddCommand(accessCmd)
+	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
+		"Get a specific generation")
 
 	rootCmd.AddCommand(bootstrapCmd)
 	bootstrapCmd.Flags().StringVarP(&projectID, "project", "p", "",
@@ -319,6 +335,10 @@ func main() {
 		"Member to add")
 
 	rootCmd.AddCommand(listCmd)
+	listCmd.Flags().BoolVar(&listGenerations, "all-generations", false,
+		"List all versions of secrets")
+	listCmd.Flags().StringVar(&listPrefix, "prefix", "",
+		"List secrets that match prefix")
 
 	rootCmd.AddCommand(revokeCmd)
 	revokeCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
@@ -337,8 +357,9 @@ func accessRun(_ *cobra.Command, args []string) {
 
 	ctx := cliCtx()
 	plaintext, err := berglas.Access(ctx, &berglas.AccessRequest{
-		Bucket: bucket,
-		Object: object,
+		Bucket:     bucket,
+		Object:     object,
+		Generation: accessGeneration,
 	})
 	if err != nil {
 		handleError(err, 1)
@@ -394,7 +415,8 @@ func createRun(_ *cobra.Command, args []string) {
 	}
 
 	ctx := cliCtx()
-	if err := berglas.Create(ctx, &berglas.CreateRequest{
+	var secret *berglas.Secret
+	if secret, err = berglas.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    object,
 		Key:       key,
@@ -403,7 +425,7 @@ func createRun(_ *cobra.Command, args []string) {
 		handleError(err, 1)
 	}
 
-	fmt.Fprintf(stdout, "Successfully created secret: %s\n", object)
+	fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, secret.Generation)
 }
 
 func deleteRun(_ *cobra.Command, args []string) {
@@ -540,14 +562,16 @@ func listRun(_ *cobra.Command, args []string) {
 
 	ctx := cliCtx()
 	secrets, err := berglas.List(ctx, &berglas.ListRequest{
-		Bucket: bucket,
+		Bucket:      bucket,
+		Prefix:      listPrefix,
+		Generations: listGenerations,
 	})
 	if err != nil {
 		handleError(err, 1)
 	}
 
-	for _, s := range secrets {
-		fmt.Fprintf(stdout, "%s\n", s)
+	for _, s := range secrets.Secrets {
+		fmt.Fprintf(stdout, "%s (updated %s) (generation %d)\n", s.Name, s.UpdatedAt.Local(), s.Generation)
 	}
 }
 

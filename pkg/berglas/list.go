@@ -15,15 +15,56 @@
 package berglas
 
 import (
+	"cloud.google.com/go/storage"
 	"context"
 	"sort"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
 
+// Secret represents a specific secret stored in Google Cloud Storage
+// The attributes on this object should ideally map 1:1 with storage.ObjectAttrs
+type Secret struct {
+	// Name of the secret
+	Name string
+
+	// UpdatedAt indicates when a secret was last updated
+	UpdatedAt time.Time
+
+	// Generation indicates a secret's version
+	Generation int64
+}
+
+type ListResponse struct {
+	Secrets []Secret
+}
+
+// secretList is a list of secrets
+type secretList []Secret
+
+// Len is the number of elements in the collection.
+func (s secretList) Len() int {
+	return len(s)
+}
+
+// Less reports whether the element with
+// index i should sort before the element with index j.
+func (s secretList) Less(i, j int) bool {
+	if s[i].Name == s[j].Name {
+		return s[i].Generation > s[j].Generation
+	}
+	return s[i].Name > s[j].Name
+}
+
+// Swap swaps the elements with indexes i and j.
+func (s secretList) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 // List is a top-level package function for listing secrets.
-func List(ctx context.Context, i *ListRequest) ([]string, error) {
+func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
@@ -35,10 +76,16 @@ func List(ctx context.Context, i *ListRequest) ([]string, error) {
 type ListRequest struct {
 	// Bucket is the name of the bucket where the secrets live.
 	Bucket string
+
+	// Prefix matches secret names to filter
+	Prefix string
+
+	// Generations indicates that all generations of secrets should be listed
+	Generations bool
 }
 
 // List lists all secrets in the bucket.
-func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
+func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
@@ -48,12 +95,17 @@ func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
 		return nil, errors.New("missing bucket name")
 	}
 
-	var result []string
+	var result secretList
+
+	query := &storage.Query{
+		Prefix:   i.Prefix,
+		Versions: i.Generations,
+	}
 
 	// List all objects
 	it := c.storageClient.
 		Bucket(bucket).
-		Objects(ctx, nil)
+		Objects(ctx, query)
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
@@ -65,11 +117,18 @@ func (c *Client) List(ctx context.Context, i *ListRequest) ([]string, error) {
 
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			result = append(result, obj.Name)
+			secret := Secret{
+				Name:       obj.Name,
+				UpdatedAt:  obj.Updated,
+				Generation: obj.Generation,
+			}
+			result = append(result, secret)
 		}
 	}
 
-	sort.Strings(result)
+	sort.Sort(result)
 
-	return result, nil
+	return &ListResponse{
+		Secrets: result,
+	}, nil
 }
