@@ -47,6 +47,10 @@ func DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
 		return new(cloudRunEnv), nil
 	}
 
+	if os.Getenv("GAE_SERVICE") != "" || os.Getenv("GAE_INSTANCE") != "" {
+		return new(gaeEnv), nil
+	}
+
 	return nil, errors.New("unknown runtime")
 }
 
@@ -204,4 +208,59 @@ type cloudRunContainer struct {
 		Name  string `json:"name"`
 		Value string `json:"value"`
 	} `json:"env"`
+}
+
+// gaeEnv is a Google App Engine environment.
+type gaeEnv struct{}
+
+type appengineVersion struct {
+	EnvVariables map[string]string `json:"envVariables"`
+}
+
+// EnvVars returns the list of envvars set on this app engine version
+func (e *gaeEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+	version := os.Getenv("GAE_VERSION")
+	service := os.Getenv("GAE_SERVICE")
+
+	project, err := valueFromMetadata(ctx, "project/project-id")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get project ID")
+	}
+
+	endpoint := fmt.Sprintf("https://appengine.googleapis.com/v1/apps/%s/services/%s/versions/%s?view=FULL",
+		project, service, version)
+
+	client, err := google.DefaultClient(ctx, iam.CloudPlatformScope)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create app engine client")
+	}
+	client.Timeout = 15 * time.Second
+
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create app engine request")
+	}
+	req.Header.Set("User-Agent", UserAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to execute app engine request")
+	}
+	defer resp.Body.Close()
+
+	d, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read app engine response body")
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, errors.Errorf("failed to communicate with app engine: %s", d)
+	}
+
+	var s appengineVersion
+	if err := json.Unmarshal(d, &s); err != nil {
+		return nil, err
+	}
+
+	return s.EnvVariables, nil
 }

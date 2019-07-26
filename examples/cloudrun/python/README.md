@@ -87,7 +87,9 @@ environment variables:
       --quiet \
       --project ${PROJECT_ID} \
       --region us-central1
-
+    ```
+   
+    ```text
     IMAGE=gcr.io/${PROJECT_ID}/berglas-example-python
     for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
       gcloud container images delete --quiet --force-delete-tags "${IMAGE}@${DIGEST}"
