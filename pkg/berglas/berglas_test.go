@@ -188,7 +188,7 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 }
 
-func testStringInclude(l []Secret, n string, g int64) bool {
+func testStringInclude(l []*Secret, n string, g int64) bool {
 	for _, v := range l {
 		if n == v.Name && (g == 0 || g == v.Generation) {
 			return true

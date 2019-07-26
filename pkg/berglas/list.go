@@ -37,12 +37,14 @@ type Secret struct {
 	Generation int64
 }
 
+// ListResponse is the response from a list call.
 type ListResponse struct {
-	Secrets []Secret
+	// Secrets are the list of secrets in the response.
+	Secrets []*Secret
 }
 
 // secretList is a list of secrets
-type secretList []Secret
+type secretList []*Secret
 
 // Len is the number of elements in the collection.
 func (s secretList) Len() int {
@@ -117,12 +119,11 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error
 
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			secret := Secret{
+			result = append(result, &Secret{
 				Name:       obj.Name,
 				UpdatedAt:  obj.Updated,
 				Generation: obj.Generation,
-			}
-			result = append(result, secret)
+			})
 		}
 	}
 
