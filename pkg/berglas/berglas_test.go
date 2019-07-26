@@ -94,10 +94,10 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %q to include %q", secrets, object)
+		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 	if !testStringInclude(secrets.Secrets, object2, 0) {
-		t.Errorf("expected %q to include %q", secrets, object2)
+		t.Errorf("expected %#v to include %q", secrets, object2)
 	}
 
 	secrets, err = c.List(ctx, &ListRequest{
@@ -108,10 +108,10 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %q to include %q", secrets, object)
+		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 	if testStringInclude(secrets.Secrets, object2, secret.Generation) {
-		t.Errorf("expected %q to not include %q", secrets, object)
+		t.Errorf("expected %#v to not include %q", secrets, object)
 	}
 
 	updated := []byte("updated text")
@@ -135,10 +135,10 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !testStringInclude(secrets.Secrets, object, updatedSecret.Generation) {
-		t.Errorf("expected %q to include %q", secrets, object)
+		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %q to include %q", secrets, object)
+		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 
 	plaintext, err := c.Access(ctx, &AccessRequest{
