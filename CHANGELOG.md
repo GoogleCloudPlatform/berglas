@@ -4,6 +4,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 
 ## [0.1.5] Unreleased
 ### Changed
+- auto: [security] do not trust the environment variables
 
 ## [0.1.4] 2019-07-26
 ### Breaking
