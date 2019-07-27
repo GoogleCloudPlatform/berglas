@@ -86,11 +86,10 @@ func Replace(ctx context.Context, key string) error {
 	return client.Replace(ctx, key)
 }
 
-// Replace parses a berglas reference from the environment variable at the
-// given environment variable name. If parsing and extraction is successful,
-// this function replaces the value of the environment variable to the resolved
-// secret reference.
-func (c *Client) Replace(ctx context.Context, key string) error {
+// ReplaceValue parses a berglas reference from value. If parsing and extraction
+// is successful, this function sets the value of the environment variable to the
+// resolved secret reference.
+func (c *Client) ReplaceValue(ctx context.Context, key string, value string) error {
 	plaintext, err := c.Resolve(ctx, os.Getenv(key))
 	if err != nil {
 		return err
@@ -100,4 +99,12 @@ func (c *Client) Replace(ctx context.Context, key string) error {
 		return errors.Wrapf(err, "failed to set %s", key)
 	}
 	return nil
+}
+
+// Replace parses a berglas reference from the environment variable at the
+// given environment variable name. If parsing and extraction is successful,
+// this function replaces the value of the environment variable to the resolved
+// secret reference.
+func (c *Client) Replace(ctx context.Context, key string) error {
+	return c.ReplaceValue(ctx, key, os.Getenv(key))
 }
