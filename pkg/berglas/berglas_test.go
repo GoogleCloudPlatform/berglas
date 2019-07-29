@@ -80,6 +80,21 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := c.Grant(ctx, &GrantRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: []string{sa},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if secret, err = c.Access(ctx, &AccessRequest{
+		Bucket: bucket,
+		Object: object,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	if _, err = c.Create(ctx, &CreateRequest{
 		Bucket:    bucket,
 		Object:    object2,
@@ -174,14 +189,6 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 	if !bytes.Equal(accessedSecret.Plaintext, original) {
 		t.Errorf("expected %q to be %q", accessedSecret.Plaintext, original)
-	}
-
-	if err := c.Grant(ctx, &GrantRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: []string{sa},
-	}); err != nil {
-		t.Fatal(err)
 	}
 
 	if err := c.Revoke(ctx, &RevokeRequest{

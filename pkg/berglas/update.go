@@ -109,6 +109,11 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		return nil, errors.Wrap(err, "failed to get object")
 	}
 
+	members, err := c.getMembers(ctx, bucket, object)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve members")
+	}
+
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
 	// pieces of data).
 	dek, ciphertext, err := envelopeEncrypt(plaintext)
@@ -139,5 +144,19 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		MetagenerationMatch: metageneration,
 	}
 
-	return c.write(ctx, bucket, object, key, blob, conds, plaintext, secretUpdatedError)
+	secret, err := c.write(ctx, bucket, object, key, blob, conds, plaintext, secretUpdatedError)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.Grant(ctx, &GrantRequest{
+		Bucket:  bucket,
+		Object:  object,
+		Members: members,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "secret updated, but failed to update members")
+	}
+
+	return secret, nil
 }
