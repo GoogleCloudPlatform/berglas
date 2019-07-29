@@ -488,8 +488,11 @@ func findEditor() error {
 	if editor == "" {
 		editor = os.Getenv("EDITOR")
 	}
-	return errors.New("Unable to determine editor. Please set EDITOR or manually specify using the " +
-		"--editor flag and try again")
+	if editor == "" {
+		return errors.New("Unable to determine editor. Please set EDITOR or manually specify using the " +
+			"--editor flag and try again")
+	}
+	return nil
 }
 
 func editRun(_ *cobra.Command, args []string) {
@@ -540,6 +543,7 @@ func editRun(_ *cobra.Command, args []string) {
 	editorCmd, editorArgs := editorSplit[0], editorSplit[1:]
 	editorArgs = append(editorArgs, f.Name())
 	cmd := exec.Command(editorCmd, editorArgs...)
+	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
