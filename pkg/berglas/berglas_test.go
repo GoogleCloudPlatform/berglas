@@ -21,6 +21,9 @@ import (
 	"os"
 	"testing"
 
+	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
+
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -206,8 +209,9 @@ func TestBerglasIntegration(t *testing.T) {
 	}
 
 	if err := c.Delete(ctx, &DeleteRequest{
-		Bucket: bucket,
-		Object: object,
+		Bucket:      bucket,
+		Object:      object,
+		Permanently: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -217,6 +221,35 @@ func TestBerglasIntegration(t *testing.T) {
 		Object: object2,
 	}); err != nil {
 		t.Fatal(err)
+	}
+
+	if err := c.Delete(ctx, &DeleteRequest{
+		Bucket:      bucket,
+		Object:      object2,
+		Permanently: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(object, object2)
+	testNoObjectVersionExists(ctx, t, c, bucket, object)
+	testNoObjectVersionExists(ctx, t, c, bucket, object2)
+}
+
+func testNoObjectVersionExists(ctx context.Context, t *testing.T, c *Client, bucket, object string) {
+	it := c.storageClient.
+		Bucket(bucket).
+		Objects(ctx, &storage.Query{
+			Prefix:   object,
+			Versions: true,
+		})
+	obj, err := it.Next()
+	if err != iterator.Done {
+		if err == nil {
+			t.Errorf("expected no objects in bucket, found: %v", obj)
+		} else {
+			t.Error(err)
+		}
 	}
 }
 

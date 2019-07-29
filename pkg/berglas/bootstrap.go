@@ -154,6 +154,15 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 						NumNewerVersions: 10,
 					},
 				},
+				storage.LifecycleRule{
+					Action: storage.LifecycleAction{
+						Type: "Delete",
+					},
+					Condition: storage.LifecycleCondition{
+						AgeInDays: 30,
+						Liveness:  storage.Archived,
+					},
+				},
 			},
 		},
 		Labels: map[string]string{

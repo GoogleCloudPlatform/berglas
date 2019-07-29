@@ -73,6 +73,8 @@ type ListRequest struct {
 	Generations bool
 }
 
+var emptyTime = time.Time{}
+
 // List lists all secrets in the bucket. This doesn't fetch the plaintext value
 // of secrets.
 func (c *Client) List(
@@ -86,12 +88,12 @@ func (c *Client) List(
 		return nil, errors.New("missing bucket name")
 	}
 
-	var result secretList
-
 	query := &storage.Query{
 		Prefix:   i.Prefix,
 		Versions: i.Generations,
 	}
+
+	secrets := map[string][]*storage.ObjectAttrs{}
 
 	// List all objects
 	it := c.storageClient.
@@ -109,6 +111,28 @@ func (c *Client) List(
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
 			result = append(result, secretFromAttrs(obj, nil))
+		}
+	}
+
+	// list objects returns all generations even if the live object is gone.
+	// filter on names which have not been deleted
+	for _, secretValues := range secrets {
+		foundLiveObject := false
+		for _, obj := range secretValues {
+			if obj.Deleted == emptyTime {
+				foundLiveObject = true
+				break
+			}
+		}
+
+		if foundLiveObject {
+			for _, obj := range secretValues {
+				result = append(result, &Secret{
+					Name:       obj.Name,
+					UpdatedAt:  obj.Updated,
+					Generation: obj.Generation,
+				})
+			}
 		}
 	}
 

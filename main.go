@@ -26,9 +26,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 )
 
 const (
@@ -50,8 +51,9 @@ var (
 	listGenerations bool
 	listPrefix      string
 
-	key       string
-	execLocal bool
+	key             string
+	execLocal       bool
+	permanentDelete bool
 
 	editor          string
 	createIfMissing bool
@@ -384,6 +386,8 @@ func main() {
 	}
 
 	rootCmd.AddCommand(deleteCmd)
+	deleteCmd.Flags().BoolVar(&permanentDelete, "permanently", false,
+		"Delete this secret permanently instead of archiving")
 
 	rootCmd.AddCommand(editCmd)
 	editCmd.Flags().StringVar(&editor, "editor", "",
@@ -517,8 +521,9 @@ func deleteRun(_ *cobra.Command, args []string) error {
 
 	ctx := cliCtx()
 	if err := berglas.Delete(ctx, &berglas.DeleteRequest{
-		Bucket: bucket,
-		Object: object,
+		Bucket:      bucket,
+		Object:      object,
+		Permanently: permanentDelete,
 	}); err != nil {
 		return apiError(err)
 	}
