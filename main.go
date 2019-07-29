@@ -27,9 +27,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 )
 
 var (
@@ -168,12 +169,12 @@ This command will exit successfully even if the secret does not exist.
 
 var editCmd = &cobra.Command{
 	Use:   "edit [secret]",
-	Short: "Edit a secret",
+	Short: "Edit an existing secret",
 	Long: strings.Trim(`
-Updates the contents of a secret by reading the encrypted data from Google
+Updates the contents of an existing secret by reading the encrypted data from Google
 Cloud Storage, decrypting it with Google Cloud KMS, editing it in-place using an editor,
 encrypting the updated content using Google Cloud KMS, writing it back into Google
-Cloud Storage. The file MUST be saved and editor MUST exit with exit code 0 for the
+Cloud Storage. The file must be saved and editor must exit with exit code 0 for the
 secret to update.
 `, "\n"),
 	Example: strings.Trim(`
@@ -354,7 +355,7 @@ func main() {
 	rootCmd.AddCommand(editCmd)
 	editCmd.Flags().StringVarP(&editor, "editor", "", "",
 		strings.Trim(`
-The command to open a new editor. If this flag is not specified, it defaults to
+The editor program to use. If this flag is not specified, it defaults to
 reading env vars "VISUAL", or "EDITOR" (in that order). If neither environment variable
 is found, these commands are attempted: "vi", "emacs", "nano", "pico". The command is
 invoked with just one argument: a temporary filename with contents of the secret. The
@@ -480,20 +481,6 @@ func deleteRun(_ *cobra.Command, args []string) {
 	fmt.Fprintf(stdout, "Successfully deleted secret if it existed: %s\n", object)
 }
 
-func isEditorAvailable(e string) (bool, error) {
-	cmd := exec.Command("which", "-s", e)
-	if err := cmd.Start(); err != nil {
-		return false, err
-	}
-	if err := cmd.Wait(); err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
 func findEditor() error {
 	if editor == "" {
 		editor = os.Getenv("VISUAL")
@@ -501,20 +488,8 @@ func findEditor() error {
 	if editor == "" {
 		editor = os.Getenv("EDITOR")
 	}
-	if editor != "" {
-		return nil
-	}
-
-	editorsToTry := []string{"vi", "emacs", "nano", "pico"}
-	for _, e := range editorsToTry {
-		if available, err := isEditorAvailable(e); err != nil {
-			return err
-		} else if available {
-			editor = e
-			return nil
-		}
-	}
-	return errors.New("unable to determine editor. manually specify using `--editor` flag and try again")
+	return errors.New("Unable to determine editor. Please set EDITOR or manually specify using the " +
+		"--editor flag and try again")
 }
 
 func editRun(_ *cobra.Command, args []string) {
@@ -526,7 +501,7 @@ func editRun(_ *cobra.Command, args []string) {
 	ctx := cliCtx()
 	client, err := berglas.New(ctx)
 	if err != nil {
-		handleError(err, 2)
+		handleError(errors.Wrap(err, "the secret was not updated"), 1)
 	}
 	var secret *berglas.Secret
 	if secret, err = client.Access(ctx, &berglas.AccessRequest{
@@ -544,6 +519,13 @@ func editRun(_ *cobra.Command, args []string) {
 	if err != nil {
 		handleError(errors.Wrap(err, "failed to create tempfile for secret"), 1)
 	}
+
+	defer func() {
+		if err := os.Remove(f.Name()); err != nil {
+			handleError(err, 1)
+		}
+	}()
+
 	if _, err := f.Write(secret.Plaintext); err != nil {
 		handleError(errors.Wrap(err, "failed to write tempfile for secret"), 1)
 	}
@@ -554,7 +536,10 @@ func editRun(_ *cobra.Command, args []string) {
 		handleError(errors.Wrap(err, "failed to close tempfile for secret"), 1)
 	}
 
-	cmd := exec.Command(editor, f.Name())
+	editorSplit := strings.Split(editor, " ")
+	editorCmd, editorArgs := editorSplit[0], editorSplit[1:]
+	editorArgs = append(editorArgs, f.Name())
+	cmd := exec.Command(editorCmd, editorArgs...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
@@ -569,16 +554,11 @@ func editRun(_ *cobra.Command, args []string) {
 
 	newPlaintext, err := ioutil.ReadFile(f.Name())
 	if err != nil {
-		// try to cleanup
-		_ = os.Remove(f.Name())
 		handleError(errors.Wrapf(err, "failed to read secret tempfile"), 2)
 	}
 
-	if err = os.Remove(f.Name()); err != nil {
-		handleError(errors.Wrapf(err, "failed to delete secret tempfile"), 2)
-	}
-
 	if bytes.Equal(secret.Plaintext, newPlaintext) {
+		fmt.Fprintf(stdout, "[WARN] Secret not updated")
 		return
 	}
 

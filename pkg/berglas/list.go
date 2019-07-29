@@ -25,7 +25,8 @@ import (
 )
 
 // Secret represents a specific secret stored in Google Cloud Storage
-// The attributes on this object should ideally map 1:1 with storage.ObjectAttrs
+// The attributes on this object should ideally map 1:1 with
+// storage.ObjectAttrs
 type Secret struct {
 	// Name of the secret
 	Name string
@@ -74,7 +75,8 @@ func (s secretList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-// List is a top-level package function for listing secrets. This doesn't fetch the plaintext value of secrets.
+// List is a top-level package function for listing secrets. This doesn't
+// fetch the plaintext value of secrets.
 func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	client, err := New(ctx)
 	if err != nil {
@@ -95,8 +97,10 @@ type ListRequest struct {
 	Generations bool
 }
 
-// List lists all secrets in the bucket. This doesn't fetch the plaintext value of secrets.
-func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
+// List lists all secrets in the bucket. This doesn't fetch the plaintext value
+// of secrets.
+func (c *Client) List(
+	ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
