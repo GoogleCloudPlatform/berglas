@@ -23,34 +23,42 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-// Create is a top-level package function for creating a secret. For large
-// volumes of secrets, please create a client instead.
-func Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
+// Update is a top-level package function for creating a secret. For large
+// volumes of secrets, please update a client instead.
+func Update(ctx context.Context, i *UpdateRequest) (*Secret, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return client.Create(ctx, i)
+	return client.Update(ctx, i)
 }
 
-// CreateRequest is used as input to a create a secret.
-type CreateRequest struct {
+// UpdateRequest is used as input to a update a secret.
+type UpdateRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
 	Bucket string
 
 	// Object is the name of the object in Cloud Storage.
 	Object string
 
+	// Generation indicates a secret's version
+	Generation int64
+
 	// Key is the fully qualified KMS key id.
 	Key string
 
-	// Plaintext is the plaintext secret to encrypt and store.
+	// Metageneration indicates a secret's metageneration
+	Metageneration int64
+
+	// Plaintext value of the secret (may not be filled in)
 	Plaintext []byte
 }
 
-// Create reads the contents of the secret from the bucket, decrypting the
+var secretUpdatedError = "secret modified between read and write"
+
+// Update reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
-func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
+func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
@@ -65,6 +73,16 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		return nil, errors.New("missing object name")
 	}
 
+	generation := i.Generation
+	if generation <= 0 {
+		return nil, errors.New("missing secret generation")
+	}
+
+	metageneration := i.Metageneration
+	if metageneration <= 0 {
+		return nil, errors.New("missing secret metageneration")
+	}
+
 	key := i.Key
 	if key == "" {
 		return nil, errors.New("missing key name")
@@ -73,6 +91,21 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 	plaintext := i.Plaintext
 	if plaintext == nil {
 		return nil, errors.New("missing plaintext")
+	}
+
+	attrs, err := c.storageClient.
+		Bucket(bucket).
+		Object(object).
+		Attrs(ctx)
+	switch err {
+	case nil:
+		if attrs.Generation != generation || attrs.Metageneration != metageneration {
+			return nil, errors.New(secretUpdatedError)
+		}
+	case storage.ErrObjectNotExist:
+		return nil, errors.Wrap(err, "secret does not exist")
+	default:
+		return nil, errors.Wrap(err, "failed to get object")
 	}
 
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
@@ -101,8 +134,9 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		base64.StdEncoding.EncodeToString(ciphertext))
 
 	conds := &storage.Conditions{
-		DoesNotExist: true,
+		GenerationMatch:     generation,
+		MetagenerationMatch: metageneration,
 	}
 
-	return c.write(ctx, bucket, object, key, blob, conds, plaintext, "secret already exists")
+	return c.write(ctx, bucket, object, key, blob, conds, plaintext, secretUpdatedError)
 }

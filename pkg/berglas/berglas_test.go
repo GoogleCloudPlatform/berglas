@@ -117,11 +117,13 @@ func TestGsecretsIntegration(t *testing.T) {
 	updated := []byte("updated text")
 
 	var updatedSecret *Secret
-	if updatedSecret, err = c.Create(ctx, &CreateRequest{
-		Bucket:    bucket,
-		Object:    object,
-		Key:       key,
-		Plaintext: updated,
+	if updatedSecret, err = c.Update(ctx, &UpdateRequest{
+		Bucket:         bucket,
+		Object:         object,
+		Generation:     secret.Generation,
+		Key:            secret.KMSKey,
+		Metageneration: secret.Metageneration,
+		Plaintext:      updated,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -141,18 +143,18 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 
-	plaintext, err := c.Access(ctx, &AccessRequest{
+	accessedSecret, err := c.Access(ctx, &AccessRequest{
 		Bucket: bucket,
 		Object: object,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(plaintext, updated) {
-		t.Errorf("expected %q to be %q", plaintext, updated)
+	if !bytes.Equal(accessedSecret.Plaintext, updated) {
+		t.Errorf("expected %q to be %q", accessedSecret.Plaintext, updated)
 	}
 
-	plaintext, err = c.Access(ctx, &AccessRequest{
+	accessedSecret, err = c.Access(ctx, &AccessRequest{
 		Bucket:     bucket,
 		Object:     object,
 		Generation: secret.Generation,
@@ -160,8 +162,8 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(plaintext, original) {
-		t.Errorf("expected %q to be %q", plaintext, original)
+	if !bytes.Equal(accessedSecret.Plaintext, original) {
+		t.Errorf("expected %q to be %q", accessedSecret.Plaintext, original)
 	}
 
 	if err := c.Grant(ctx, &GrantRequest{

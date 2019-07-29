@@ -39,13 +39,14 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to parse reference %s", s)
 	}
 
-	plaintext, err := c.Access(ctx, &AccessRequest{
+	secret, err := c.Access(ctx, &AccessRequest{
 		Bucket: ref.Bucket(),
 		Object: ref.Object(),
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to access secret %s/%s", ref.Bucket(), ref.Object())
 	}
+	plaintext := secret.Plaintext
 
 	if pth := ref.Filepath(); pth != "" {
 		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE, 0600)
