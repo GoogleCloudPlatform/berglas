@@ -15,10 +15,11 @@
 package berglas
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"encoding/base64"
 	"fmt"
+
+	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -48,6 +49,8 @@ type CreateRequest struct {
 	Plaintext []byte
 }
 
+var alreadyExistsError = "secret already exists"
+
 // Create reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
 func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
@@ -73,6 +76,19 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 	plaintext := i.Plaintext
 	if plaintext == nil {
 		return nil, errors.New("missing plaintext")
+	}
+
+	_, err := c.storageClient.
+		Bucket(bucket).
+		Object(object).
+		Attrs(ctx)
+	switch err {
+	case nil:
+		return nil, errors.New(alreadyExistsError)
+	case storage.ErrObjectNotExist:
+		break
+	default:
+		return nil, errors.Wrap(err, "failed to get object")
 	}
 
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
@@ -104,5 +120,5 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		DoesNotExist: true,
 	}
 
-	return c.write(ctx, bucket, object, key, blob, conds, plaintext, "secret already exists")
+	return c.write(ctx, bucket, object, key, blob, conds, plaintext, alreadyExistsError)
 }
