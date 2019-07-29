@@ -30,11 +30,20 @@ type Secret struct {
 	// Name of the secret
 	Name string
 
-	// UpdatedAt indicates when a secret was last updated
-	UpdatedAt time.Time
-
 	// Generation indicates a secret's version
 	Generation int64
+
+	// KMSKey is the key used to encrypt the secret key
+	KMSKey string
+
+	// Metageneration indicates a secret's metageneration
+	Metageneration int64
+
+	// Plaintext value of the secret (may not be filled in)
+	Plaintext []byte
+
+	// UpdatedAt indicates when a secret was last updated
+	UpdatedAt time.Time
 }
 
 // ListResponse is the response from a list call.
@@ -65,7 +74,7 @@ func (s secretList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-// List is a top-level package function for listing secrets.
+// List is a top-level package function for listing secrets. This doesn't fetch the plaintext value of secrets.
 func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	client, err := New(ctx)
 	if err != nil {
@@ -86,7 +95,7 @@ type ListRequest struct {
 	Generations bool
 }
 
-// List lists all secrets in the bucket.
+// List lists all secrets in the bucket. This doesn't fetch the plaintext value of secrets.
 func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
@@ -120,9 +129,11 @@ func (c *Client) List(ctx context.Context, i *ListRequest) (*ListResponse, error
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
 			result = append(result, &Secret{
-				Name:       obj.Name,
-				UpdatedAt:  obj.Updated,
-				Generation: obj.Generation,
+				Name:           obj.Name,
+				Generation:     obj.Generation,
+				KMSKey:         obj.Metadata[MetadataKMSKey],
+				Metageneration: obj.Metageneration,
+				UpdatedAt:      obj.Updated,
 			})
 		}
 	}

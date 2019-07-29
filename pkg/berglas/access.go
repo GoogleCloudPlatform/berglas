@@ -27,7 +27,7 @@ import (
 
 // Access is a top-level package function for accessing a secret. For large
 // volumes of secrets, please create a client instead.
-func Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
+func Access(ctx context.Context, i *AccessRequest) (*Secret, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ type AccessRequest struct {
 
 // Access reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
-func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
+func (c *Client) Access(ctx context.Context, i *AccessRequest) (*Secret, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
@@ -133,5 +133,12 @@ func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "xxx")
 	}
-	return plaintext, nil
+	return &Secret{
+		Name:           attrs.Name,
+		Generation:     attrs.Generation,
+		KMSKey:         key,
+		Metageneration: attrs.Metageneration,
+		Plaintext:      plaintext,
+		UpdatedAt:      attrs.Updated,
+	}, nil
 }

@@ -59,12 +59,31 @@ func ExampleClient_List() {
 }
 
 func ExampleClient_Access() {
-	plaintext, err = client.Access(ctx, &berglas.AccessRequest{
+	secret, err = client.Access(ctx, &berglas.AccessRequest{
 		Bucket: bucket,
 		Object: "my-secret",
 	})
 
-	log.Println(string(plaintext)) // "my secret data"
+	log.Println(secret) // [&Secret{"my secret data"...}]
+}
+
+func ExampleClient_Update() {
+	secret, err = client.Create(ctx, &berglas.CreateRequest{
+		Bucket:    bucket,
+		Object:    "my-secret",
+		Key:       key,
+		Plaintext: []byte("my secret data"),
+	})
+	secret, err = client.Update(ctx, &berglas.UpdateRequest{
+		Bucket:         bucket,
+		Object:         "my-secret",
+		Generation:     secret.Generation,
+		Key:            key,
+		Metageneration: secret.Metageneration,
+		Plaintext:      []byte("my updated secret data"),
+	})
+
+	log.Println(secret) // [&Secret{"my updated secret data"...}]
 }
 
 func ExampleClient_Bootstrap() {
@@ -111,4 +130,6 @@ func ExampleClient_Replace() {
 
 func ExampleClient_Resolve() {
 	plaintext, err = client.Resolve(ctx, "berglas://my-bucket/my-secret")
+
+	log.Println(plaintext) // "my secret data"
 }
