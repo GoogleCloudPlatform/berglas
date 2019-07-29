@@ -17,11 +17,10 @@ package berglas
 import (
 	"context"
 
-	"google.golang.org/api/iterator"
-
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/iterator"
 )
 
 // Delete is a top-level package function for creating a secret. For large

@@ -22,9 +22,8 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"google.golang.org/api/iterator"
-
 	uuid "github.com/satori/go.uuid"
+	"google.golang.org/api/iterator"
 )
 
 func TestBerglasIntegration(t *testing.T) {
