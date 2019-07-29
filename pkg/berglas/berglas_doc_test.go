@@ -74,6 +74,7 @@ func ExampleClient_Update() {
 		Key:       key,
 		Plaintext: []byte("my secret data"),
 	})
+
 	secret, err = client.Update(ctx, &berglas.UpdateRequest{
 		Bucket:         bucket,
 		Object:         "my-secret",
