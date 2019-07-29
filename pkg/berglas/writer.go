@@ -23,15 +23,19 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
+var emptyCondition = storage.Conditions{}
+
 func (c *Client) write(
 	ctx context.Context, bucket, object, key, blob string, conds *storage.Conditions, plaintext []byte,
 	preconditionFailureError string) (*Secret, error) {
-	// Write the object with CAS
-	iow := c.storageClient.
+	oh := c.storageClient.
 		Bucket(bucket).
-		Object(object).
-		If(*conds).
-		NewWriter(ctx)
+		Object(object)
+	// Write the object with CAS
+	if conds != nil && *conds != emptyCondition {
+		oh = oh.If(*conds)
+	}
+	iow := oh.NewWriter(ctx)
 	iow.ObjectAttrs.CacheControl = CacheControl
 	iow.ChunkSize = 1024
 
