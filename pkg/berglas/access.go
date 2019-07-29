@@ -47,6 +47,14 @@ type AccessRequest struct {
 	Generation int64
 }
 
+var doesNotExistError = "secret object not found"
+
+// IsDoesNotExist returns true if the error returned by this package indicates
+// that a secret does not exist
+func IsDoesNotExist(err error) bool {
+	return errors.Cause(err).Error() == "secret object not found"
+}
+
 // Access reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
 func (c *Client) Access(ctx context.Context, i *AccessRequest) (*Secret, error) {
@@ -73,7 +81,7 @@ func (c *Client) Access(ctx context.Context, i *AccessRequest) (*Secret, error) 
 	}
 	attrs, err := h.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
-		return nil, errors.New("secret object not found")
+		return nil, errors.New(doesNotExistError)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read secret metadata")

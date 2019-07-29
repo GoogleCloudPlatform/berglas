@@ -47,6 +47,9 @@ type CreateRequest struct {
 
 	// Plaintext is the plaintext secret to encrypt and store.
 	Plaintext []byte
+
+	// Overwrite the existing secret
+	Overwrite bool
 }
 
 var alreadyExistsError = "secret already exists"
@@ -84,7 +87,9 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		Attrs(ctx)
 	switch err {
 	case nil:
-		return nil, errors.New(alreadyExistsError)
+		if !i.Overwrite {
+			return nil, errors.New(alreadyExistsError)
+		}
 	case storage.ErrObjectNotExist:
 		break
 	default:
@@ -117,7 +122,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		base64.StdEncoding.EncodeToString(ciphertext))
 
 	conds := &storage.Conditions{
-		DoesNotExist: true,
+		DoesNotExist: !i.Overwrite,
 	}
 
 	return c.write(ctx, bucket, object, key, blob, conds, plaintext, alreadyExistsError)

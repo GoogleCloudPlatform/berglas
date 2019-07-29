@@ -67,6 +67,8 @@ func TestGsecretsIntegration(t *testing.T) {
 	}
 
 	original := []byte("original text")
+	updated := []byte("updated text")
+
 	var secret *Secret
 
 	if secret, err = c.Create(ctx, &CreateRequest{
@@ -83,6 +85,16 @@ func TestGsecretsIntegration(t *testing.T) {
 		Object:    object2,
 		Key:       key,
 		Plaintext: original,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = c.Create(ctx, &CreateRequest{
+		Bucket:    bucket,
+		Object:    object2,
+		Key:       key,
+		Plaintext: updated,
+		Overwrite: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -113,8 +125,6 @@ func TestGsecretsIntegration(t *testing.T) {
 	if testStringInclude(secrets.Secrets, object2, secret.Generation) {
 		t.Errorf("expected %#v to not include %q", secrets, object)
 	}
-
-	updated := []byte("updated text")
 
 	var updatedSecret *Secret
 	if updatedSecret, err = c.Update(ctx, &UpdateRequest{

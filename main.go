@@ -43,10 +43,12 @@ var (
 	listGenerations bool
 	listPrefix      string
 
+	overwrite bool
 	key       string
 	execLocal bool
 
-	editor string
+	editor          string
+	createIfMissing bool
 
 	members []string
 
@@ -77,6 +79,8 @@ For example:
 
 For more information and examples, see the help text for a specific command.
 `, "\n"),
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 var accessCmd = &cobra.Command{
@@ -97,7 +101,7 @@ characters.
   berglas access my-secrets/api-key --generation 1563925940580201
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  accessRun,
+	RunE: accessRun,
 }
 
 var bootstrapCmd = &cobra.Command{
@@ -121,7 +125,7 @@ returned.
   berglas bootstrap --project my-project --bucket my-bucket
 `, "\n"),
 	Args: cobra.ExactArgs(0),
-	Run:  bootstrapRun,
+	RunE: bootstrapRun,
 }
 
 var createCmd = &cobra.Command{
@@ -132,8 +136,9 @@ Creates a new secret with the given name and contents, encrypted with the
 provided Cloud KMS key. If the secret already exists, its contents are
 overwritten.
 
-If an object already exists at that location, the operation fails.
-Use the "edit" command to update if it's a secret.
+If an object already exists at that location, the operation fails unless
+--overwrite is specified.
+Use the "edit" command to update an existing secret.
 `, "\n"),
 	Example: strings.Trim(`
   # Create a secret named "api-key" with the contents "abcd1234"
@@ -147,7 +152,7 @@ Use the "edit" command to update if it's a secret.
   berglas create my-secrets/api-key @/path/to/file --key...
 `, "\n"),
 	Args: cobra.ExactArgs(2),
-	Run:  createRun,
+	RunE: createRun,
 }
 
 var deleteCmd = &cobra.Command{
@@ -164,7 +169,7 @@ This command will exit successfully even if the secret does not exist.
   berglas delete my-secrets/api-key
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  deleteRun,
+	RunE: deleteRun,
 }
 
 var editCmd = &cobra.Command{
@@ -185,7 +190,7 @@ secret to update.
   berglas edit my-secrets/api-key --editor emacs
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  editRun,
+	RunE: editRun,
 }
 
 var execCmd = &cobra.Command{
@@ -212,7 +217,7 @@ signals are proxied to the child process.
   berglas exec --local -- myapp --with-args
 `, "\n"),
 	Args: cobra.MinimumNArgs(1),
-	Run:  execRun,
+	RunE: execRun,
 }
 
 var grantCmd = &cobra.Command{
@@ -248,7 +253,7 @@ Members must be specified with their type, for example:
     --member serviceAccount:sa@project.iam.gserviceaccount.com
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  grantRun,
+	RunE: grantRun,
 }
 
 var listCmd = &cobra.Command{
@@ -270,7 +275,7 @@ the "access" command instead.
   berglas list my-secrets --all-generations
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  listRun,
+	RunE: listRun,
 }
 
 var revokeCmd = &cobra.Command{
@@ -311,7 +316,7 @@ Members must be specified with their type, for example:
     --member serviceAccount:sa@project.iam.gserviceaccount.com
 `, "\n"),
 	Args: cobra.ExactArgs(1),
-	Run:  revokeRun,
+	RunE: revokeRun,
 }
 
 var versionCmd = &cobra.Command{
@@ -324,6 +329,11 @@ Show berglas version.
 	Run:  versionRun,
 }
 
+type ExitError struct {
+	error
+	ExitCode int
+}
+
 func main() {
 	rootCmd.AddCommand(accessCmd)
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
@@ -332,10 +342,10 @@ func main() {
 	rootCmd.AddCommand(bootstrapCmd)
 	bootstrapCmd.Flags().StringVarP(&projectID, "project", "p", "",
 		"Google Cloud Project ID")
-	createCmd.MarkFlagRequired("project")
+	bootstrapCmd.MarkFlagRequired("project")
 	bootstrapCmd.Flags().StringVarP(&bucket, "bucket", "b", "",
 		"Name of the Cloud Storage bucket to create")
-	createCmd.MarkFlagRequired("bucket")
+	bootstrapCmd.MarkFlagRequired("bucket")
 	bootstrapCmd.Flags().StringVarP(&bucketLocation, "bucket-location", "l", "US",
 		"Location in which to create Cloud Storage bucket")
 	bootstrapCmd.Flags().StringVarP(&kmsLocation, "kms-location", "m", "global",
@@ -349,11 +359,13 @@ func main() {
 	createCmd.Flags().StringVarP(&key, "key", "k", "",
 		"KMS key to use for encryption")
 	createCmd.MarkFlagRequired("key")
+	createCmd.Flags().BoolVar(&overwrite, "overwrite", false,
+		"Overwrite the secret")
 
 	rootCmd.AddCommand(deleteCmd)
 
 	rootCmd.AddCommand(editCmd)
-	editCmd.Flags().StringVarP(&editor, "editor", "", "",
+	editCmd.Flags().StringVar(&editor, "editor", "",
 		strings.Trim(`
 The editor program to use. If this flag is not specified, it defaults to
 reading env vars "VISUAL", or "EDITOR" (in that order). If neither environment variable
@@ -361,6 +373,10 @@ is found, these commands are attempted: "vi", "emacs", "nano", "pico". The comma
 invoked with just one argument: a temporary filename with contents of the secret. The
 command MUST exit with code 0.
 `, "\n"))
+	editCmd.Flags().BoolVar(&createIfMissing, "create-if-missing", false,
+		"Create the secret if it doesn't exist")
+	editCmd.Flags().StringVarP(&key, "key", "k", "",
+		"KMS key to use for encryption (only used when secret doesn't exist)")
 
 	rootCmd.AddCommand(execCmd)
 	execCmd.Flags().BoolVarP(&execLocal, "local", "l", false,
@@ -382,13 +398,19 @@ command MUST exit with code 0.
 
 	rootCmd.AddCommand(versionCmd)
 
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(stderr, "%s\n", err)
+		if exitError, ok := err.(ExitError); ok && exitError.ExitCode != 0 {
+			os.Exit(exitError.ExitCode)
+		}
+		os.Exit(1)
+	}
 }
 
-func accessRun(_ *cobra.Command, args []string) {
+func accessRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	ctx := cliCtx()
@@ -398,13 +420,14 @@ func accessRun(_ *cobra.Command, args []string) {
 		Generation: accessGeneration,
 	})
 	if err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	fmt.Fprintf(stdout, "%s", secret.Plaintext)
+	return nil
 }
 
-func bootstrapRun(_ *cobra.Command, args []string) {
+func bootstrapRun(_ *cobra.Command, args []string) error {
 	ctx := cliCtx()
 	if err := berglas.Bootstrap(ctx, &berglas.BootstrapRequest{
 		ProjectID:      projectID,
@@ -414,7 +437,7 @@ func bootstrapRun(_ *cobra.Command, args []string) {
 		KMSKeyRing:     kmsKeyRing,
 		KMSCryptoKey:   kmsCryptoKey,
 	}); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	kmsKeyID := fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
@@ -436,18 +459,19 @@ func bootstrapRun(_ *cobra.Command, args []string) {
 	fmt.Fprintf(stdout, "    --member user:jane.doe@mycompany.com\n")
 	fmt.Fprintf(stdout, "\n")
 	fmt.Fprintf(stdout, "For more help and examples, please run \"berglas -h\".\n")
+	return nil
 }
 
-func createRun(_ *cobra.Command, args []string) {
+func createRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	data := strings.TrimSpace(args[1])
 	plaintext, err := readData(data)
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	ctx := cliCtx()
@@ -457,17 +481,19 @@ func createRun(_ *cobra.Command, args []string) {
 		Object:    object,
 		Key:       key,
 		Plaintext: plaintext,
+		Overwrite: overwrite,
 	}); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, secret.Generation)
+	return nil
 }
 
-func deleteRun(_ *cobra.Command, args []string) {
+func deleteRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	ctx := cliCtx()
@@ -475,10 +501,11 @@ func deleteRun(_ *cobra.Command, args []string) {
 		Bucket: bucket,
 		Object: object,
 	}); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	fmt.Fprintf(stdout, "Successfully deleted secret if it existed: %s\n", object)
+	return nil
 }
 
 func findEditor() error {
@@ -495,48 +522,50 @@ func findEditor() error {
 	return nil
 }
 
-func editRun(_ *cobra.Command, args []string) {
+func editRun(_ *cobra.Command, args []string) (err error) {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	ctx := cliCtx()
 	client, err := berglas.New(ctx)
 	if err != nil {
-		handleError(errors.Wrap(err, "the secret was not updated"), 1)
+		return errors.Wrap(err, "the secret was not updated")
 	}
 	var secret *berglas.Secret
 	if secret, err = client.Access(ctx, &berglas.AccessRequest{
 		Bucket: bucket,
 		Object: object,
-	}); err != nil {
-		handleError(err, 1)
+	}); err != nil && !(createIfMissing && berglas.IsDoesNotExist(err)) {
+		return err
 	}
 
 	if err = findEditor(); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	f, err := ioutil.TempFile("", "berglas-")
 	if err != nil {
-		handleError(errors.Wrap(err, "failed to create tempfile for secret"), 1)
+		return errors.Wrap(err, "failed to create tempfile for secret")
 	}
 
 	defer func() {
-		if err := os.Remove(f.Name()); err != nil {
-			handleError(err, 1)
+		if rmErr := os.Remove(f.Name()); rmErr != nil && err == nil {
+			err = rmErr
 		}
 	}()
 
-	if _, err := f.Write(secret.Plaintext); err != nil {
-		handleError(errors.Wrap(err, "failed to write tempfile for secret"), 1)
+	if secret != nil {
+		if _, err := f.Write(secret.Plaintext); err != nil {
+			return errors.Wrap(err, "failed to write tempfile for secret")
+		}
 	}
 	if err := f.Sync(); err != nil {
-		handleError(errors.Wrap(err, "failed to sync tempfile for secret"), 1)
+		return errors.Wrap(err, "failed to sync tempfile for secret")
 	}
 	if err := f.Close(); err != nil {
-		handleError(errors.Wrap(err, "failed to close tempfile for secret"), 1)
+		return errors.Wrap(err, "failed to close tempfile for secret")
 	}
 
 	editorSplit := strings.Split(editor, " ")
@@ -547,18 +576,32 @@ func editRun(_ *cobra.Command, args []string) {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Start(); err != nil {
-		handleError(errors.Wrap(err, "failed to start editor"), 2)
+		return ExitError{errors.Wrap(err, "failed to start editor"), 2}
 	}
 	if err := cmd.Wait(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
-			handleError(errors.Wrap(err, "editor failed to exit cleanly"), 2)
+			return ExitError{errors.Wrap(err, "editor failed to exit cleanly"), 2}
 		}
-		handleError(errors.Wrap(err, "unknown failure in running editor"), 2)
+		return ExitError{errors.Wrap(err, "unknown failure in running editor"), 2}
 	}
 
 	newPlaintext, err := ioutil.ReadFile(f.Name())
 	if err != nil {
-		handleError(errors.Wrapf(err, "failed to read secret tempfile"), 2)
+		return ExitError{errors.Wrapf(err, "failed to read secret tempfile"), 2}
+	}
+
+	if secret == nil {
+		if secret, err = berglas.Create(ctx, &berglas.CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: newPlaintext,
+		}); err != nil {
+			return err
+		}
+
+		fmt.Fprintf(stdout, "Successfully created secret: %s with generation: %d\n", object, secret.Generation)
+		return
 	}
 
 	if bytes.Equal(secret.Plaintext, newPlaintext) {
@@ -574,20 +617,21 @@ func editRun(_ *cobra.Command, args []string) {
 		Metageneration: secret.Metageneration,
 		Plaintext:      newPlaintext,
 	}); err != nil {
-		handleError(errors.Wrapf(err, "failed to update secret"), 2)
+		return ExitError{errors.Wrapf(err, "failed to update secret"), 2}
 	}
 
 	fmt.Fprintf(stdout, "Successfully updated secret: %s with generation: %d\n", object, secret.Generation)
+	return nil
 }
 
-func execRun(_ *cobra.Command, args []string) {
+func execRun(_ *cobra.Command, args []string) (err error) {
 	execCmd := args[0]
 	execArgs := args[1:]
 
 	ctx := cliCtx()
 	c, err := berglas.New(ctx)
 	if err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	env := os.Environ()
@@ -607,7 +651,7 @@ func execRun(_ *cobra.Command, args []string) {
 
 			s, err := c.Resolve(ctx, v)
 			if err != nil {
-				handleError(err, 1)
+				return err
 			}
 			env[i] = fmt.Sprintf("%s=%s", k, s)
 		}
@@ -616,13 +660,13 @@ func execRun(_ *cobra.Command, args []string) {
 		runtimeEnv, err := berglas.DetectRuntimeEnvironment()
 		if err != nil {
 			err = errors.Wrap(err, "failed to detect runtime environment")
-			handleError(err, 1)
+			return err
 		}
 
 		envvars, err := runtimeEnv.EnvVars(ctx)
 		if err != nil {
 			err = errors.Wrap(err, "failed to find environment variables")
-			handleError(err, 2)
+			return ExitError{err, 2}
 		}
 
 		for k, v := range envvars {
@@ -632,7 +676,7 @@ func execRun(_ *cobra.Command, args []string) {
 
 			s, err := c.Resolve(ctx, v)
 			if err != nil {
-				handleError(err, 1)
+				return err
 			}
 			env = append(env, fmt.Sprintf("%s=%s", k, s))
 		}
@@ -645,7 +689,7 @@ func execRun(_ *cobra.Command, args []string) {
 	cmd.Stderr = stderr
 	cmd.Env = env
 	if err := cmd.Start(); err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	// Listen for signals and send them to the underlying command
@@ -654,8 +698,8 @@ func execRun(_ *cobra.Command, args []string) {
 	go func() {
 		s := <-signalCh
 		if cmd.Process != nil {
-			if err := cmd.Process.Signal(s); err != nil {
-				handleError(errors.Wrap(err, "failed to signal command"), 2)
+			if signalErr := cmd.Process.Signal(s); signalErr != nil && err == nil {
+				err = ExitError{errors.Wrap(signalErr, "failed to signal command"), 2}
 			}
 		}
 	}()
@@ -664,17 +708,18 @@ func execRun(_ *cobra.Command, args []string) {
 	if err := cmd.Wait(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-				handleError(exitErr, status.ExitStatus())
+				return ExitError{exitErr, status.ExitStatus()}
 			}
 		}
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
+	return nil
 }
 
-func grantRun(_ *cobra.Command, args []string) {
+func grantRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	sort.Strings(members)
@@ -685,14 +730,15 @@ func grantRun(_ *cobra.Command, args []string) {
 		Object:  object,
 		Members: members,
 	}); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	fmt.Fprintf(stdout, "Successfully granted permission on %s to: \n- %s\n",
 		object, strings.Join(members, "\n- "))
+	return nil
 }
 
-func listRun(_ *cobra.Command, args []string) {
+func listRun(_ *cobra.Command, args []string) error {
 	bucket := strings.TrimPrefix(args[0], "gs://")
 
 	ctx := cliCtx()
@@ -702,18 +748,19 @@ func listRun(_ *cobra.Command, args []string) {
 		Generations: listGenerations,
 	})
 	if err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	for _, s := range secrets.Secrets {
 		fmt.Fprintf(stdout, "%s (updated %s) (generation %d)\n", s.Name, s.UpdatedAt.Local(), s.Generation)
 	}
+	return nil
 }
 
-func revokeRun(_ *cobra.Command, args []string) {
+func revokeRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
-		handleError(err, 2)
+		return ExitError{err, 2}
 	}
 
 	sort.Strings(members)
@@ -724,11 +771,12 @@ func revokeRun(_ *cobra.Command, args []string) {
 		Object:  object,
 		Members: members,
 	}); err != nil {
-		handleError(err, 1)
+		return err
 	}
 
 	fmt.Fprintf(stdout, "Successfully revoked permission on %s to: \n- %s\n",
 		object, strings.Join(members, "\n- "))
+	return nil
 }
 
 func versionRun(_ *cobra.Command, _ []string) {
@@ -781,10 +829,4 @@ func parseRef(s string) (string, string, error) {
 	}
 
 	return ss[0], ss[1], nil
-}
-
-// handleError prints the error to stderr and exits with the given status.
-func handleError(err error, status int) {
-	fmt.Fprintf(stderr, "%s\n", err)
-	os.Exit(status)
 }
