@@ -15,10 +15,11 @@
 package berglas
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"encoding/base64"
 	"fmt"
+
+	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
