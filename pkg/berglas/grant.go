@@ -31,35 +31,6 @@ func Grant(ctx context.Context, i *GrantRequest) error {
 	return client.Grant(ctx, i)
 }
 
-// getMembers returns members who have access to a given secret
-func (c *Client) getMembers(ctx context.Context, bucket, object string) ([]string, error) {
-	// Get attributes to find the KMS key
-	objHandle := c.storageClient.Bucket(bucket).Object(object)
-	attrs, err := objHandle.Attrs(ctx)
-	if err == storage.ErrObjectNotExist {
-		return nil, errors.New("secret object not found")
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read secret metadata")
-	}
-	if attrs.Metadata == nil || attrs.Metadata[MetadataKMSKey] == "" {
-		return nil, errors.New("missing kms key in secret metadata")
-	}
-
-	// Grant access to storage
-	storageHandle, err := c.storageIAM(bucket, object)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create Storage IAM client")
-	}
-
-	storageP, err := storageHandle.Policy(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get Storage IAM policy")
-	}
-
-	return storageP.Members(iamObjectReader), nil
-}
-
 // GrantRequest is used as input to a grant secret request.
 type GrantRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
