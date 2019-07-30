@@ -59,12 +59,12 @@ func ExampleClient_List() {
 }
 
 func ExampleClient_Access() {
-	secret, err = client.Access(ctx, &berglas.AccessRequest{
+	plaintext, err = client.Access(ctx, &berglas.AccessRequest{
 		Bucket: bucket,
 		Object: "my-secret",
 	})
 
-	log.Println(secret) // [&Secret{"my secret data"...}]
+	log.Println(plaintext) // "abcd1234"
 }
 
 func ExampleClient_Update() {
