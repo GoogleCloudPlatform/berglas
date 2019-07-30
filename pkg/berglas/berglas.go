@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"io"
 	"strings"
+	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	"cloud.google.com/go/storage"
@@ -87,6 +88,42 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 	c.storageIAMClient = storageIAMClient
 
 	return &c, nil
+}
+
+// Secret represents a specific secret stored in Google Cloud Storage
+// The attributes on this object should ideally map 1:1 with
+// storage.ObjectAttrs
+type Secret struct {
+	// Name of the secret
+	Name string
+
+	// Generation indicates a secret's version
+	Generation int64
+
+	// KMSKey is the key used to encrypt the secret key
+	KMSKey string
+
+	// Metageneration indicates a secret's metageneration
+	Metageneration int64
+
+	// Plaintext value of the secret (may not be filled in)
+	Plaintext []byte
+
+	// UpdatedAt indicates when a secret was last updated
+	UpdatedAt time.Time
+}
+
+// secretFromAttrs constructs a secret from the given object attributes and
+// plaintext.
+func secretFromAttrs(attrs *storage.ObjectAttrs, plaintext []byte) *Secret {
+	return &Secret{
+		Name:           attrs.Name,
+		Generation:     attrs.Generation,
+		Metageneration: attrs.Metageneration,
+		UpdatedAt:      attrs.Updated,
+		KMSKey:         attrs.Metadata[MetadataKMSKey],
+		Plaintext:      plaintext,
+	}
 }
 
 // kmsKeyIncludesVersion returns true if the given KMS key reference includes

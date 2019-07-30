@@ -17,35 +17,11 @@ package berglas
 import (
 	"context"
 	"sort"
-	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
-
-// Secret represents a specific secret stored in Google Cloud Storage
-// The attributes on this object should ideally map 1:1 with
-// storage.ObjectAttrs
-type Secret struct {
-	// Name of the secret
-	Name string
-
-	// Generation indicates a secret's version
-	Generation int64
-
-	// KMSKey is the key used to encrypt the secret key
-	KMSKey string
-
-	// Metageneration indicates a secret's metageneration
-	Metageneration int64
-
-	// Plaintext value of the secret (may not be filled in)
-	Plaintext []byte
-
-	// UpdatedAt indicates when a secret was last updated
-	UpdatedAt time.Time
-}
 
 // ListResponse is the response from a list call.
 type ListResponse struct {
@@ -132,13 +108,7 @@ func (c *Client) List(
 
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			result = append(result, &Secret{
-				Name:           obj.Name,
-				Generation:     obj.Generation,
-				KMSKey:         obj.Metadata[MetadataKMSKey],
-				Metageneration: obj.Metageneration,
-				UpdatedAt:      obj.Updated,
-			})
+			result = append(result, secretFromAttrs(obj, nil))
 		}
 	}
 
