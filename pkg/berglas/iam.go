@@ -18,9 +18,12 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/iam"
+	"github.com/GoogleCloudPlatform/berglas/pkg/retry"
 	"github.com/pkg/errors"
+	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
 	iampb "google.golang.org/genproto/googleapis/iam/v1"
 )
@@ -141,4 +144,75 @@ func iamFromStorageBindings(rbs []*storagev1.PolicyBindings) []*iampb.Binding {
 
 func setClientHeader(h http.Header) {
 	h.Set("User-Agent", UserAgent)
+}
+
+func getIAMPolicyWithRetries(ctx context.Context, h *iam.Handle) (*iam.Policy, error) {
+	var policy *iam.Policy
+	var err error
+
+	if err := retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
+		policy, err = h.Policy(ctx)
+		if err != nil {
+			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
+				switch {
+				case terr.Code == 412:
+					// IAM returns 412 while propagating
+					return retry.RetryableError(terr)
+				case terr.Code >= 400 && terr.Code <= 499:
+					return terr
+				}
+			}
+			return retry.RetryableError(err)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return policy, nil
+}
+
+func setIAMPolicyWithRetries(ctx context.Context, h *iam.Handle, newP *iam.Policy) error {
+	if err := retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
+		// Get the current policy - this is required because IAM validates etags
+		latestP, err := h.Policy(ctx)
+		if err != nil {
+			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
+				switch {
+				case terr.Code == 412:
+					// IAM returns 412 while propagating
+					return retry.RetryableError(terr)
+				case terr.Code >= 400 && terr.Code <= 499:
+					return terr
+				}
+			}
+			return retry.RetryableError(err)
+		}
+
+		// Overwrite the existing policy with ours
+		for _, r := range newP.Roles() {
+			for _, m := range newP.Members(r) {
+				latestP.Add(m, r)
+			}
+		}
+
+		// Update the policy
+		if err := h.SetPolicy(ctx, latestP); err != nil {
+			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
+				switch {
+				case terr.Code == 412:
+					// IAM returns 412 while propagating
+					return retry.RetryableError(terr)
+				case terr.Code >= 400 && terr.Code <= 499:
+					return terr
+				}
+			}
+			return retry.RetryableError(err)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
