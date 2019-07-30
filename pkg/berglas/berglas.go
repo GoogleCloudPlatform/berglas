@@ -46,6 +46,9 @@ const (
 	// be immediately available.
 	CacheControl = "private, no-cache, no-store, no-transform, max-age=0"
 
+	// ChunkSize is the size in bytes of the chunks to upload.
+	ChunkSize = 1024
+
 	// MetadataIDKey is a key in the object metadata that identifies an object as
 	// a secret. This is used when enumerating secrets in a bucket, in case
 	// non-secrets also reside in the bucket.
