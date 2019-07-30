@@ -140,12 +140,12 @@ running inside the context of berglas, it will dump the plaintext values.
 
 ## Filesystem Access
 
-When using Berglas edit command, secrets are briefly written to a temporary file
-on the local filesystem to be opened using an external editor. The file is owned
-by current user and guarded by unix permissions. Any malicious executable running as
-that user may be able to access the plaintext values of the secret. Furthermore,
-some editors may cache contents of the file in a temporary file (such as a swapfile
-for vim).
+When using `berglas edit` command, secrets are briefly written to a temporary
+file on the local filesystem to be opened using an external editor. The file is
+owned by current user and guarded by filesystem permissions. Any malicious
+executable running as that user may be able to access the plaintext values of
+the secret. Furthermore, some editors may cache contents of the file in a
+temporary file (such as a swapfile for vim).
 
 **Mitigations**
 
@@ -154,4 +154,3 @@ for vim).
 - Disable file caching in the editor (e.g. `:setlocal swapfile` for vim)
 - Close the file before closing the editor
 - Exit the editor promptly even if no edits were made
- 
