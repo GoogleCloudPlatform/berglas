@@ -326,9 +326,28 @@ Members must be specified with their type, for example:
 	RunE: revokeRun,
 }
 
+var updateCmd = &cobra.Command{
+	Use:   "update SECRET [DATA]",
+	Short: "Update an existing secret",
 	Long: strings.Trim(`
-`, "\n"),
+Update an existing secret. If the secret does not exist, an error is returned.
 
+Run with --create-if-missing to force creation of the secret if it does not
+already exist.
+`, "\n"),
+	Example: strings.Trim(`
+  # Update the secret named "api-key" with the contents "new-contents"
+  berglas update my-secrets/api-key new-contents
+
+  # Update the secret named "api-key" with a new KMS encryption key, keeping
+  # the original secret value
+  berglas update my-secrets/api-key --key=...
+
+  # Update the secret named "api-key", creating it if it does not already exist
+  berglas update my-secrets/api-key abcd1234 --key...
+`, "\n"),
+	Args: cobra.RangeArgs(1, 2),
+	RunE: updateRun,
 }
 
 func main() {
@@ -394,6 +413,11 @@ func main() {
 	revokeCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
 		"Member to remove")
 
+	rootCmd.AddCommand(updateCmd)
+	updateCmd.Flags().BoolVarP(&createIfMissing, "create-if-missing", "f", false,
+		"Create the secret if it does not already exist")
+	updateCmd.Flags().StringVarP(&key, "key", "k", "",
+		"KMS key to use for re-encryption")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(stderr, "%s\n", err)
@@ -781,6 +805,39 @@ func revokeRun(_ *cobra.Command, args []string) error {
 
 	fmt.Fprintf(stdout, "Successfully revoked permission on [%s] from: \n- %s\n",
 		object, strings.Join(members, "\n- "))
+	return nil
+}
+
+func updateRun(_ *cobra.Command, args []string) error {
+	bucket, object, err := parseRef(args[0])
+	if err != nil {
+		return misuseError(err)
+	}
+
+	var plaintext []byte
+	if len(args) > 1 {
+		plaintext, err = readData(strings.TrimSpace(args[1]))
+		if err != nil {
+			return misuseError(err)
+		}
+	}
+
+	ctx := cliCtx()
+	secret, err := berglas.Update(ctx, &berglas.UpdateRequest{
+		Bucket:          bucket,
+		Object:          object,
+		Key:             key,
+		Plaintext:       plaintext,
+		CreateIfMissing: createIfMissing,
+		Generation:      0,
+		Metageneration:  0,
+	})
+	if err != nil {
+		return apiError(err)
+	}
+
+	fmt.Fprintf(stdout, "Successfully updated secret [%s] to generation [%d]\n",
+		object, secret.Generation)
 	return nil
 }
 
