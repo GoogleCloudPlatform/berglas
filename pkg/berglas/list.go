@@ -86,14 +86,12 @@ func (c *Client) List(
 		return nil, errors.New("missing bucket name")
 	}
 
+	allSecrets := map[string][]*storage.ObjectAttrs{}
+
 	query := &storage.Query{
 		Prefix:   i.Prefix,
 		Versions: i.Generations,
 	}
-
-	secrets := map[string][]*storage.ObjectAttrs{}
-
-	var result secretList
 
 	// List all objects
 	it := c.storageClient.
@@ -110,15 +108,17 @@ func (c *Client) List(
 
 		// Only include items with metadata marking them as a secret
 		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			result = append(result, secretFromAttrs(obj, nil))
+			allSecrets[obj.Name] = append(allSecrets[obj.Name], obj)
 		}
 	}
 
+	var result secretList
+
 	// list objects returns all generations even if the live object is gone.
 	// filter on names which have not been deleted
-	for _, secretValues := range secrets {
+	for _, secretAttrs := range allSecrets {
 		foundLiveObject := false
-		for _, obj := range secretValues {
+		for _, obj := range secretAttrs {
 			if obj.Deleted.IsZero() {
 				foundLiveObject = true
 				break
@@ -126,12 +126,8 @@ func (c *Client) List(
 		}
 
 		if foundLiveObject {
-			for _, obj := range secretValues {
-				result = append(result, &Secret{
-					Name:       obj.Name,
-					UpdatedAt:  obj.Updated,
-					Generation: obj.Generation,
-				})
+			for _, attrs := range secretAttrs {
+				result = append(result, secretFromAttrs(attrs, nil))
 			}
 		}
 	}
