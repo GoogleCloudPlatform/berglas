@@ -31,6 +31,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
+const (
+	// APIExitCode is the exit code returned with an upstream API call fails.
+	APIExitCode = 60
+
+	// MisuseExitCode is the exit code returned when the user or system has
+	// generated an error.
+	MisuseExitCode = 61
 )
 
 var (
@@ -329,9 +336,6 @@ Show berglas version.
 	Run:  versionRun,
 }
 
-type ExitError struct {
-	error
-	ExitCode int
 }
 
 func main() {
@@ -781,6 +785,36 @@ func revokeRun(_ *cobra.Command, args []string) error {
 
 func versionRun(_ *cobra.Command, _ []string) {
 	fmt.Fprintf(stdout, "%s\n", berglas.Version)
+// exitError is a typed error to return.
+type exitError struct {
+	err  error
+	code int
+}
+
+// Error implements error.
+func (e *exitError) Error() string {
+	if e.err == nil {
+		return "<missing error>"
+	}
+	return e.err.Error()
+}
+
+// exitWithCode prints exits with the specified error and exit code.
+func exitWithCode(code int, err error) *exitError {
+	return &exitError{
+		err:  err,
+		code: code,
+	}
+}
+
+// apiError returns the given error with an API error exit code.
+func apiError(err error) *exitError {
+	return exitWithCode(APIExitCode, err)
+}
+
+// misuseError returns the given error with a userland exit code.
+func misuseError(err error) *exitError {
+	return exitWithCode(MisuseExitCode, err)
 }
 
 // cliCtx is a context that is canceled on os.Interrupt.

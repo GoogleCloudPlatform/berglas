@@ -211,6 +211,19 @@ stored in [Cloud Storage][cloud-storage].
     Successfully deleted secret if it existed: foo
     ```
 
+In addition to standard Unix exit codes, if the CLI exits with a known error,
+Berglas will exit with one of the following:
+
+- `60` - API error. Berglas got a bad response when communicating with an
+  upstream API.
+
+- `61` - Misuse error. You gave unexpected input or behavior. Please read the
+  error message. Open an issue if you think this is a mistake.
+
+The only exception is `berglas exec`, which will exit with the exit status of
+its child command, if one was provided.
+
+
 ## Integrations
 
 - **App Engine (Flex)** - When invoked via [App Engine Flex][app-engine-flex],
