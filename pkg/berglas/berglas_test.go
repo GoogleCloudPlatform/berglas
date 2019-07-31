@@ -24,7 +24,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func TestGsecretsIntegration(t *testing.T) {
+func TestBerglasIntegration(t *testing.T) {
 	t.Parallel()
 
 	if testing.Short() {
@@ -70,6 +70,7 @@ func TestGsecretsIntegration(t *testing.T) {
 	updated := []byte("updated text")
 
 	var secret *Secret
+	var plaintext []byte
 
 	if secret, err = c.Create(ctx, &CreateRequest{
 		Bucket:    bucket,
@@ -88,7 +89,14 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if secret, err = c.Access(ctx, &AccessRequest{
+	if _, err := c.Access(ctx, &AccessRequest{
+		Bucket: bucket,
+		Object: object,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if secret, err = c.Read(ctx, &ReadRequest{
 		Bucket: bucket,
 		Object: object,
 	}); err != nil {
@@ -104,12 +112,10 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = c.Create(ctx, &CreateRequest{
+	if _, err = c.Update(ctx, &UpdateRequest{
 		Bucket:    bucket,
 		Object:    object2,
-		Key:       key,
 		Plaintext: updated,
-		Overwrite: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -168,18 +174,18 @@ func TestGsecretsIntegration(t *testing.T) {
 		t.Errorf("expected %#v to include %q", secrets, object)
 	}
 
-	accessedSecret, err := c.Access(ctx, &AccessRequest{
+	plaintext, err = c.Access(ctx, &AccessRequest{
 		Bucket: bucket,
 		Object: object,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(accessedSecret.Plaintext, updated) {
-		t.Errorf("expected %q to be %q", accessedSecret.Plaintext, updated)
+	if !bytes.Equal(plaintext, updated) {
+		t.Errorf("expected %q to be %q", plaintext, updated)
 	}
 
-	accessedSecret, err = c.Access(ctx, &AccessRequest{
+	plaintext, err = c.Access(ctx, &AccessRequest{
 		Bucket:     bucket,
 		Object:     object,
 		Generation: secret.Generation,
@@ -187,8 +193,8 @@ func TestGsecretsIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(accessedSecret.Plaintext, original) {
-		t.Errorf("expected %q to be %q", accessedSecret.Plaintext, original)
+	if !bytes.Equal(plaintext, original) {
+		t.Errorf("expected %q to be %q", plaintext, original)
 	}
 
 	if err := c.Revoke(ctx, &RevokeRequest{
