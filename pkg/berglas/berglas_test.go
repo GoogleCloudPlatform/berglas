@@ -208,9 +208,8 @@ func TestBerglasIntegration(t *testing.T) {
 	}
 
 	if err := c.Delete(ctx, &DeleteRequest{
-		Bucket:      bucket,
-		Object:      object,
-		Permanently: true,
+		Bucket: bucket,
+		Object: object,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -222,15 +221,6 @@ func TestBerglasIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Delete(ctx, &DeleteRequest{
-		Bucket:      bucket,
-		Object:      object2,
-		Permanently: true,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Println(object, object2)
 	testNoObjectVersionExists(ctx, t, c, bucket, object)
 	testNoObjectVersionExists(ctx, t, c, bucket, object2)
 }
