@@ -2,9 +2,23 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.1.5] Unreleased
+## [0.2.0] Unreleased
+### Breaking
+- cli: drop `version` command in favor of `--version` flag
+- core: create will now return an error against an existing secret - use update
+  instead
+
+### Added
+- core: add new `Read` API for returning the plaintext secret and metadata about
+  the storage object
+- core: retry certain IAM functions due to eventual consistency
+- cli: `edit` command for editing a secret in a local editor
+- cli: `update` command for updating an existing secret
+
 ### Changed
 - auto: [security] do not trust the environment variables
+- cli: `list` command now outputs in a table with version and timestamp
+- cli: standardized exit codes - see README for more information
 
 ## [0.1.4] 2019-07-26
 ### Breaking
