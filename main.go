@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"text/tabwriter"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -741,18 +742,27 @@ func listRun(_ *cobra.Command, args []string) error {
 	bucket := strings.TrimPrefix(args[0], "gs://")
 
 	ctx := cliCtx()
-	secrets, err := berglas.List(ctx, &berglas.ListRequest{
+	list, err := berglas.List(ctx, &berglas.ListRequest{
 		Bucket:      bucket,
 		Prefix:      listPrefix,
 		Generations: listGenerations,
 	})
 	if err != nil {
-		return err
+		return apiError(err)
 	}
 
-	for _, s := range secrets.Secrets {
-		fmt.Fprintf(stdout, "%s (updated %s) (generation %d)\n", s.Name, s.UpdatedAt.Local(), s.Generation)
+	if len(list.Secrets) == 0 {
+		return nil
 	}
+
+	tw := new(tabwriter.Writer)
+	tw.Init(stdout, 0, 4, 4, ' ', 0)
+	fmt.Fprintf(tw, "NAME\tGENERATION\tUPDATED\n")
+	for _, s := range list.Secrets {
+		fmt.Fprintf(tw, "%s\t%d\t%s\n", s.Name, s.Generation, s.UpdatedAt.Local())
+	}
+	tw.Flush()
+
 	return nil
 }
 
