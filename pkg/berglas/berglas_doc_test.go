@@ -68,18 +68,11 @@ func ExampleClient_Access() {
 }
 
 func ExampleClient_Update() {
-	secret, err = client.Create(ctx, &berglas.CreateRequest{
-		Bucket:    bucket,
-		Object:    "my-secret",
-		Key:       key,
-		Plaintext: []byte("my secret data"),
-	})
-
 	secret, err = client.Update(ctx, &berglas.UpdateRequest{
 		Bucket:         bucket,
 		Object:         "my-secret",
 		Generation:     secret.Generation,
-		Key:            key,
+		Key:            secret.KMSKey,
 		Metageneration: secret.Metageneration,
 		Plaintext:      []byte("my updated secret data"),
 	})
