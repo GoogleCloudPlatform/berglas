@@ -16,7 +16,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -713,23 +712,32 @@ func execRun(_ *cobra.Command, args []string) error {
 	}
 
 	// Listen for signals and send them to the underlying command
+	doneCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh)
 	go func() {
-		s := <-signalCh
-		if cmd.Process != nil {
-			if signalErr := cmd.Process.Signal(s); signalErr != nil && err == nil {
-				err = ExitError{errors.Wrap(signalErr, "failed to signal command"), 2}
+		for {
+			select {
+			case s := <-signalCh:
+				if cmd.Process == nil {
+					return
+				}
+				if signalErr := cmd.Process.Signal(s); signalErr != nil && err == nil {
+					fmt.Fprintf(stderr, "failed to signal command: %s\n", err)
+				}
+			case <-doneCh:
+				close(signalCh)
+				return
 			}
 		}
 	}()
 
 	// Wait for the command to finish
 	if err := cmd.Wait(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-				return ExitError{exitErr, status.ExitStatus()}
-			}
+		close(doneCh)
+		if terr, ok := err.(*exec.ExitError); ok && terr.ProcessState != nil {
+			code := terr.ProcessState.ExitCode()
+			return exitWithCode(code, errors.Wrap(terr, "process exited non-zero"))
 		}
 		return misuseError(err)
 	}
