@@ -16,12 +16,9 @@ package berglas
 
 import (
 	"context"
-	"encoding/base64"
-	"fmt"
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 // Update is a top-level package function for creating a secret. For large
@@ -42,23 +39,25 @@ type UpdateRequest struct {
 	// Object is the name of the object in Cloud Storage.
 	Object string
 
-	// Generation indicates a secret's version
+	// Generation indicates a secret's version.
 	Generation int64
 
 	// Key is the fully qualified KMS key id.
 	Key string
 
-	// Metageneration indicates a secret's metageneration
+	// Metageneration indicates a secret's metageneration.
 	Metageneration int64
 
 	// Plaintext value of the secret (may not be filled in)
 	Plaintext []byte
+
+	// CreateIfMissing indicates that the updater should create a secret with the
+	// given parameters if one does not already exist.
+	CreateIfMissing bool
 }
 
-var secretUpdatedError = "secret modified between read and write"
-
-// Update reads the contents of the secret from the bucket, decrypting the
-// ciphertext using Cloud KMS.
+// Update changes the contents of an existing secret. If the secret does not
+// exist, an error is returned.
 func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
@@ -74,89 +73,87 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		return nil, errors.New("missing object name")
 	}
 
-	generation := i.Generation
-	if generation <= 0 {
-		return nil, errors.New("missing secret generation")
-	}
-
-	metageneration := i.Metageneration
-	if metageneration <= 0 {
-		return nil, errors.New("missing secret metageneration")
-	}
-
+	// Key and Plaintext may be required depending on whether the object exists.
 	key := i.Key
-	if key == "" {
-		return nil, errors.New("missing key name")
-	}
-
 	plaintext := i.Plaintext
-	if plaintext == nil {
-		return nil, errors.New("missing plaintext")
-	}
 
+	generation := i.Generation
+	metageneration := i.Metageneration
+
+	// If no specific generations were given, lookup the latest generation to make
+	// sure we don't conflict with another write.
 	attrs, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
 		Attrs(ctx)
 	switch err {
 	case nil:
-		if attrs.Generation != generation || attrs.Metageneration != metageneration {
-			return nil, errors.New(secretUpdatedError)
+		if generation == 0 {
+			generation = attrs.Generation
 		}
+
+		if metageneration == 0 {
+			metageneration = attrs.Metageneration
+		}
+
+		if key == "" {
+			key = attrs.Metadata[MetadataKMSKey]
+		}
+
+		if plaintext == nil {
+			plaintext, err = c.Access(ctx, &AccessRequest{
+				Bucket:     bucket,
+				Object:     object,
+				Generation: generation,
+			})
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get plaintext")
+			}
+		}
+
+		// Get existing IAM policies.
+		storageHandle, err := c.storageIAM(bucket, object)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create IAM client")
+		}
+		storageP, err := getIAMPolicyWithRetries(ctx, storageHandle)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get IAM policy")
+		}
+
+		// Update the secret.
+		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
+			generation, metageneration)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to update secret")
+		}
+
+		// Copy over the existing IAM memberships, if any.
+		if err := setIAMPolicyWithRetries(ctx, storageHandle, storageP); err != nil {
+			return nil, errors.Wrap(err, "secret updated, but failed to update IAM")
+		}
+		return secret, nil
 	case storage.ErrObjectNotExist:
-		return nil, errors.Wrap(err, "secret does not exist")
+		if !i.CreateIfMissing {
+			return nil, errSecretDoesNotExist
+		}
+
+		if key == "" {
+			return nil, errors.New("missing key name")
+		}
+
+		if plaintext == nil {
+			return nil, errors.New("missing plaintext")
+		}
+
+		// Update the secret.
+		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
+			generation, metageneration)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to update secret")
+		}
+		return secret, nil
 	default:
-		return nil, errors.Wrap(err, "failed to get object")
+		return nil, errors.Wrap(err, "failed to fetch existing secret")
 	}
-
-	members, err := c.getMembers(ctx, bucket, object)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve members")
-	}
-
-	// Generate a unique DEK and encrypt the plaintext locally (useful for large
-	// pieces of data).
-	dek, ciphertext, err := envelopeEncrypt(plaintext)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform envelope encryption")
-	}
-
-	// Encrypt the plaintext using a KMS key
-	kmsResp, err := c.kmsClient.Encrypt(ctx, &kmspb.EncryptRequest{
-		Name:                        key,
-		Plaintext:                   dek,
-		AdditionalAuthenticatedData: []byte(object),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt secret")
-	}
-	encDEK := kmsResp.Ciphertext
-
-	// Build the storage object contents. Contents will be of the format:
-	//
-	//    b64(kms_encrypted_dek):b64(dek_encrypted_plaintext)
-	blob := fmt.Sprintf("%s:%s",
-		base64.StdEncoding.EncodeToString(encDEK),
-		base64.StdEncoding.EncodeToString(ciphertext))
-
-	conds := &storage.Conditions{
-		GenerationMatch:     generation,
-		MetagenerationMatch: metageneration,
-	}
-
-	secret, err := c.write(ctx, bucket, object, key, blob, conds, plaintext, secretUpdatedError)
-	if err != nil {
-		return nil, err
-	}
-
-	err = c.Grant(ctx, &GrantRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: members,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "secret updated, but failed to update members")
-	}
-
-	return secret, nil
 }

@@ -16,12 +16,8 @@ package berglas
 
 import (
 	"context"
-	"encoding/base64"
-	"fmt"
 
-	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 // Create is a top-level package function for creating a secret. For large
@@ -47,15 +43,10 @@ type CreateRequest struct {
 
 	// Plaintext is the plaintext secret to encrypt and store.
 	Plaintext []byte
-
-	// Overwrite the existing secret
-	Overwrite bool
 }
 
-var alreadyExistsError = "secret already exists"
-
-// Create reads the contents of the secret from the bucket, decrypting the
-// ciphertext using Cloud KMS.
+// Create creates a new encrypted secret on GCS. If the secret already exists,
+// an error is returned. Use Update to update an existing secret.
 func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
@@ -81,49 +72,9 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		return nil, errors.New("missing plaintext")
 	}
 
-	_, err := c.storageClient.
-		Bucket(bucket).
-		Object(object).
-		Attrs(ctx)
-	switch err {
-	case nil:
-		if !i.Overwrite {
-			return nil, errors.New(alreadyExistsError)
-		}
-	case storage.ErrObjectNotExist:
-		break
-	default:
-		return nil, errors.Wrap(err, "failed to get object")
-	}
-
-	// Generate a unique DEK and encrypt the plaintext locally (useful for large
-	// pieces of data).
-	dek, ciphertext, err := envelopeEncrypt(plaintext)
+	secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext, 0, 0)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform envelope encryption")
+		return nil, errors.Wrap(err, "failed to create secret")
 	}
-
-	// Encrypt the plaintext using a KMS key
-	kmsResp, err := c.kmsClient.Encrypt(ctx, &kmspb.EncryptRequest{
-		Name:                        key,
-		Plaintext:                   dek,
-		AdditionalAuthenticatedData: []byte(object),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt secret")
-	}
-	encDEK := kmsResp.Ciphertext
-
-	// Build the storage object contents. Contents will be of the format:
-	//
-	//    b64(kms_encrypted_dek):b64(dek_encrypted_plaintext)
-	blob := fmt.Sprintf("%s:%s",
-		base64.StdEncoding.EncodeToString(encDEK),
-		base64.StdEncoding.EncodeToString(ciphertext))
-
-	conds := &storage.Conditions{
-		DoesNotExist: !i.Overwrite,
-	}
-
-	return c.write(ctx, bucket, object, key, blob, conds, plaintext, alreadyExistsError)
+	return secret, nil
 }

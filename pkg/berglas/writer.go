@@ -16,64 +16,96 @@ package berglas
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/api/googleapi"
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-var emptyCondition = storage.Conditions{}
+// encryptAndWrite is a low-level function for encrypting and writing data.
+func (c *Client) encryptAndWrite(
+	ctx context.Context, bucket, object, key string, plaintext []byte,
+	generation, metageneration int64) (*Secret, error) {
 
-func (c *Client) write(
-	ctx context.Context, bucket, object, key, blob string, conds *storage.Conditions, plaintext []byte,
-	preconditionFailureError string) (*Secret, error) {
-	oh := c.storageClient.
-		Bucket(bucket).
-		Object(object)
-	// Write the object with CAS
-	if conds != nil && *conds != emptyCondition {
-		oh = oh.If(*conds)
+	// Generate a unique DEK and encrypt the plaintext locally (useful for large
+	// pieces of data).
+	dek, ciphertext, err := envelopeEncrypt(plaintext)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to perform envelope encryption")
 	}
-	iow := oh.NewWriter(ctx)
+
+	// Encrypt the plaintext using a KMS key
+	kmsResp, err := c.kmsClient.Encrypt(ctx, &kmspb.EncryptRequest{
+		Name:                        key,
+		Plaintext:                   dek,
+		AdditionalAuthenticatedData: []byte(object),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encrypt secret")
+	}
+	encDEK := kmsResp.Ciphertext
+
+	// Build the storage object contents. Contents will be of the format:
+	//
+	//    b64(kms_encrypted_dek):b64(dek_encrypted_plaintext)
+	blob := fmt.Sprintf("%s:%s",
+		base64.StdEncoding.EncodeToString(encDEK),
+		base64.StdEncoding.EncodeToString(ciphertext))
+
+	// If generation and metageneration are 0, then we should only create the
+	// object if it does not exist. Otherwise, we should only perform an update if
+	// the metagenerations match.
+	var conds storage.Conditions
+	if generation == 0 || metageneration == 0 {
+		conds = storage.Conditions{
+			DoesNotExist: true,
+		}
+	} else {
+		conds = storage.Conditions{
+			GenerationMatch:     generation,
+			MetagenerationMatch: metageneration,
+		}
+	}
+
+	// Create the writer
+	iow := c.storageClient.
+		Bucket(bucket).
+		Object(object).
+		If(conds).
+		NewWriter(ctx)
+
 	iow.ObjectAttrs.CacheControl = CacheControl
-	iow.ChunkSize = 1024
+	iow.ChunkSize = ChunkSize
 
 	if iow.Metadata == nil {
 		iow.Metadata = make(map[string]string)
 	}
-
-	// Mark this as a secret
 	iow.Metadata[MetadataIDKey] = "1"
-
-	// If a specific key version was given, only store the key, not the key
-	// version, because decrypt calls can't specify a key version.
 	iow.Metadata[MetadataKMSKey] = kmsKeyTrimVersion(key)
 
+	// Write
 	if _, err := iow.Write([]byte(blob)); err != nil {
-		return nil, errors.Wrap(err, "failed save encrypted ciphertext to storage")
+		return nil, errors.Wrap(err, "failed to save encrypted ciphertext to storage")
 	}
 
-	// Close, handling any errors
+	// Close and flush
 	if err := iow.Close(); err != nil {
 		if terr, ok := err.(*googleapi.Error); ok {
 			switch terr.Code {
 			case http.StatusNotFound:
 				return nil, errors.New("bucket does not exist")
 			case http.StatusPreconditionFailed:
-				return nil, errors.New(preconditionFailureError)
+				if conds.DoesNotExist {
+					return nil, errSecretAlreadyExists
+				}
+				return nil, errSecretModified
 			}
 		}
-
-		return nil, errors.Wrap(err, "failed to close writer")
 	}
 
-	return &Secret{
-		Name:           iow.Attrs().Name,
-		Generation:     iow.Attrs().Generation,
-		KMSKey:         iow.Attrs().Metadata[MetadataKMSKey],
-		Metageneration: iow.Attrs().Metageneration,
-		Plaintext:      plaintext,
-		UpdatedAt:      iow.Attrs().Updated,
-	}, nil
+	return secretFromAttrs(iow.Attrs(), plaintext), nil
 }
