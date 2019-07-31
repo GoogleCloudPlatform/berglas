@@ -16,8 +16,10 @@ package berglas
 
 import (
 	"context"
+	"runtime"
 
 	"cloud.google.com/go/storage"
+	"github.com/gammazero/workerpool"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
@@ -65,21 +67,44 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 			Versions: true,
 		})
 
+	// Create a workerpool for parallel deletion of resources
+	wp := workerpool.New(runtime.NumCPU() - 1)
+	ch := make(chan error)
+	childCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return errors.Wrap(err, "failed to list secrets")
+			ch <- errors.Wrap(err, "failed to list secrets")
+			cancel()
 		}
-		if err := c.storageClient.
-			Bucket(bucket).
-			Object(object).
-			Generation(obj.Generation).
-			Delete(ctx); err != nil {
-			return errors.Wrap(err, "failed to delete")
+		// don't queue more tasks if a failure has been encountered already
+		select {
+		case <-childCtx.Done():
+			break
+		default:
+			wp.Submit(func() {
+				if err := c.storageClient.
+					Bucket(bucket).
+					Object(object).
+					Generation(obj.Generation).
+					Delete(childCtx); err != nil {
+					ch <- err
+					cancel()
+				}
+			})
 		}
 	}
-	return nil
+	wp.StopWait()
+	select {
+	case err := <-ch:
+		// there may be multiple failures, but just return the first failure
+		return errors.Wrap(err, "failed to delete secret")
+	default:
+		return nil
+	}
 }

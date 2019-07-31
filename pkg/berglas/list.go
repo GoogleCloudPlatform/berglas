@@ -73,8 +73,6 @@ type ListRequest struct {
 	Generations bool
 }
 
-var emptyTime = time.Time{}
-
 // List lists all secrets in the bucket. This doesn't fetch the plaintext value
 // of secrets.
 func (c *Client) List(
@@ -94,6 +92,8 @@ func (c *Client) List(
 	}
 
 	secrets := map[string][]*storage.ObjectAttrs{}
+
+	var result secretList
 
 	// List all objects
 	it := c.storageClient.
@@ -119,7 +119,7 @@ func (c *Client) List(
 	for _, secretValues := range secrets {
 		foundLiveObject := false
 		for _, obj := range secretValues {
-			if obj.Deleted == emptyTime {
+			if obj.Deleted.IsZero() {
 				foundLiveObject = true
 				break
 			}

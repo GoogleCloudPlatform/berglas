@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	cloud.google.com/go v0.43.0
+	github.com/gammazero/workerpool v0.0.0-20190608213748-0ed5e40ec55e
 	github.com/golang/protobuf v1.3.2
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/kr/pretty v0.1.0 // indirect

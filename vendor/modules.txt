@@ -7,6 +7,10 @@ cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 cloud.google.com/go/compute/metadata
+# github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
+github.com/gammazero/deque
+# github.com/gammazero/workerpool v0.0.0-20190608213748-0ed5e40ec55e
+github.com/gammazero/workerpool
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
