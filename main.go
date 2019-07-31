@@ -88,6 +88,7 @@ For more information and examples, see the help text for a specific command.
 `, "\n"),
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	Version:       berglas.Version,
 }
 
 var accessCmd = &cobra.Command{
@@ -326,19 +327,14 @@ Members must be specified with their type, for example:
 	RunE: revokeRun,
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Show berlgas version",
 	Long: strings.Trim(`
-Show berglas version.
 `, "\n"),
-	Args: cobra.ExactArgs(0),
-	Run:  versionRun,
-}
 
 }
 
 func main() {
+	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
+
 	rootCmd.AddCommand(accessCmd)
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
 		"Get a specific generation")
@@ -400,7 +396,6 @@ command MUST exit with code 0.
 	revokeCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
 		"Member to remove")
 
-	rootCmd.AddCommand(versionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(stderr, "%s\n", err)
@@ -783,8 +778,6 @@ func revokeRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func versionRun(_ *cobra.Command, _ []string) {
-	fmt.Fprintf(stdout, "%s\n", berglas.Version)
 // exitError is a typed error to return.
 type exitError struct {
 	err  error
