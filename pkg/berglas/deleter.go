@@ -69,40 +69,54 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 
 	// Create a workerpool for parallel deletion of resources
 	wp := workerpool.New(runtime.NumCPU() - 1)
-	ch := make(chan error)
+	errCh := make(chan error)
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+L:
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			ch <- errors.Wrap(err, "failed to list secrets")
-			cancel()
+			select {
+			case <-childCtx.Done():
+			case errCh <- errors.Wrap(err, "failed to list secrets"):
+				cancel()
+			default:
+			}
 		}
-		// don't queue more tasks if a failure has been encountered already
+
+		// Don't queue more tasks if a failure has been encountered already
 		select {
 		case <-childCtx.Done():
-			break
+			break L
 		default:
 			wp.Submit(func() {
-				if err := c.storageClient.
+				err := c.storageClient.
 					Bucket(bucket).
 					Object(object).
 					Generation(obj.Generation).
-					Delete(childCtx); err != nil {
-					ch <- err
-					cancel()
+					Delete(childCtx)
+
+				if err != nil {
+					select {
+					case <-childCtx.Done():
+					case errCh <- err:
+						cancel()
+					default:
+						cancel()
+					}
 				}
 			})
 		}
 	}
+
 	wp.StopWait()
+
 	select {
-	case err := <-ch:
-		// there may be multiple failures, but just return the first failure
+	case err := <-errCh:
 		return errors.Wrap(err, "failed to delete secret")
 	default:
 		return nil
