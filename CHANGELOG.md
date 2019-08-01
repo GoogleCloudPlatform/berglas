@@ -2,6 +2,9 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
+## [0.2.1] Unreleased
+### Changed
+
 ## [0.2.0] 2019-08-01
 ### Breaking
 - cli: drop `version` command in favor of `--version` flag
