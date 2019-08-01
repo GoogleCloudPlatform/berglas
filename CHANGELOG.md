@@ -2,7 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.2.0] Unreleased
+## [0.2.0] 2019-08-01
 ### Breaking
 - cli: drop `version` command in favor of `--version` flag
 - core: create will now return an error against an existing secret - use update
@@ -19,6 +19,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 - auto: [security] do not trust the environment variables
 - cli: `list` command now outputs in a table with version and timestamp
 - cli: standardized exit codes - see README for more information
+- core: delete all storage versions when deleting a secret
 
 ## [0.1.4] 2019-07-26
 ### Breaking
