@@ -233,7 +233,7 @@ its child command, if one was provided.
   container. See [examples/appengineflex](examples/appengineflex) for examples
   and invocations.
 
-- **App Engine (Standard) ** - When invoked via [App Engine][app-engine],
+- **App Engine (Standard)** - When invoked via [App Engine][app-engine],
   Berglas resolves environment variables to their plaintext values using the
   [`berglas://`reference syntax][reference-syntax]. This integration only works
   with the Go language runtime because it requires importing the `auto/`
