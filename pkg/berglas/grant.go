@@ -112,7 +112,7 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	}
 
 	// Save the policy
-	if err := kmsHandle.SetPolicy(ctx, kmsP); err != nil {
+	if err := setIAMPolicyWithRetries(ctx, kmsHandle, kmsP); err != nil {
 		return errors.Wrapf(err, "failed to update KMS IAM policy for %s", key)
 	}
 
