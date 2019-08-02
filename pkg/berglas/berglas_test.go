@@ -114,6 +114,31 @@ func TestBerglasIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Replace
+	os.Setenv("BAD_SECRET", "not_a_ref")
+	os.Setenv("GOOD_SECRET", fmt.Sprintf("berglas://%s/%s", bucket, object))
+	if err := c.Replace(ctx, "BAD_SECRET"); err == nil {
+		t.Fatalf("expected error, got %s", os.Getenv("BAD_SECRET"))
+	}
+	if v, exp := os.Getenv("BAD_SECRET"), "not_a_ref"; v != exp {
+		t.Fatalf("expected %q to be %q", v, exp)
+	}
+	if err := c.Replace(ctx, "GOOD_SECRET"); err != nil {
+		t.Fatal(err)
+	}
+	if v, exp := os.Getenv("GOOD_SECRET"), string(original); v != exp {
+		t.Errorf("expected %q to be %q", v, exp)
+	}
+
+	// ReplaceValue
+	os.Setenv("SECRET", "berglas://nope/nope")
+	if err := c.ReplaceValue(ctx, "SECRET", fmt.Sprintf("berglas://%s/%s", bucket, object)); err != nil {
+		t.Fatal(err)
+	}
+	if v, exp := os.Getenv("SECRET"), string(original); v != exp {
+		t.Errorf("expected %q to be %q", v, exp)
+	}
+
 	if _, err = c.Update(ctx, &UpdateRequest{
 		Bucket:    bucket,
 		Object:    object2,
