@@ -95,7 +95,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 		storageP.Remove(m, iamObjectReader)
 	}
 
-	if err := storageHandle.SetPolicy(ctx, storageP); err != nil {
+	if err := setIAMPolicyWithRetries(ctx, storageHandle, storageP); err != nil {
 		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
 	}
 
