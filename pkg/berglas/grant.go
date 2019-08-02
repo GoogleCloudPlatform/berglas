@@ -95,7 +95,7 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 		storageP.Add(m, iamObjectReader)
 	}
 
-	if err := storageHandle.SetPolicy(ctx, storageP); err != nil {
+	if err := setIAMPolicyWithRetries(ctx, storageHandle, storageP); err != nil {
 		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
 	}
 
