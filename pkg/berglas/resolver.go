@@ -90,7 +90,7 @@ func Replace(ctx context.Context, key string) error {
 // is successful, this function sets the value of the environment variable to the
 // resolved secret reference.
 func (c *Client) ReplaceValue(ctx context.Context, key string, value string) error {
-	plaintext, err := c.Resolve(ctx, os.Getenv(key))
+	plaintext, err := c.Resolve(ctx, value)
 	if err != nil {
 		return err
 	}
