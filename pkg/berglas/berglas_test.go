@@ -19,271 +19,391 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
-	"cloud.google.com/go/storage"
 	uuid "github.com/satori/go.uuid"
-	"google.golang.org/api/iterator"
 )
 
 func TestBerglasIntegration(t *testing.T) {
 	t.Parallel()
 
 	if testing.Short() {
-		t.Skip("skipping integration test (short)")
+		t.Skip("skipping integration tests (short)")
 	}
 
-	ctx := context.Background()
+	t.Run("access", func(t *testing.T) {
+		t.Parallel()
 
-	bucket := os.Getenv("GOOGLE_CLOUD_BUCKET")
-	if bucket == "" {
-		t.Fatal("missing GOOGLE_CLOUD_BUCKET")
-	}
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+		plaintext := []byte("my secret value")
 
-	key := os.Getenv("GOOGLE_CLOUD_KMS_KEY")
-	if key == "" {
-		t.Fatal("missing GOOGLE_CLOUD_KMS_KEY")
-	}
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
 
-	sa := os.Getenv("GOOGLE_CLOUD_SERVICE_ACCOUNT")
-	if sa == "" {
-		t.Fatal("missing GOOGLE_CLOUD_SERVICE_ACCOUNT")
-	}
-	sa = fmt.Sprintf("serviceAccount:%s", sa)
-
-	object, object2 := testUUID(t), testUUID(t)
-	if len(object) < 3 || len(object2) < 3 {
-		t.Fatal("bad uuid created")
-	}
-	// ensure non-matching prefix
-	for i := 0; i < 10 && object[:3] == object2[:3]; i++ {
-		object2 = testUUID(t)
-	}
-	if object[:3] == object2[:3] {
-		t.Fatal("unable to generate non-prefix matching uuids")
-	}
-
-	c, err := New(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	original := []byte("original text")
-	updated := []byte("updated text")
-
-	var secret *Secret
-	var plaintext []byte
-
-	if secret, err = c.Create(ctx, &CreateRequest{
-		Bucket:    bucket,
-		Object:    object,
-		Key:       key,
-		Plaintext: original,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := c.Grant(ctx, &GrantRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: []string{sa},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := c.Access(ctx, &AccessRequest{
-		Bucket: bucket,
-		Object: object,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if secret, err = c.Read(ctx, &ReadRequest{
-		Bucket: bucket,
-		Object: object,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err = c.Create(ctx, &CreateRequest{
-		Bucket:    bucket,
-		Object:    object2,
-		Key:       key,
-		Plaintext: original,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Replace
-	os.Setenv("BAD_SECRET", "not_a_ref")
-	os.Setenv("GOOD_SECRET", fmt.Sprintf("berglas://%s/%s", bucket, object))
-	if err := c.Replace(ctx, "BAD_SECRET"); err == nil {
-		t.Fatalf("expected error, got %s", os.Getenv("BAD_SECRET"))
-	}
-	if v, exp := os.Getenv("BAD_SECRET"), "not_a_ref"; v != exp {
-		t.Fatalf("expected %q to be %q", v, exp)
-	}
-	if err := c.Replace(ctx, "GOOD_SECRET"); err != nil {
-		t.Fatal(err)
-	}
-	if v, exp := os.Getenv("GOOD_SECRET"), string(original); v != exp {
-		t.Errorf("expected %q to be %q", v, exp)
-	}
-
-	// ReplaceValue
-	os.Setenv("SECRET", "berglas://nope/nope")
-	if err := c.ReplaceValue(ctx, "SECRET", fmt.Sprintf("berglas://%s/%s", bucket, object)); err != nil {
-		t.Fatal(err)
-	}
-	if v, exp := os.Getenv("SECRET"), string(original); v != exp {
-		t.Errorf("expected %q to be %q", v, exp)
-	}
-
-	if _, err = c.Update(ctx, &UpdateRequest{
-		Bucket:    bucket,
-		Object:    object2,
-		Plaintext: updated,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	secrets, err := c.List(ctx, &ListRequest{
-		Bucket: bucket,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %#v to include %q", secrets, object)
-	}
-	if !testStringInclude(secrets.Secrets, object2, 0) {
-		t.Errorf("expected %#v to include %q", secrets, object2)
-	}
-
-	secrets, err = c.List(ctx, &ListRequest{
-		Bucket: bucket,
-		Prefix: object[:3],
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %#v to include %q", secrets, object)
-	}
-	if testStringInclude(secrets.Secrets, object2, secret.Generation) {
-		t.Errorf("expected %#v to not include %q", secrets, object)
-	}
-
-	var updatedSecret *Secret
-	if updatedSecret, err = c.Update(ctx, &UpdateRequest{
-		Bucket:         bucket,
-		Object:         object,
-		Generation:     secret.Generation,
-		Key:            secret.KMSKey,
-		Metageneration: secret.Metageneration,
-		Plaintext:      updated,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	secrets, err = c.List(ctx, &ListRequest{
-		Bucket:      bucket,
-		Prefix:      object,
-		Generations: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !testStringInclude(secrets.Secrets, object, updatedSecret.Generation) {
-		t.Errorf("expected %#v to include %q", secrets, object)
-	}
-	if !testStringInclude(secrets.Secrets, object, secret.Generation) {
-		t.Errorf("expected %#v to include %q", secrets, object)
-	}
-
-	plaintext, err = c.Access(ctx, &AccessRequest{
-		Bucket: bucket,
-		Object: object,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(plaintext, updated) {
-		t.Errorf("expected %q to be %q", plaintext, updated)
-	}
-
-	plaintext, err = c.Access(ctx, &AccessRequest{
-		Bucket:     bucket,
-		Object:     object,
-		Generation: secret.Generation,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(plaintext, original) {
-		t.Errorf("expected %q to be %q", plaintext, original)
-	}
-
-	if err := c.Revoke(ctx, &RevokeRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: []string{sa},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := c.Delete(ctx, &DeleteRequest{
-		Bucket: bucket,
-		Object: object,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := c.Delete(ctx, &DeleteRequest{
-		Bucket: bucket,
-		Object: object2,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	testNoObjectVersionExists(ctx, t, c, bucket, object)
-	testNoObjectVersionExists(ctx, t, c, bucket, object2)
-}
-
-func testNoObjectVersionExists(ctx context.Context, t *testing.T, c *Client, bucket, object string) {
-	it := c.storageClient.
-		Bucket(bucket).
-		Objects(ctx, &storage.Query{
-			Prefix:   object,
-			Versions: true,
+		accessPlaintext, err := client.Access(ctx, &AccessRequest{
+			Bucket: bucket,
+			Object: object,
 		})
-	obj, err := it.Next()
-	if err != iterator.Done {
-		if err == nil {
-			t.Errorf("expected no objects in bucket, found: %v", obj)
-		} else {
-			t.Error(err)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-}
 
-func testStringInclude(l []*Secret, n string, g int64) bool {
-	for _, v := range l {
-		if n == v.Name && (g == 0 || g == v.Generation) {
-			return true
+		if act, exp := accessPlaintext, plaintext; !bytes.Equal(act, exp) {
+			t.Errorf("expected %q to be %q", act, exp)
 		}
-	}
-	return false
-}
+	})
 
-func testUUID(tb testing.TB) string {
-	tb.Helper()
+	t.Run("create", func(t *testing.T) {
+		t.Parallel()
 
-	u, err := uuid.NewV4()
-	if err != nil {
-		tb.Fatal(err)
-	}
-	return u.String()
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+		plaintext := []byte("my secret value")
+
+		createdSecret, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		readSecret, err := client.Read(ctx, &ReadRequest{
+			Bucket:     bucket,
+			Object:     object,
+			Generation: createdSecret.Generation,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if act, exp := readSecret.Plaintext, plaintext; !bytes.Equal(act, exp) {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+		plaintext := []byte("my secret value")
+
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		if err := client.Delete(ctx, &DeleteRequest{
+			Bucket: bucket,
+			Object: object,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := client.Access(ctx, &AccessRequest{
+			Bucket: bucket,
+			Object: object,
+		}); err == nil {
+			t.Errorf("expected secret to be deleted")
+		}
+	})
+
+	t.Run("grant", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key, serviceAccount := testBucket(t), testObject(t), testKey(t), testServiceAccount(t)
+		plaintext := []byte("my secret value")
+
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		if err := client.Grant(ctx, &GrantRequest{
+			Bucket:  bucket,
+			Object:  object,
+			Members: []string{serviceAccount},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		handle, err := client.storageIAM(bucket, object)
+		if err != nil {
+			t.Fatal(err)
+		}
+		policy, err := getIAMPolicyWithRetries(ctx, handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		members := policy.Members(iamObjectReader)
+		for _, member := range members {
+			if member == serviceAccount {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("expected %q to contain %q", members, serviceAccount)
+		}
+	})
+
+	t.Run("list", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, key := testBucket(t), testKey(t)
+		plaintext := []byte("my secret value")
+
+		object1 := "list-" + testObject(t)
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object1,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object1)
+
+		secret1, err := client.Read(ctx, &ReadRequest{
+			Bucket: bucket,
+			Object: object1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		object2 := "list-" + testObject(t)
+		secret2, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object2,
+			Key:       key,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object2)
+
+		updatedSecret2, err := client.Update(ctx, &UpdateRequest{
+			Bucket:    bucket,
+			Object:    object2,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		list, err := client.List(ctx, &ListRequest{
+			Bucket:      bucket,
+			Prefix:      "list-",
+			Generations: true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		secrets := list.Secrets
+
+		if !testSecretsInclude(secrets, secret1) {
+			t.Errorf("expected %#v to include %#v", secrets, secret1)
+		}
+
+		if !testSecretsInclude(secrets, secret2) {
+			t.Errorf("expected %#v to include %#v", secrets, secret2)
+		}
+
+		if !testSecretsInclude(secrets, updatedSecret2) {
+			t.Errorf("expected %#v to include %#v", secrets, updatedSecret2)
+		}
+	})
+
+	t.Run("replace", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+		plaintext := []byte("my secret value")
+
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		ref := fmt.Sprintf("berglas://%s/%s", bucket, object)
+		os.Setenv("REPLACE_BAD", "not_a_ref")
+		os.Setenv("REPLACE_GOOD", ref)
+
+		if err := client.Replace(ctx, "REPLACE_BAD"); err == nil {
+			t.Fatalf("expected error, got %s", os.Getenv("REPLACE_BAD"))
+		}
+		if act, exp := os.Getenv("REPLACE_BAD"), "not_a_ref"; act != exp {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+
+		if err := client.Replace(ctx, "REPLACE_GOOD"); err != nil {
+			t.Fatal(err)
+		}
+		if act, exp := os.Getenv("REPLACE_GOOD"), string(plaintext); act != exp {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("replace_value", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+		plaintext := []byte("my secret value")
+
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		ref := fmt.Sprintf("berglas://%s/%s", bucket, object)
+		os.Setenv("REPLACE_VALUE_GOOD", "should_not_be_read")
+		if err := client.ReplaceValue(ctx, "REPLACE_VALUE_GOOD", ref); err != nil {
+			t.Fatal(err)
+		}
+		if act, exp := os.Getenv("REPLACE_VALUE_GOOD"), string(plaintext); act != exp {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key := testBucket(t), testObject(t), testKey(t)
+
+		createdSecret, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: []byte("my secret value"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		updatedSecret, err := client.Update(ctx, &UpdateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: []byte("my new secret value"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		if act, exp := createdSecret.Generation, updatedSecret.Generation; act == exp {
+			t.Errorf("expected %q to be different than %q", act, exp)
+		}
+
+		accessPlaintext, err := client.Access(ctx, &AccessRequest{
+			Bucket: bucket,
+			Object: object,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if act, exp := accessPlaintext, updatedSecret.Plaintext; !bytes.Equal(act, exp) {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("revoke", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		bucket, object, key, serviceAccount := testBucket(t), testObject(t), testKey(t), testServiceAccount(t)
+		plaintext := []byte("my secret value")
+
+		if _, err := client.Create(ctx, &CreateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: plaintext,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		defer testCleanup(t, bucket, object)
+
+		if err := client.Grant(ctx, &GrantRequest{
+			Bucket:  bucket,
+			Object:  object,
+			Members: []string{serviceAccount},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := client.Revoke(ctx, &RevokeRequest{
+			Bucket:  bucket,
+			Object:  object,
+			Members: []string{serviceAccount},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		handle, err := client.storageIAM(bucket, object)
+		if err != nil {
+			t.Fatal(err)
+		}
+		policy, err := getIAMPolicyWithRetries(ctx, handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		members := policy.Members(iamObjectReader)
+		for _, member := range members {
+			if member == serviceAccount {
+				found = true
+			}
+		}
+		if found {
+			t.Errorf("expected %q to not contain %q", members, serviceAccount)
+		}
+	})
 }
 
 func TestKMSKeyTrimVersion(t *testing.T) {
@@ -321,5 +441,89 @@ func TestKMSKeyTrimVersion(t *testing.T) {
 				t.Errorf("expected %q to be %q", act, exp)
 			}
 		})
+	}
+}
+
+func testClient(tb testing.TB) (*Client, context.Context) {
+	tb.Helper()
+
+	ctx := context.Background()
+	client, err := New(ctx)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return client, ctx
+}
+
+func testBucket(tb testing.TB) string {
+	tb.Helper()
+
+	bucket := os.Getenv("GOOGLE_CLOUD_BUCKET")
+	if bucket == "" {
+		tb.Fatal("missing GOOGLE_CLOUD_BUCKET")
+	}
+	return bucket
+}
+
+func testObject(tb testing.TB) string {
+	tb.Helper()
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return u.String()
+}
+
+func testKey(tb testing.TB) string {
+	tb.Helper()
+
+	key := os.Getenv("GOOGLE_CLOUD_KMS_KEY")
+	if key == "" {
+		tb.Fatal("missing GOOGLE_CLOUD_KMS_KEY")
+	}
+	return key
+}
+
+func testServiceAccount(tb testing.TB) string {
+	tb.Helper()
+
+	sa := os.Getenv("GOOGLE_CLOUD_SERVICE_ACCOUNT")
+	if sa == "" {
+		tb.Fatal("missing GOOGLE_CLOUD_SERVICE_ACCOUNT")
+	}
+	if !strings.HasPrefix("serviceAccount:", sa) {
+		sa = fmt.Sprintf("serviceAccount:%s", sa)
+	}
+	return sa
+}
+
+func testSecretsInclude(list []*Secret, s *Secret) bool {
+	for _, v := range list {
+		if v.Name == s.Name &&
+			(v.Plaintext == nil || s.Plaintext == nil || bytes.Equal(v.Plaintext, s.Plaintext)) &&
+			(v.Generation == 0 || s.Generation == 0 || v.Generation == s.Generation) {
+			return true
+		}
+	}
+	return false
+}
+
+func testCleanup(tb testing.TB, bucket, object string) {
+	tb.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := New(context.Background())
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	if err := client.Delete(ctx, &DeleteRequest{
+		Object: object,
+		Bucket: bucket,
+	}); err != nil && !IsSecretDoesNotExistErr(err) {
+		tb.Fatal(err)
 	}
 }
