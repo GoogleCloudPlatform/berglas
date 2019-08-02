@@ -6,6 +6,8 @@ All notable changes to Berglas will be documented in this file. This file is mai
 ### Changed
 - core: resolve value uses the passed value instead of looking it up from the
   environment
+- core: retry when setting GCS IAM permissions
+- core: retry when setting KMS IAM permissions
 
 ## [0.2.0] 2019-08-01
 ### Breaking
