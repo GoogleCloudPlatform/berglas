@@ -4,6 +4,8 @@ All notable changes to Berglas will be documented in this file. This file is mai
 
 ## [0.2.1] Unreleased
 ### Changed
+- core: resolve value uses the passed value instead of looking it up from the
+  environment
 
 ## [0.2.0] 2019-08-01
 ### Breaking
