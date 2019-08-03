@@ -127,12 +127,29 @@ func TestBerglasIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("grant", func(t *testing.T) {
+	t.Run("grant_revoke", func(t *testing.T) {
 		t.Parallel()
 
 		client, ctx := testClient(t)
 		bucket, object, key, serviceAccount := testBucket(t), testObject(t), testKey(t), testServiceAccount(t)
 		plaintext := []byte("my secret value")
+
+		policyIncludesServiceAccount := func() bool {
+			handle := client.storageIAM(bucket, object)
+			policy, err := getIAMPolicy(ctx, handle)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			found := false
+			members := policy.Members(iamObjectReader)
+			for _, member := range members {
+				if member == serviceAccount {
+					found = true
+				}
+			}
+			return found
+		}
 
 		if _, err := client.Create(ctx, &CreateRequest{
 			Bucket:    bucket,
@@ -152,24 +169,20 @@ func TestBerglasIntegration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		handle, err := client.storageIAM(bucket, object)
-		if err != nil {
-			t.Fatal(err)
+		if !policyIncludesServiceAccount() {
+			t.Errorf("expected policy to include %q", serviceAccount)
 		}
-		policy, err := getIAMPolicyWithRetries(ctx, handle)
-		if err != nil {
+
+		if err := client.Revoke(ctx, &RevokeRequest{
+			Bucket:  bucket,
+			Object:  object,
+			Members: []string{serviceAccount},
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		found := false
-		members := policy.Members(iamObjectReader)
-		for _, member := range members {
-			if member == serviceAccount {
-				found = true
-			}
-		}
-		if !found {
-			t.Errorf("expected %q to contain %q", members, serviceAccount)
+		if policyIncludesServiceAccount() {
+			t.Errorf("expected policy to not include %q", serviceAccount)
 		}
 	})
 
@@ -348,60 +361,6 @@ func TestBerglasIntegration(t *testing.T) {
 
 		if act, exp := accessPlaintext, updatedSecret.Plaintext; !bytes.Equal(act, exp) {
 			t.Errorf("expected %q to be %q", act, exp)
-		}
-	})
-
-	t.Run("revoke", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key, serviceAccount := testBucket(t), testObject(t), testKey(t), testServiceAccount(t)
-		plaintext := []byte("my secret value")
-
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		if err := client.Grant(ctx, &GrantRequest{
-			Bucket:  bucket,
-			Object:  object,
-			Members: []string{serviceAccount},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := client.Revoke(ctx, &RevokeRequest{
-			Bucket:  bucket,
-			Object:  object,
-			Members: []string{serviceAccount},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		handle, err := client.storageIAM(bucket, object)
-		if err != nil {
-			t.Fatal(err)
-		}
-		policy, err := getIAMPolicyWithRetries(ctx, handle)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		found := false
-		members := policy.Members(iamObjectReader)
-		for _, member := range members {
-			if member == serviceAccount {
-				found = true
-			}
-		}
-		if found {
-			t.Errorf("expected %q to not contain %q", members, serviceAccount)
 		}
 	})
 }
