@@ -17,6 +17,7 @@ package berglas
 import (
 	"context"
 
+	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 )
@@ -81,39 +82,26 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	key := attrs.Metadata[MetadataKMSKey]
 
 	// Remove access to storage
-	storageHandle, err := c.storageIAM(bucket, object)
-	if err != nil {
-		return errors.Wrap(err, "failed to create Storage IAM client")
-	}
-
-	storageP, err := storageHandle.Policy(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to get Storage IAM policy")
-	}
-
-	for _, m := range members {
-		storageP.Remove(m, iamObjectReader)
-	}
-
-	if err := setIAMPolicyWithRetries(ctx, storageHandle, storageP); err != nil {
+	storageHandle := c.storageIAM(bucket, object)
+	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
+		for _, m := range members {
+			p.Remove(m, iamObjectReader)
+		}
+		return p
+	}); err != nil {
 		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
 	}
 
 	// Remove access to KMS
 	kmsHandle := c.kmsClient.ResourceIAM(key)
-	kmsP, err := kmsHandle.Policy(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to get KMS IAM policy")
-	}
-
-	// Add members to the policy
-	for _, m := range members {
-		kmsP.Remove(m, iamKMSDecrypt)
-	}
-
-	// Save the policy
-	if err := setIAMPolicyWithRetries(ctx, kmsHandle, kmsP); err != nil {
+	if err := updateIAMPolicy(ctx, kmsHandle, func(p *iam.Policy) *iam.Policy {
+		for _, m := range members {
+			p.Remove(m, iamKMSDecrypt)
+		}
+		return p
+	}); err != nil {
 		return errors.Wrapf(err, "failed to update KMS IAM policy for %s", key)
 	}
+
 	return nil
 }

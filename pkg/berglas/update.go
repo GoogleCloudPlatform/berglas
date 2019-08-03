@@ -17,6 +17,7 @@ package berglas
 import (
 	"context"
 
+	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 )
@@ -111,26 +112,29 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 			}
 		}
 
-		// Get existing IAM policies.
-		storageHandle, err := c.storageIAM(bucket, object)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create IAM client")
-		}
-		storageP, err := getIAMPolicyWithRetries(ctx, storageHandle)
+		// Get existing IAM policies
+		storageHandle := c.storageIAM(bucket, object)
+		storageP, err := getIAMPolicy(ctx, storageHandle)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get IAM policy")
 		}
 
-		// Update the secret.
+		// Update the secret
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to update secret")
 		}
 
-		// Copy over the existing IAM memberships, if any.
-		if err := setIAMPolicyWithRetries(ctx, storageHandle, storageP); err != nil {
-			return nil, errors.Wrap(err, "secret updated, but failed to update IAM")
+		// Copy over the existing IAM memberships, if any
+		if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
+			// Copy any IAM permissions from the old object over to the new object.
+			for _, m := range storageP.Members(iamObjectReader) {
+				p.Add(m, iamObjectReader)
+			}
+			return p
+		}); err != nil {
+			return nil, errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
 		}
 		return secret, nil
 	case storage.ErrObjectNotExist:
