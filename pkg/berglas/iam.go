@@ -146,23 +146,19 @@ func setClientHeader(h http.Header) {
 	h.Set("User-Agent", UserAgent)
 }
 
-func getIAMPolicyWithRetries(ctx context.Context, h *iam.Handle) (*iam.Policy, error) {
+// getIAMPolicy fetches the IAM policy for the given resource handle, handling
+// any transient errors or conflicts and automatically retrying.
+func getIAMPolicy(ctx context.Context, h *iam.Handle) (*iam.Policy, error) {
 	var policy *iam.Policy
 	var err error
 
 	if err := retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
 		policy, err = h.Policy(ctx)
 		if err != nil {
-			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
-				switch {
-				case terr.Code == 412:
-					// IAM returns 412 while propagating
-					return retry.RetryableError(terr)
-				case terr.Code >= 400 && terr.Code <= 499:
-					return terr
-				}
+			if isIAMRetryableError(err) {
+				return retry.RetryableError(err)
 			}
-			return retry.RetryableError(err)
+			return err
 		}
 		return nil
 	}); err != nil {
@@ -172,47 +168,53 @@ func getIAMPolicyWithRetries(ctx context.Context, h *iam.Handle) (*iam.Policy, e
 	return policy, nil
 }
 
-func setIAMPolicyWithRetries(ctx context.Context, h *iam.Handle, newP *iam.Policy) error {
-	if err := retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
-		// Get the current policy - this is required because IAM validates etags
-		latestP, err := h.Policy(ctx)
+// updateIAMPolicy gets the existing IAM policy, applies the modifications from
+// f, and attempts to set the new policy, retrying and accounting for transient
+// errors.
+func updateIAMPolicy(ctx context.Context, h *iam.Handle, f func(*iam.Policy) *iam.Policy) error {
+	return retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
+		// Get existing policy
+		existingPolicy, err := h.Policy(ctx)
 		if err != nil {
-			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
-				switch {
-				case terr.Code == 412:
-					// IAM returns 412 while propagating
-					return retry.RetryableError(terr)
-				case terr.Code >= 400 && terr.Code <= 499:
-					return terr
-				}
+			if isIAMRetryableError(err) {
+				return retry.RetryableError(err)
 			}
-			return retry.RetryableError(err)
+			return err
 		}
 
-		// Overwrite the existing policy with ours
-		for _, r := range newP.Roles() {
-			for _, m := range newP.Members(r) {
-				latestP.Add(m, r)
+		// Mutate policy
+		newPolicy := f(existingPolicy)
+
+		// Put new policy
+		if err := h.SetPolicy(ctx, newPolicy); err != nil {
+			if isIAMRetryableError(err) {
+				return retry.RetryableError(err)
 			}
+			return err
 		}
 
-		// Update the policy
-		if err := h.SetPolicy(ctx, latestP); err != nil {
-			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
-				switch {
-				case terr.Code == 412:
-					// IAM returns 412 while propagating
-					return retry.RetryableError(terr)
-				case terr.Code >= 400 && terr.Code <= 499:
-					return terr
-				}
-			}
-			return retry.RetryableError(err)
-		}
 		return nil
-	}); err != nil {
-		return err
+	})
+}
+
+// isIAMRetryableError returns true if the given error should retry, false
+// otherwise.
+func isIAMRetryableError(err error) bool {
+	terr, ok := errors.Cause(err).(*googleapi.Error)
+	if !ok {
+		// Don't retry non-API errors
+		return false
 	}
 
-	return nil
+	switch {
+	case terr.Code == 412:
+		// IAM returns 412 while propagating
+		return true
+	case terr.Code >= 400 && terr.Code <= 499:
+		// Don't retry other 400s
+		return false
+	default:
+		// Retry 500s and other things
+		return true
+	}
 }
