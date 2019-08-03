@@ -35,10 +35,10 @@ const (
 
 // storageIAM returns an IAM storage handle to the given object since one does
 // not exist in the storage libray.
-func (c *Client) storageIAM(bucket, object string) (*iam.Handle, error) {
+func (c *Client) storageIAM(bucket, object string) *iam.Handle {
 	return iam.InternalNewHandleClient(&iamClient{
 		raw: c.storageIAMClient,
-	}, bucket+"/"+object), nil
+	}, bucket+"/"+object)
 }
 
 // iamClient implements the iam.client interface.
