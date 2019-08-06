@@ -40,8 +40,9 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	}
 
 	plaintext, err := c.Access(ctx, &AccessRequest{
-		Bucket: ref.Bucket(),
-		Object: ref.Object(),
+		Bucket:     ref.Bucket(),
+		Object:     ref.Object(),
+		Generation: ref.Generation(),
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to access secret %s/%s", ref.Bucket(), ref.Object())

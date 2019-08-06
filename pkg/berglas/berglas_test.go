@@ -298,14 +298,17 @@ func TestBerglasIntegration(t *testing.T) {
 		client, ctx := testClient(t)
 		bucket, object, key := testBucket(t), testObject(t), testKey(t)
 		plaintext := []byte("my secret value")
+		var generation int64
 
-		if _, err := client.Create(ctx, &CreateRequest{
+		if createdSecret, err := client.Create(ctx, &CreateRequest{
 			Bucket:    bucket,
 			Object:    object,
 			Key:       key,
 			Plaintext: plaintext,
 		}); err != nil {
 			t.Fatal(err)
+		} else {
+			generation = createdSecret.Generation
 		}
 		defer testCleanup(t, bucket, object)
 
@@ -316,6 +319,23 @@ func TestBerglasIntegration(t *testing.T) {
 		}
 		if act, exp := os.Getenv("REPLACE_VALUE_GOOD"), string(plaintext); act != exp {
 			t.Errorf("expected %q to be %q", act, exp)
+		}
+
+		_, err := client.Update(ctx, &UpdateRequest{
+			Bucket:    bucket,
+			Object:    object,
+			Key:       key,
+			Plaintext: []byte("my new secret value"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		// access older version of the secret
+		if err := client.ReplaceValue(ctx, "SECRET", fmt.Sprintf("berglas://%s/%s#%d", bucket, object, generation)); err != nil {
+			t.Fatal(err)
+		}
+		if v, exp := os.Getenv("SECRET"), string(plaintext); v != exp {
+			t.Errorf("expected %q to be %q", v, exp)
 		}
 	})
 
@@ -345,7 +365,6 @@ func TestBerglasIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer testCleanup(t, bucket, object)
 
 		if act, exp := createdSecret.Generation, updatedSecret.Generation; act == exp {
 			t.Errorf("expected %q to be different than %q", act, exp)

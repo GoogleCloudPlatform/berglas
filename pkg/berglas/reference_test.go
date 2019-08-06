@@ -86,6 +86,17 @@ func TestParseReference(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"destination_path",
+			"berglas://foo/bar?destination=/var/foo#12345678",
+			&Reference{
+				bucket:     "foo",
+				object:     "bar",
+				generation: 12345678,
+				filepath:   "/var/foo",
+			},
+			false,
+		},
 	}
 
 	for _, tc := range cases {
