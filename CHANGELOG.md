@@ -8,6 +8,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
   environment
 - core: retry when setting GCS IAM permissions
 - core: retry when setting KMS IAM permissions
+- core: allow accessing a specific version of a secret
 
 ## [0.2.0] 2019-08-01
 ### Breaking
