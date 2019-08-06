@@ -17,6 +17,7 @@ package berglas
 import (
 	"io/ioutil"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -29,9 +30,10 @@ const (
 
 // Reference is a parsed berglas reference.
 type Reference struct {
-	bucket   string
-	object   string
-	filepath string
+	bucket     string
+	object     string
+	generation int64
+	filepath   string
 }
 
 // Bucket is the storage bucket where the secret lives.
@@ -47,6 +49,11 @@ func (r *Reference) Object() string {
 // Filepath is the disk to write the reference, if any.
 func (r *Reference) Filepath() string {
 	return r.filepath
+}
+
+// Generation is the secret generation, if any.
+func (r *Reference) Generation() int64 {
+	return r.generation
 }
 
 // IsReference returns true if the given string looks like a berglas reference,
@@ -85,6 +92,12 @@ func ParseReference(s string) (*Reference, error) {
 	var r Reference
 	r.bucket = ss[0]
 	r.object = ss[1]
+
+	if u.Fragment != "" {
+		if generation, err := strconv.ParseInt(u.Fragment, 0, 64); err == nil {
+			r.generation = generation
+		}
+	}
 
 	// Parse out destination
 	switch d := u.Query().Get("destination"); d {
