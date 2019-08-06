@@ -88,11 +88,11 @@ func TestParseReference(t *testing.T) {
 		},
 		{
 			"destination_path",
-			"berglas://foo/bar?destination=/var/foo#12345678",
+			"berglas://foo/bar?destination=/var/foo#1563925173373377",
 			&Reference{
 				bucket:     "foo",
 				object:     "bar",
-				generation: 12345678,
+				generation: 1563925173373377,
 				filepath:   "/var/foo",
 			},
 			false,
