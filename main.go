@@ -16,6 +16,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -621,6 +622,11 @@ func editRun(_ *cobra.Command, args []string) error {
 	// Error if the secret is empty
 	if len(newPlaintext) == 0 {
 		err := errors.New("secret is empty")
+		return misuseError(err)
+	}
+
+	if bytes.Equal(newPlaintext, originalSecret.Plaintext) {
+		err := errors.New("secret unchanged - not going to update")
 		return misuseError(err)
 	}
 
