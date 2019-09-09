@@ -1,5 +1,5 @@
 module github.com/GoogleCloudPlatform/berglas/examples/cloudrun/go
 
-go 1.12
+go 1.13
 
 require github.com/GoogleCloudPlatform/berglas v0.1.4
