@@ -53,6 +53,12 @@ stored in [Cloud Storage][cloud-storage].
         chmod +x /path/to/berglas
         ```
 
+    - If you use [Homebrew](https://brew.sh/) on macOS, you can install like this:
+    
+      ```text
+      brew install berglas
+      ```
+      
     - Use the official Docker container:
 
       ```text
