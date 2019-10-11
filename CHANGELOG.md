@@ -2,7 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.2.1] Unreleased
+## [0.2.1] 2019-10-11
 ### Changed
 - core: resolve value uses the passed value instead of looking it up from the
   environment
