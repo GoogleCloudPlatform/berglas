@@ -12,6 +12,8 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2554,6 +2556,80 @@ type KeyManagementServiceServer interface {
 	// will be set to [DISABLED][google.cloud.kms.v1.CryptoKeyVersion.CryptoKeyVersionState.DISABLED],
 	// and [destroy_time][google.cloud.kms.v1.CryptoKeyVersion.destroy_time] will be cleared.
 	RestoreCryptoKeyVersion(context.Context, *RestoreCryptoKeyVersionRequest) (*CryptoKeyVersion, error)
+}
+
+// UnimplementedKeyManagementServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedKeyManagementServiceServer struct {
+}
+
+func (*UnimplementedKeyManagementServiceServer) ListKeyRings(ctx context.Context, req *ListKeyRingsRequest) (*ListKeyRingsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListKeyRings not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) ListCryptoKeys(ctx context.Context, req *ListCryptoKeysRequest) (*ListCryptoKeysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCryptoKeys not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) ListCryptoKeyVersions(ctx context.Context, req *ListCryptoKeyVersionsRequest) (*ListCryptoKeyVersionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCryptoKeyVersions not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) ListImportJobs(ctx context.Context, req *ListImportJobsRequest) (*ListImportJobsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListImportJobs not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) GetKeyRing(ctx context.Context, req *GetKeyRingRequest) (*KeyRing, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetKeyRing not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) GetCryptoKey(ctx context.Context, req *GetCryptoKeyRequest) (*CryptoKey, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCryptoKey not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) GetCryptoKeyVersion(ctx context.Context, req *GetCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCryptoKeyVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) GetPublicKey(ctx context.Context, req *GetPublicKeyRequest) (*PublicKey, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) GetImportJob(ctx context.Context, req *GetImportJobRequest) (*ImportJob, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetImportJob not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) CreateKeyRing(ctx context.Context, req *CreateKeyRingRequest) (*KeyRing, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateKeyRing not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) CreateCryptoKey(ctx context.Context, req *CreateCryptoKeyRequest) (*CryptoKey, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateCryptoKey not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) CreateCryptoKeyVersion(ctx context.Context, req *CreateCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateCryptoKeyVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) ImportCryptoKeyVersion(ctx context.Context, req *ImportCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportCryptoKeyVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) CreateImportJob(ctx context.Context, req *CreateImportJobRequest) (*ImportJob, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateImportJob not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) UpdateCryptoKey(ctx context.Context, req *UpdateCryptoKeyRequest) (*CryptoKey, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCryptoKey not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) UpdateCryptoKeyVersion(ctx context.Context, req *UpdateCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCryptoKeyVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) Encrypt(ctx context.Context, req *EncryptRequest) (*EncryptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Encrypt not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) Decrypt(ctx context.Context, req *DecryptRequest) (*DecryptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Decrypt not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) AsymmetricSign(ctx context.Context, req *AsymmetricSignRequest) (*AsymmetricSignResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AsymmetricSign not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) AsymmetricDecrypt(ctx context.Context, req *AsymmetricDecryptRequest) (*AsymmetricDecryptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AsymmetricDecrypt not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) UpdateCryptoKeyPrimaryVersion(ctx context.Context, req *UpdateCryptoKeyPrimaryVersionRequest) (*CryptoKey, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCryptoKeyPrimaryVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) DestroyCryptoKeyVersion(ctx context.Context, req *DestroyCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DestroyCryptoKeyVersion not implemented")
+}
+func (*UnimplementedKeyManagementServiceServer) RestoreCryptoKeyVersion(ctx context.Context, req *RestoreCryptoKeyVersionRequest) (*CryptoKeyVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreCryptoKeyVersion not implemented")
 }
 
 func RegisterKeyManagementServiceServer(s *grpc.Server, srv KeyManagementServiceServer) {
