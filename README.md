@@ -5,7 +5,7 @@
 
 ![Berglas Logo](/logos/berglas.svg)
 
-Berglas is a command line tool and library for storing and and retrieving
+Berglas is a command line tool and library for storing and retrieving
 secrets on Google Cloud. Secrets are encrypted with [Cloud KMS][cloud-kms] and
 stored in [Cloud Storage][cloud-storage].
 
