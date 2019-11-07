@@ -54,11 +54,11 @@ stored in [Cloud Storage][cloud-storage].
         ```
 
     - If you use [Homebrew](https://brew.sh/) on macOS, you can install like this:
-    
+
       ```text
       brew install berglas
       ```
-      
+
     - Use the official Docker container:
 
       ```text
@@ -120,13 +120,20 @@ stored in [Cloud Storage][cloud-storage].
 
     If you want full control over the creation of the Cloud Storage and Cloud
     KMS keys, please see the [custom setup documentation][custom-setup].
-    
-1. _(Optional)_ Bootstrap a Berglas environment specifying a bucket location. By default the berglas bucket is created in the multi-regional location `US`. You can specify your location by using the following command. Please see the list of supported locations in the [GCP bucket location documentation page](https://cloud.google.com/storage/docs/locations)
+
+1. _(Optional)_ Bootstrap a Berglas environment specifying a bucket location. By
+   default the berglas bucket is created in the multi-regional location `US`.
+   You can specify your location by using the following command. Please see the
+   list of supported locations in the [GCP bucket location documentation
+   page](https://cloud.google.com/storage/docs/locations)
 
 
     ```text
     export BUCKET_LOCATION=europe-west1
-    berglas bootstrap --project $PROJECT_ID --bucket $BUCKET_ID --bucket-location $BUCKET_LOCATION
+    berglas bootstrap \
+      --project $PROJECT_ID \
+      --bucket $BUCKET_ID \
+      --bucket-location $BUCKET_LOCATION
     ```
 
     This command uses the default values. You can customize the storage bucket
