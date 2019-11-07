@@ -103,7 +103,11 @@ func (c *Client) encryptAndWrite(
 					return nil, errSecretAlreadyExists
 				}
 				return nil, errSecretModified
+			default:
+				return nil, errors.Wrap(err, "Writer.Close: googleapi.Error: failed to finalise bucket creation")
 			}
+		} else {
+			return nil, errors.Wrap(err, "Writer.Close: failed to finalise bucket creation")
 		}
 	}
 
