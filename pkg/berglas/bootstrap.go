@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -59,6 +60,9 @@ type BootstrapRequest struct {
 
 	// KMSCryptoKey is the name of the KMS crypto key.
 	KMSCryptoKey string
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Bootstrap adds IAM permission to the given entity to the storage object and the
@@ -99,11 +103,13 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 	}
 
 	// Attempt to create the KMS key ring
+	i.Logger.Log("attempting to create kms key ring...")
 	if _, err := c.kmsClient.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s",
 			projectID, kmsLocation),
 		KeyRingId: kmsKeyRing,
 	}); err != nil {
+		i.Logger.Logf("kmsClient.CreateKeyRing: unable to create key ring: %#v", err)
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
 			return errors.Wrapf(err, "failed to create KMS key ring %s", kmsKeyRing)
@@ -112,6 +118,7 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 
 	// Attempt to create the KMS crypto key
 	rotationPeriod := 30 * 24 * time.Hour
+	i.Logger.Logf("attempting to create kms crypto key with ration period %d...", rotationPeriod)
 	if _, err := c.kmsClient.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s/keyRings/%s",
 			projectID, kmsLocation, kmsKeyRing),
@@ -132,6 +139,7 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 			},
 		},
 	}); err != nil {
+		i.Logger.Logf("kmsClient.CreateCryptoKey: unable to create crypto key: %v", err)
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
 			return errors.Wrapf(err, "failed to create KMS crypto key %s", kmsCryptoKey)
@@ -139,7 +147,8 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 	}
 
 	// Create the storage bucket
-	if err := c.storageClient.Bucket(bucket).Create(ctx, projectID, &storage.BucketAttrs{
+	i.Logger.Logf("attempting to create storage bucket %d...", rotationPeriod)
+	bucketAttrs := &storage.BucketAttrs{
 		PredefinedACL:              "private",
 		PredefinedDefaultObjectACL: "private",
 		Location:                   bucketLocation,
@@ -159,7 +168,10 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 		Labels: map[string]string{
 			"purpose": "berglas",
 		},
-	}); err != nil {
+	}
+	i.Logger.Logf("storage bucket attributes: %#v", bucketAttrs)
+	if err := c.storageClient.Bucket(bucket).Create(ctx, projectID, bucketAttrs); err != nil {
+		i.Logger.Logf("storageClient.Bucket(%s).Create: unable to create bucket: %#v", bucket, err)
 		if isBucketAlreadyExistsError(err) {
 			err = errors.New("bucket already exists")
 		}

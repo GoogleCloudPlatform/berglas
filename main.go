@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -28,6 +29,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -65,6 +67,7 @@ var (
 	kmsLocation    string
 	kmsKeyRing     string
 	kmsCryptoKey   string
+	verboseOutput  bool
 )
 
 var rootCmd = &cobra.Command{
@@ -354,6 +357,7 @@ func main() {
 	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
 
 	rootCmd.AddCommand(accessCmd)
+	rootCmd.PersistentFlags().BoolVarP(&verboseOutput, "verbose", "v", false, "verbose output")
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
 		"Get a specific generation")
 
@@ -457,6 +461,7 @@ func bootstrapRun(_ *cobra.Command, args []string) error {
 		KMSLocation:    kmsLocation,
 		KMSKeyRing:     kmsKeyRing,
 		KMSCryptoKey:   kmsCryptoKey,
+		Logger:         logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	}); err != nil {
 		return apiError(err)
 	}
