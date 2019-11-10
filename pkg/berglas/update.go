@@ -19,6 +19,7 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 )
 
@@ -55,6 +56,9 @@ type UpdateRequest struct {
 	// CreateIfMissing indicates that the updater should create a secret with the
 	// given parameters if one does not already exist.
 	CreateIfMissing bool
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Update changes the contents of an existing secret. If the secret does not
@@ -83,6 +87,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 
 	// If no specific generations were given, lookup the latest generation to make
 	// sure we don't conflict with another write.
+	i.Logger.Logf("attempting to upate content of existing secret on bucket %s object %s...", bucket, object)
 	attrs, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
@@ -113,6 +118,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		}
 
 		// Get existing IAM policies
+		i.Logger.Logf("attempting to get existing IAM policies on bucket %s object %s...", bucket, object)
 		storageHandle := c.storageIAM(bucket, object)
 		storageP, err := getIAMPolicy(ctx, storageHandle)
 		if err != nil {
@@ -120,6 +126,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		}
 
 		// Update the secret
+		i.Logger.Logf("attempting to encrypt and write new secret on bucket %s object %s key %s...", bucket, object, key)
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
 		if err != nil {
@@ -127,6 +134,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		}
 
 		// Copy over the existing IAM memberships, if any
+		i.Logger.Logf("attempting to copy existing IAM memberships if any...")
 		if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
 			// Copy any IAM permissions from the old object over to the new object.
 			for _, m := range storageP.Members(iamObjectReader) {
@@ -138,6 +146,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		}
 		return secret, nil
 	case storage.ErrObjectNotExist:
+		i.Logger.Logf("object %s does not exist", object)
 		if !i.CreateIfMissing {
 			return nil, errSecretDoesNotExist
 		}
@@ -151,6 +160,7 @@ func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) 
 		}
 
 		// Update the secret.
+		i.Logger.Logf("encrypt and write new secret to bucket %s object %s key %s", bucket, object, key)
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
 		if err != nil {

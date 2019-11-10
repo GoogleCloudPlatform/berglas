@@ -115,22 +115,26 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Split into parts
+	i.Logger.Logf("attempting to split response into parts...")
 	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) < 2 {
 		return nil, errors.New("invalid ciphertext: not enough parts")
 	}
 
+	i.Logger.Log("attempting to b64 decode first part...")
 	encDEK, err := base64.StdEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, errors.New("invalid ciphertext: failed to parse dek")
 	}
 
+	i.Logger.Log("attempting to b64 decode second part...")
 	ciphertext, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, errors.New("invalid ciphertext: failed to parse ciphertext")
 	}
 
 	// Decrypt the DEK using a KMS key
+	i.Logger.Logf("attempting to decrypt ciphertext with KMS key %s...", key)
 	kmsResp, err := c.kmsClient.Decrypt(ctx, &kmspb.DecryptRequest{
 		Name:                        key,
 		Ciphertext:                  encDEK,
@@ -142,7 +146,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	dek := kmsResp.Plaintext
 
 	// Decrypt with the local key
-	i.Logger.Log("attempting to decrypt ciphertext...")
+	i.Logger.Log("attempting to decrypt envelope...")
 	plaintext, err := envelopeDecrypt(dek, ciphertext)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decrypt envelope")

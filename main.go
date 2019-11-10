@@ -771,6 +771,7 @@ func grantRun(_ *cobra.Command, args []string) error {
 		Bucket:  bucket,
 		Object:  object,
 		Members: members,
+		Logger:  logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	}); err != nil {
 		return apiError(err)
 	}
@@ -788,6 +789,7 @@ func listRun(_ *cobra.Command, args []string) error {
 		Bucket:      bucket,
 		Prefix:      listPrefix,
 		Generations: listGenerations,
+		Logger:      logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	})
 	if err != nil {
 		return apiError(err)
@@ -821,6 +823,7 @@ func revokeRun(_ *cobra.Command, args []string) error {
 		Bucket:  bucket,
 		Object:  object,
 		Members: members,
+		Logger:  logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	}); err != nil {
 		return apiError(err)
 	}
@@ -853,6 +856,7 @@ func updateRun(_ *cobra.Command, args []string) error {
 		CreateIfMissing: createIfMissing,
 		Generation:      0,
 		Metageneration:  0,
+		Logger:          logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	})
 	if err != nil {
 		return apiError(err)

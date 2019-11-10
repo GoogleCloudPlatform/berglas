@@ -19,6 +19,7 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 )
 
@@ -43,6 +44,9 @@ type RevokeRequest struct {
 	// Members is the list of membership bindings. This should be in the format
 	// described at https://godoc.org/google.golang.org/api/iam/v1#Binding.
 	Members []string
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Revoke removes IAM permission to the given entity on the storage object and
@@ -68,6 +72,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	}
 
 	// Get attributes to find the KMS key
+	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s...")
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
@@ -82,6 +87,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	key := attrs.Metadata[MetadataKMSKey]
 
 	// Remove access to storage
+	i.Logger.Logf("attempting to remove access to storage for bucket %s object %s...", bucket, object)
 	storageHandle := c.storageIAM(bucket, object)
 	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {
@@ -93,6 +99,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	}
 
 	// Remove access to KMS
+	i.Logger.Logf("attempting to remove access to KMS for bucket %s object %s key %s...", bucket, object, key)
 	kmsHandle := c.kmsClient.ResourceIAM(key)
 	if err := updateIAMPolicy(ctx, kmsHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {

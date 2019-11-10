@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
 )
@@ -71,6 +72,9 @@ type ListRequest struct {
 
 	// Generations indicates that all generations of secrets should be listed
 	Generations bool
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // List lists all secrets in the bucket. This doesn't fetch the plaintext value
@@ -94,6 +98,7 @@ func (c *Client) List(
 	}
 
 	// List all objects
+	i.Logger.Logf("attempting to list all objects by query %v", query)
 	it := c.storageClient.
 		Bucket(bucket).
 		Objects(ctx, query)
@@ -116,6 +121,7 @@ func (c *Client) List(
 
 	// list objects returns all generations even if the live object is gone.
 	// filter on names which have not been deleted
+	i.Logger.Log("filter names which have not been deleted...")
 	for _, objects := range allObjects {
 		foundLiveObject := false
 		for _, obj := range objects {
@@ -132,6 +138,7 @@ func (c *Client) List(
 		}
 	}
 
+	i.Logger.Log("sorting results...")
 	sort.Sort(result)
 
 	return &ListResponse{
