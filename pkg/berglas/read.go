@@ -73,7 +73,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Get attributes to find the KMS key
-	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s generation %s...", bucket, object, generation)
+	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s generation %d...", bucket, object, generation)
 	attrs, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).

@@ -147,7 +147,7 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 	}
 
 	// Create the storage bucket
-	i.Logger.Logf("attempting to create storage bucket %d...", bucket)
+	i.Logger.Logf("attempting to create storage bucket %s...", bucket)
 	bucketAttrs := &storage.BucketAttrs{
 		PredefinedACL:              "private",
 		PredefinedDefaultObjectACL: "private",

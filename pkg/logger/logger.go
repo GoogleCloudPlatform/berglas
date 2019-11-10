@@ -30,7 +30,7 @@ func (l Logger) Log(msg string) {
 // conditionally prints to output based on l.verbose value
 func (l Logger) Logf(format string, args ...interface{}) {
 	if l.verbose {
-		l.logger.Printf(format, args)
+		l.logger.Printf(format, args...)
 		l.logger.Println()
 	}
 }

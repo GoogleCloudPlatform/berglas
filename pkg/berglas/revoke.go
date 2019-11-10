@@ -72,7 +72,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	}
 
 	// Get attributes to find the KMS key
-	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s...")
+	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s...", bucket, object)
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
