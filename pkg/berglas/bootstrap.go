@@ -139,7 +139,7 @@ func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
 			},
 		},
 	}); err != nil {
-		i.Logger.Logf("kmsClient.CreateCryptoKey: unable to create crypto key: %v", err)
+		i.Logger.Logf("kmsClient.CreateCryptoKey: unable to create crypto key: %#v", err)
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
 			return errors.Wrapf(err, "failed to create KMS crypto key %s", kmsCryptoKey)

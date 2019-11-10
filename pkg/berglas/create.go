@@ -17,6 +17,7 @@ package berglas
 import (
 	"context"
 
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 )
 
@@ -43,6 +44,9 @@ type CreateRequest struct {
 
 	// Plaintext is the plaintext secret to encrypt and store.
 	Plaintext []byte
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Create creates a new encrypted secret on GCS. If the secret already exists,
@@ -72,6 +76,7 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 		return nil, errors.New("missing plaintext")
 	}
 
+	i.Logger.Logf("attempting to encrypt and write secret to bucket %s/%s...", bucket, object)
 	secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext, 0, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create secret")

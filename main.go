@@ -507,6 +507,7 @@ func createRun(_ *cobra.Command, args []string) error {
 		Object:    object,
 		Key:       key,
 		Plaintext: plaintext,
+		Logger:    logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	}); err != nil {
 		return apiError(err)
 	}
@@ -525,6 +526,7 @@ func deleteRun(_ *cobra.Command, args []string) error {
 	if err := berglas.Delete(ctx, &berglas.DeleteRequest{
 		Bucket: bucket,
 		Object: object,
+		Logger: logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	}); err != nil {
 		return apiError(err)
 	}
@@ -562,6 +564,7 @@ func editRun(_ *cobra.Command, args []string) error {
 	originalSecret, err := client.Read(ctx, &berglas.ReadRequest{
 		Bucket: bucket,
 		Object: object,
+		Logger: logger.NewLogger(verboseOutput, log.New(os.Stderr, "[debug] ", log.LstdFlags)),
 	})
 	if err != nil {
 		return apiError(err)

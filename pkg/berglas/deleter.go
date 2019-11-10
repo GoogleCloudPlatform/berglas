@@ -19,6 +19,7 @@ import (
 	"runtime"
 
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/gammazero/workerpool"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
@@ -41,6 +42,9 @@ type DeleteRequest struct {
 
 	// Object is the name of the secret in Cloud Storage.
 	Object string
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Delete reads the contents of the secret from the bucket, decrypting the
@@ -60,6 +64,7 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 		return errors.New("missing object name")
 	}
 
+	i.Logger.Logf("initialising storageClient iterator for bucket %s and object prefix %s...", bucket, object)
 	it := c.storageClient.
 		Bucket(bucket).
 		Objects(ctx, &storage.Query{
@@ -68,6 +73,7 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 		})
 
 	// Create a workerpool for parallel deletion of resources
+	i.Logger.Logf("creating workerpool for parallel deletion of resources...")
 	wp := workerpool.New(runtime.NumCPU() - 1)
 	errCh := make(chan error)
 	childCtx, cancel := context.WithCancel(ctx)

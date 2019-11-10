@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/pkg/logger"
 	"github.com/pkg/errors"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -45,6 +46,9 @@ type ReadRequest struct {
 
 	// Generation of the object to fetch
 	Generation int64
+
+	// Logger is internal logger used for debugging purposes
+	Logger logger.Logger
 }
 
 // Read reads the contents of the secret from the bucket.
@@ -69,6 +73,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Get attributes to find the KMS key
+	i.Logger.Logf("attempting to get attributes to find KMS key for bucket %s object %s generation %s...", bucket, object, generation)
 	attrs, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
@@ -86,6 +91,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	key := attrs.Metadata[MetadataKMSKey]
 
 	// Download the file from GCS
+	i.Logger.Log("attempting to download file from Google Cloud Storage...")
 	ior, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
@@ -99,6 +105,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Read the entire response into memory
+	i.Logger.Log("attempting to read entire response into memory...")
 	data, err := ioutil.ReadAll(ior)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read secret into string")
@@ -135,6 +142,7 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	dek := kmsResp.Plaintext
 
 	// Decrypt with the local key
+	i.Logger.Log("attempting to decrypt ciphertext...")
 	plaintext, err := envelopeDecrypt(dek, ciphertext)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decrypt envelope")
