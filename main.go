@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -350,6 +351,38 @@ already exist.
 	RunE: updateRun,
 }
 
+var completionCmd = &cobra.Command{
+	Use: "completion SHELL",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return fmt.Errorf("requires 1 arg, found %d", len(args))
+		}
+		return cobra.OnlyValidArgs(cmd, args)
+	},
+	ValidArgs: []string{"bash", "zsh"},
+	Short:     "Outputs shell completion for the given shell (bash or zsh)",
+	Long:      strings.Trim(
+`Outputs shell completion for the given shell (bash or zsh)
+
+This depends on the bash-completion package:
+
+  # OS X:
+  brew install bash-completion
+
+  # Ubuntu:
+  apt-get install bash-completion
+  
+Zsh users may also put the file somewhere on their $fpath,
+e.g. /usr/local/share/zsh/site-functions
+`, "\n"),
+	Example: strings.Trim(`
+  # Enable completion in your current shell
+  source <(berglas completion bash)    # for bash users
+  source <(berglas completion zsh)     # for zsh users
+`, "\n"),
+	Run:       completionRun,
+}
+
 func main() {
 	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
 
@@ -418,6 +451,8 @@ func main() {
 		"Create the secret if it does not already exist")
 	updateCmd.Flags().StringVarP(&key, "key", "k", "",
 		"KMS key to use for re-encryption")
+
+	rootCmd.AddCommand(completionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(stderr, "%s\n", err)
@@ -853,6 +888,17 @@ func updateRun(_ *cobra.Command, args []string) error {
 	fmt.Fprintf(stdout, "Successfully updated secret [%s] to generation [%d]\n",
 		object, secret.Generation)
 	return nil
+}
+
+func completionRun(cmd *cobra.Command, args []string) {
+	switch args[0] {
+	case "bash":
+		rootCmd.GenBashCompletion(os.Stdout)
+	case "zsh":
+		rootCmd.GenZshCompletion(os.Stdout)
+		// enable the `source <(berglas completion SHELL)` pattern for zsh
+		io.WriteString(os.Stdout, "compdef _berglas berglas\n")
+	}
 }
 
 // exitError is a typed error to return.
