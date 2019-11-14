@@ -46,6 +46,9 @@ var (
 	stderr = os.Stderr
 	stdin  = os.Stdin
 
+	logFormat string
+	logLevel  string
+
 	accessGeneration int64
 
 	listGenerations bool
@@ -352,6 +355,11 @@ already exist.
 
 func main() {
 	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
+
+	rootCmd.PersistentFlags().StringVarP(&logFormat, "log-format", "f", "console",
+		"Format in which to log")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "info",
+		"Level at which to log")
 
 	rootCmd.AddCommand(accessCmd)
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
