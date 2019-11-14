@@ -2,7 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.3.0] Unreleased
+## [0.3.0] 2019-11-13
 ### Breaking
 - cli: remove local command short flags, use long-form flags instead, short
   flags will be reserved for global flags moving forward
