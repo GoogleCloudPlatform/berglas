@@ -393,7 +393,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "log-format", "f", "console",
 		"Format in which to log")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "info",
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "fatal",
 		"Level at which to log")
 
 	rootCmd.AddCommand(accessCmd)
