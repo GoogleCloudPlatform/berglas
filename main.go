@@ -356,35 +356,31 @@ already exist.
 }
 
 var completionCmd = &cobra.Command{
-	Use: "completion SHELL",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return fmt.Errorf("requires 1 arg, found %d", len(args))
-		}
-		return cobra.OnlyValidArgs(cmd, args)
-	},
-	ValidArgs: []string{"bash", "zsh"},
-	Short:     "Outputs shell completion for the given shell (bash or zsh)",
-	Long:      strings.Trim(
-`Outputs shell completion for the given shell (bash or zsh)
+	Use:   "completion SHELL",
+	Args:  cobra.ExactArgs(1),
+	Short: "Outputs shell completion for the given shell (bash or zsh)",
+	Long: strings.Trim(
+		`Outputs shell completion for the given shell (bash or zsh)
 
-This depends on the bash-completion package:
+This depends on the bash-completion package. To install it:
 
-  # OS X:
+  # Mac OS X
   brew install bash-completion
 
-  # Ubuntu:
+  # Debian
   apt-get install bash-completion
-  
-Zsh users may also put the file somewhere on their $fpath,
-e.g. /usr/local/share/zsh/site-functions
+
+Zsh users may also put the file somewhere on their $fpath, like
+/usr/local/share/zsh/site-functions
 `, "\n"),
 	Example: strings.Trim(`
-  # Enable completion in your current shell
-  source <(berglas completion bash)    # for bash users
-  source <(berglas completion zsh)     # for zsh users
+  # Enable completion for bash users
+  source <(berglas completion bash)
+
+  # Enable completion for zsh users
+  source <(berglas completion zsh)
 `, "\n"),
-	Run:       completionRun,
+	RunE: completionRun,
 }
 
 func main() {
@@ -946,15 +942,30 @@ func updateRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func completionRun(cmd *cobra.Command, args []string) {
-	switch args[0] {
+func completionRun(cmd *cobra.Command, args []string) error {
+	switch shell := args[0]; shell {
 	case "bash":
-		rootCmd.GenBashCompletion(os.Stdout)
+		if err := rootCmd.GenBashCompletion(stdout); err != nil {
+			err = errors.Wrap(err, "failed to generate bash completion")
+			return apiError(err)
+		}
 	case "zsh":
-		rootCmd.GenZshCompletion(os.Stdout)
+		if err := rootCmd.GenZshCompletion(stdout); err != nil {
+			err = errors.Wrap(err, "failed to generate zsh completion")
+			return apiError(err)
+		}
+
 		// enable the `source <(berglas completion SHELL)` pattern for zsh
-		io.WriteString(os.Stdout, "compdef _berglas berglas\n")
+		if _, err := io.WriteString(stdout, "compdef _berglas berglas\n"); err != nil {
+			err = errors.Wrap(err, "failed to run compdef")
+			return apiError(err)
+		}
+	default:
+		err := errors.Errorf("unknown completion %q", shell)
+		return misuseError(err)
 	}
+
+	return nil
 }
 
 // exitError is a typed error to return.
