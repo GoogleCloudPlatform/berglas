@@ -22,6 +22,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/googleapi"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -31,14 +32,27 @@ func (c *Client) encryptAndWrite(
 	ctx context.Context, bucket, object, key string, plaintext []byte,
 	generation, metageneration int64) (*Secret, error) {
 
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":         bucket,
+		"object":         object,
+		"key":            key,
+		"generation":     generation,
+		"metageneration": metageneration,
+	})
+
+	logger.Debug("encryptAndWrite.start")
+	defer logger.Debug("encryptAndWrite.finish")
+
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
 	// pieces of data).
+	logger.Debug("generating envelope")
 	dek, ciphertext, err := envelopeEncrypt(plaintext)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to perform envelope encryption")
 	}
 
 	// Encrypt the plaintext using a KMS key
+	logger.Debug("encrypting envelope")
 	kmsResp, err := c.kmsClient.Encrypt(ctx, &kmspb.EncryptRequest{
 		Name:                        key,
 		Plaintext:                   dek,
@@ -88,12 +102,16 @@ func (c *Client) encryptAndWrite(
 	iow.Metadata[MetadataKMSKey] = kmsKeyTrimVersion(key)
 
 	// Write
+	logger.WithField("metadata", iow.Metadata).Debug("writing object to storage")
 	if _, err := iow.Write([]byte(blob)); err != nil {
 		return nil, errors.Wrap(err, "failed to save encrypted ciphertext to storage")
 	}
 
 	// Close and flush
+	logger.Debug("finalizing writer")
 	if err := iow.Close(); err != nil {
+		logger.WithError(err).Error("failed to finalize writer")
+
 		if terr, ok := err.(*googleapi.Error); ok {
 			switch terr.Code {
 			case http.StatusNotFound:

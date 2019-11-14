@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Create is a top-level package function for creating a secret. For large
@@ -71,6 +72,15 @@ func (c *Client) Create(ctx context.Context, i *CreateRequest) (*Secret, error) 
 	if plaintext == nil {
 		return nil, errors.New("missing plaintext")
 	}
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket": bucket,
+		"object": object,
+		"key":    key,
+	})
+
+	logger.Debug("create.start")
+	defer logger.Debug("create.finish")
 
 	secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext, 0, 0)
 	if err != nil {

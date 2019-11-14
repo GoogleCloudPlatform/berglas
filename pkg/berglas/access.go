@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Access is a top-level package function for accessing a secret. For large
@@ -45,10 +46,38 @@ type AccessRequest struct {
 // Access reads the contents of the secret from the bucket, decrypting the
 // ciphertext using Cloud KMS.
 func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
+	if i == nil {
+		return nil, errors.New("missing request")
+	}
+
+	bucket := i.Bucket
+	if bucket == "" {
+		return nil, errors.New("missing bucket name")
+	}
+
+	object := i.Object
+	if object == "" {
+		return nil, errors.New("missing object name")
+	}
+
+	generation := i.Generation
+	if generation == 0 {
+		generation = -1
+	}
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":     bucket,
+		"object":     object,
+		"generation": generation,
+	})
+
+	logger.Debug("access.start")
+	defer logger.Debug("access.finish")
+
 	secret, err := c.Read(ctx, &ReadRequest{
-		Bucket:     i.Bucket,
-		Object:     i.Object,
-		Generation: i.Generation,
+		Bucket:     bucket,
+		Object:     object,
+		Generation: generation,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to access secret")

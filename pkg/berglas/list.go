@@ -20,6 +20,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 )
 
@@ -86,11 +87,23 @@ func (c *Client) List(
 		return nil, errors.New("missing bucket name")
 	}
 
+	prefix := i.Prefix
+	generations := i.Generations
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":      bucket,
+		"prefix":      prefix,
+		"generations": generations,
+	})
+
+	logger.Debug("list.start")
+	defer logger.Debug("list.finish")
+
 	allObjects := map[string][]*storage.ObjectAttrs{}
 
 	query := &storage.Query{
-		Prefix:   i.Prefix,
-		Versions: i.Generations,
+		Prefix:   prefix,
+		Versions: generations,
 	}
 
 	// List all objects
@@ -100,22 +113,32 @@ func (c *Client) List(
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
+			logger.Debug("out of objects")
 			break
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to list secrets")
 		}
 
-		// Only include items with metadata marking them as a secret
-		if obj.Metadata != nil && obj.Metadata[MetadataIDKey] == "1" {
-			allObjects[obj.Name] = append(allObjects[obj.Name], obj)
+		// Check that it has metadata
+		if obj.Metadata == nil || obj.Metadata[MetadataIDKey] != "1" {
+			logger.WithFields(logrus.Fields{
+				"object":   obj.Name,
+				"metadata": obj.Metadata,
+			}).Debug("found object without metadata")
+			continue
 		}
+
+		logger.WithField("object", obj.Name).Debug("adding object to list")
+		allObjects[obj.Name] = append(allObjects[obj.Name], obj)
 	}
 
 	var result secretList
 
 	// list objects returns all generations even if the live object is gone.
 	// filter on names which have not been deleted
+	logger.Debug("filtering objects with no live versions")
+
 	for _, objects := range allObjects {
 		foundLiveObject := false
 		for _, obj := range objects {

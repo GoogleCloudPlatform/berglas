@@ -16,10 +16,12 @@ package berglas
 
 import (
 	"context"
+	"sort"
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Grant is a top-level package function for granting access to a secret. For
@@ -66,8 +68,20 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	if len(members) == 0 {
 		return nil
 	}
+	sort.Strings(members)
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":  bucket,
+		"object":  object,
+		"members": members,
+	})
+
+	logger.Debug("grant.start")
+	defer logger.Debug("grant.finish")
 
 	// Get attributes to find the KMS key
+	logger.Debug("finding storage object")
+
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
@@ -81,7 +95,12 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
+	logger = logger.WithField("key", key)
+	logger.Debug("found kms key")
+
 	// Grant access to storage
+	logger.Debug("granting access to storage")
+
 	storageHandle := c.storageIAM(bucket, object)
 	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {
@@ -93,6 +112,8 @@ func (c *Client) Grant(ctx context.Context, i *GrantRequest) error {
 	}
 
 	// Grant access to KMS
+	logger.Debug("granting access to kms")
+
 	kmsHandle := c.kmsClient.ResourceIAM(key)
 	if err := updateIAMPolicy(ctx, kmsHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {
