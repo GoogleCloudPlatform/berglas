@@ -22,6 +22,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
@@ -68,7 +69,18 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 		generation = -1
 	}
 
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":     bucket,
+		"object":     object,
+		"generation": generation,
+	})
+
+	logger.Debug("read.start")
+	defer logger.Debug("read.finish")
+
 	// Get attributes to find the KMS key
+	logger.Debug("reading attributes from storage")
+
 	attrs, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
@@ -85,7 +97,12 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
+	logger = logger.WithField("key", key)
+	logger.Debug("found kms key")
+
 	// Download the file from GCS
+	logger.Debug("downloading file from storage")
+
 	ior, err := c.storageClient.
 		Bucket(bucket).
 		Object(object).
@@ -99,6 +116,8 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Read the entire response into memory
+	logger.Debug("reading object into memory")
+
 	data, err := ioutil.ReadAll(ior)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read secret into string")
@@ -108,6 +127,8 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Split into parts
+	logger.Debug("deconstructing and decoding ciphertext into parts")
+
 	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) < 2 {
 		return nil, errors.New("invalid ciphertext: not enough parts")
@@ -124,6 +145,8 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	}
 
 	// Decrypt the DEK using a KMS key
+	logger.Debug("decrypting dek using kms")
+
 	kmsResp, err := c.kmsClient.Decrypt(ctx, &kmspb.DecryptRequest{
 		Name:                        key,
 		Ciphertext:                  encDEK,
@@ -135,6 +158,8 @@ func (c *Client) Read(ctx context.Context, i *ReadRequest) (*Secret, error) {
 	dek := kmsResp.Plaintext
 
 	// Decrypt with the local key
+	logger.Debug("decrypting data with deck locally")
+
 	plaintext, err := envelopeDecrypt(dek, ciphertext)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decrypt envelope")

@@ -16,10 +16,12 @@ package berglas
 
 import (
 	"context"
+	"sort"
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Revoke is a top-level package function for revokeing access to a secret. For
@@ -66,8 +68,20 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	if len(members) == 0 {
 		return nil
 	}
+	sort.Strings(members)
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket":  bucket,
+		"object":  object,
+		"members": members,
+	})
+
+	logger.Debug("revoke.start")
+	defer logger.Debug("revoke.finish")
 
 	// Get attributes to find the KMS key
+	logger.Debug("finding storage object")
+
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
@@ -81,7 +95,12 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
+	logger = logger.WithField("key", key)
+	logger.Debug("found kms key")
+
 	// Remove access to storage
+	logger.Debug("revoking access to storage")
+
 	storageHandle := c.storageIAM(bucket, object)
 	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {
@@ -93,6 +112,8 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	}
 
 	// Remove access to KMS
+	logger.Debug("revoking access to kms")
+
 	kmsHandle := c.kmsClient.ResourceIAM(key)
 	if err := updateIAMPolicy(ctx, kmsHandle, func(p *iam.Policy) *iam.Policy {
 		for _, m := range members {

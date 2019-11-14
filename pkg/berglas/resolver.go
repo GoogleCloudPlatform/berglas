@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Resolve parses and extracts a berglas reference. See Client.Resolve for more
@@ -34,6 +35,13 @@ func Resolve(ctx context.Context, s string) ([]byte, error) {
 // Resolve parses and extracts a berglas reference. The result is the plaintext
 // secrets contents, or a path to the decrypted contents on disk.
 func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
+	logger := c.Logger().WithFields(logrus.Fields{
+		"reference": s,
+	})
+
+	logger.Debug("resolve.start")
+	defer logger.Debug("resolve.finish")
+
 	ref, err := ParseReference(s)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse reference %s", s)
@@ -49,6 +57,8 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	}
 
 	if pth := ref.Filepath(); pth != "" {
+		logger.WithField("filepath", pth).Debug("writing to filepath")
+
 		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE, 0600)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to open filepath %s", pth)
@@ -91,6 +101,14 @@ func Replace(ctx context.Context, key string) error {
 // is successful, this function sets the value of the environment variable to the
 // resolved secret reference.
 func (c *Client) ReplaceValue(ctx context.Context, key string, value string) error {
+	logger := c.Logger().WithFields(logrus.Fields{
+		"key":       key,
+		"reference": value,
+	})
+
+	logger.Debug("replacevalue.start")
+	defer logger.Debug("replacevalue.finish")
+
 	plaintext, err := c.Resolve(ctx, value)
 	if err != nil {
 		return err

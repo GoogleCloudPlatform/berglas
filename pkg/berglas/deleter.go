@@ -21,6 +21,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/gammazero/workerpool"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 )
 
@@ -60,6 +61,14 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 		return errors.New("missing object name")
 	}
 
+	logger := c.Logger().WithFields(logrus.Fields{
+		"bucket": bucket,
+		"object": object,
+	})
+
+	logger.Debug("delete.start")
+	defer logger.Debug("delete.finish")
+
 	it := c.storageClient.
 		Bucket(bucket).
 		Objects(ctx, &storage.Query{
@@ -68,31 +77,44 @@ func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
 		})
 
 	// Create a workerpool for parallel deletion of resources
-	wp := workerpool.New(runtime.NumCPU() - 1)
+	ws := runtime.NumCPU() - 1
+	wp := workerpool.New(ws)
 	errCh := make(chan error)
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	logger.WithField("parallelism", ws).Debug("deleting secrets")
 
 L:
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
+			logger.Debug("out of objects")
 			break
 		}
 		if err != nil {
+			logger.WithError(err).Error("failed to get object")
+
 			select {
 			case <-childCtx.Done():
+				logger.Debug("exiting because context finished")
 			case errCh <- errors.Wrap(err, "failed to list secrets"):
+				logger.Debug("pushed error onto channel, canceling other jobs")
 				cancel()
 			default:
+				logger.WithError(err).Error("received error, but channel blocked")
 			}
 		}
 
 		// Don't queue more tasks if a failure has been encountered already
 		select {
 		case <-childCtx.Done():
+			logger.Debug("child context is finished, exiting")
 			break L
 		default:
+			logger.WithField("generation", obj.Generation).
+				Debug("queuing delete worker")
+
 			wp.Submit(func() {
 				err := c.storageClient.
 					Bucket(bucket).
@@ -101,11 +123,18 @@ L:
 					Delete(childCtx)
 
 				if err != nil {
+					logger.
+						WithError(err).
+						WithField("generation", obj.Generation).
+						Debug("worker failed to delete object")
+
 					select {
 					case <-childCtx.Done():
 					case errCh <- err:
+						logger.Debug("worker pushed error onto channel, canceling other jobs")
 						cancel()
 					default:
+						logger.WithError(err).Error("worker received error but channel blocked")
 						cancel()
 					}
 				}
@@ -113,6 +142,8 @@ L:
 		}
 	}
 
+	// Wait for jobs to finish
+	logger.Debug("waiting for delete jobs to finish")
 	wp.StopWait()
 
 	select {
