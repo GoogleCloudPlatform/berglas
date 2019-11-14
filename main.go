@@ -366,27 +366,27 @@ func main() {
 		"Get a specific generation")
 
 	rootCmd.AddCommand(bootstrapCmd)
-	bootstrapCmd.Flags().StringVarP(&projectID, "project", "p", "",
+	bootstrapCmd.Flags().StringVar(&projectID, "project", "",
 		"Google Cloud Project ID")
 	if err := bootstrapCmd.MarkFlagRequired("project"); err != nil {
 		panic(err)
 	}
-	bootstrapCmd.Flags().StringVarP(&bucket, "bucket", "b", "",
+	bootstrapCmd.Flags().StringVar(&bucket, "bucket", "",
 		"Name of the Cloud Storage bucket to create")
 	if err := bootstrapCmd.MarkFlagRequired("bucket"); err != nil {
 		panic(err)
 	}
-	bootstrapCmd.Flags().StringVarP(&bucketLocation, "bucket-location", "l", "US",
+	bootstrapCmd.Flags().StringVar(&bucketLocation, "bucket-location", "US",
 		"Location in which to create Cloud Storage bucket")
-	bootstrapCmd.Flags().StringVarP(&kmsLocation, "kms-location", "m", "global",
+	bootstrapCmd.Flags().StringVar(&kmsLocation, "kms-location", "global",
 		"Location in which to create the Cloud KMS key ring")
-	bootstrapCmd.Flags().StringVarP(&kmsKeyRing, "kms-keyring", "r", "berglas",
+	bootstrapCmd.Flags().StringVar(&kmsKeyRing, "kms-keyring", "berglas",
 		"Name of the KMS key ring to create")
-	bootstrapCmd.Flags().StringVarP(&kmsCryptoKey, "kms-key", "k", "berglas-key",
+	bootstrapCmd.Flags().StringVar(&kmsCryptoKey, "kms-key", "berglas-key",
 		"Name of the KMS key to create")
 
 	rootCmd.AddCommand(createCmd)
-	createCmd.Flags().StringVarP(&key, "key", "k", "",
+	createCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption")
 	if err := createCmd.MarkFlagRequired("key"); err != nil {
 		panic(err)
@@ -400,15 +400,15 @@ func main() {
 			"$EDITOR in that order.")
 	editCmd.Flags().BoolVar(&createIfMissing, "create-if-missing", false,
 		"Create the secret if it doesn't exist")
-	editCmd.Flags().StringVarP(&key, "key", "k", "",
+	editCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption (only used when secret doesn't exist)")
 
 	rootCmd.AddCommand(execCmd)
-	execCmd.Flags().BoolVarP(&execLocal, "local", "l", false,
+	execCmd.Flags().BoolVar(&execLocal, "local", false,
 		"Parse local environment variables for secrets instead of querying the Cloud APIs")
 
 	rootCmd.AddCommand(grantCmd)
-	grantCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
+	grantCmd.Flags().StringSliceVar(&members, "member", nil,
 		"Member to add")
 
 	rootCmd.AddCommand(listCmd)
@@ -418,13 +418,13 @@ func main() {
 		"List secrets that match prefix")
 
 	rootCmd.AddCommand(revokeCmd)
-	revokeCmd.Flags().StringSliceVarP(&members, "member", "m", nil,
+	revokeCmd.Flags().StringSliceVar(&members, "member", nil,
 		"Member to remove")
 
 	rootCmd.AddCommand(updateCmd)
-	updateCmd.Flags().BoolVarP(&createIfMissing, "create-if-missing", "f", false,
+	updateCmd.Flags().BoolVar(&createIfMissing, "create-if-missing", false,
 		"Create the secret if it does not already exist")
-	updateCmd.Flags().StringVarP(&key, "key", "k", "",
+	updateCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for re-encryption")
 
 	if err := rootCmd.Execute(); err != nil {
