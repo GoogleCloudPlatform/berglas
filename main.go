@@ -29,6 +29,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -895,9 +896,36 @@ func misuseError(err error) *exitError {
 	return exitWithCode(MisuseExitCode, err)
 }
 
-// cliCtx is a context that is canceled on os.Interrupt.
-func cliCtx() context.Context {
+// logger returns the logger for this cli.
+func logger() (*logrus.Logger, error) {
+	level, err := logrus.ParseLevel(logLevel)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse log level")
+	}
+
+	var formatter logrus.Formatter
+	switch logFormat {
+	case "console", "text":
+		formatter = new(logrus.TextFormatter)
+	case "json":
+		formatter = new(berglas.LogFormatterStackdriver)
+	default:
+		return nil, errors.Errorf("unknown log format %q", logFormat)
+	}
+
+	return &logrus.Logger{
+		Out:       stderr,
+		Formatter: formatter,
+		Hooks:     make(logrus.LevelHooks),
+		Level:     level,
+	}, nil
+}
+
+// clientWithContext returns an instantiated berglas client and context with a
+// closer.
+func clientWithContext() (*berglas.Client, context.Context, func(), error) {
 	ctx, cancel := context.WithCancel(context.Background())
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -909,7 +937,18 @@ func cliCtx() context.Context {
 		}
 	}()
 
-	return ctx
+	logger, err := logger()
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to setup logger")
+	}
+
+	client, err := berglas.New(ctx)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to create berglas client")
+	}
+	client.SetLogger(logger)
+
+	return client, ctx, cancel, nil
 }
 
 // readData reads the given string. If the string starts with an "@", it is
