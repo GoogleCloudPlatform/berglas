@@ -37,8 +37,8 @@ const (
 	// APIExitCode is the exit code returned with an upstream API call fails.
 	APIExitCode = 60
 
-	// MisuseExitCode is the exit code returned when the user or system has
-	// generated an error.
+	// MisuseExitCode is the exit code returned when the user did something wrong
+	// such as misused a flag.
 	MisuseExitCode = 61
 )
 
