@@ -220,6 +220,11 @@ variables instead.
 
 Berglas will remain the parent process, but stdin, stdout, stderr, and any
 signals are proxied to the child process.
+
+WARNING: Using berglas exec exposes secrets in plaintext in environment
+variables. You should have a strong understanding of your software supply
+chain security before blindly running a process with berglas exec. The
+resolved secrets will be in plaintext and available to the entire process.
 `, "\n"),
 	Example: strings.Trim(`
   # Spawn a subshell with secrets populated

@@ -299,7 +299,10 @@ its child command, if one was provided.
   parse any local environment variables with the [`berglas://` reference
   syntax][reference-syntax] and spawn your app as a subprocess with the
   plaintext environment replaced. This is great for initd, systemd, or
-  non-containerized workloads.
+  non-containerized workloads. Be warned that this is the _least secure_ way of
+  operating berglas, since it exposes the plaintext secrets to the entire
+  childprocess. Ensure you have audited and trust all dependencies in your
+  software supply chain before using `berglas exec`.
 
 ## Logging
 
