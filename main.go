@@ -438,13 +438,18 @@ func main() {
 }
 
 func accessRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
-	ctx := cliCtx()
-	plaintext, err := berglas.Access(ctx, &berglas.AccessRequest{
+	plaintext, err := client.Access(ctx, &berglas.AccessRequest{
 		Bucket:     bucket,
 		Object:     object,
 		Generation: accessGeneration,
@@ -458,8 +463,13 @@ func accessRun(_ *cobra.Command, args []string) error {
 }
 
 func bootstrapRun(_ *cobra.Command, args []string) error {
-	ctx := cliCtx()
-	if err := berglas.Bootstrap(ctx, &berglas.BootstrapRequest{
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
+	if err := client.Bootstrap(ctx, &berglas.BootstrapRequest{
 		ProjectID:      projectID,
 		Bucket:         bucket,
 		BucketLocation: bucketLocation,
@@ -493,6 +503,12 @@ func bootstrapRun(_ *cobra.Command, args []string) error {
 }
 
 func createRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
@@ -504,9 +520,8 @@ func createRun(_ *cobra.Command, args []string) error {
 		return misuseError(err)
 	}
 
-	ctx := cliCtx()
 	var secret *berglas.Secret
-	if secret, err = berglas.Create(ctx, &berglas.CreateRequest{
+	if secret, err = client.Create(ctx, &berglas.CreateRequest{
 		Bucket:    bucket,
 		Object:    object,
 		Key:       key,
@@ -520,13 +535,18 @@ func createRun(_ *cobra.Command, args []string) error {
 }
 
 func deleteRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
-	ctx := cliCtx()
-	if err := berglas.Delete(ctx, &berglas.DeleteRequest{
+	if err := client.Delete(ctx, &berglas.DeleteRequest{
 		Bucket: bucket,
 		Object: object,
 	}); err != nil {
@@ -538,6 +558,12 @@ func deleteRun(_ *cobra.Command, args []string) error {
 }
 
 func editRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	// Find the editor
 	var editor string
 	for _, e := range []string{"VISUAL", "EDITOR"} {
@@ -554,12 +580,6 @@ func editRun(_ *cobra.Command, args []string) error {
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
-	}
-
-	ctx := cliCtx()
-	client, err := berglas.New(ctx)
-	if err != nil {
-		return apiError(err)
 	}
 
 	// Get the existing secret
@@ -659,10 +679,17 @@ func editRun(_ *cobra.Command, args []string) error {
 }
 
 func execRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
+	_ = client
+
 	execCmd := args[0]
 	execArgs := args[1:]
 
-	ctx := cliCtx()
 	c, err := berglas.New(ctx)
 	if err != nil {
 		return apiError(err)
@@ -760,6 +787,12 @@ func execRun(_ *cobra.Command, args []string) error {
 }
 
 func grantRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
@@ -767,8 +800,7 @@ func grantRun(_ *cobra.Command, args []string) error {
 
 	sort.Strings(members)
 
-	ctx := cliCtx()
-	if err := berglas.Grant(ctx, &berglas.GrantRequest{
+	if err := client.Grant(ctx, &berglas.GrantRequest{
 		Bucket:  bucket,
 		Object:  object,
 		Members: members,
@@ -782,10 +814,15 @@ func grantRun(_ *cobra.Command, args []string) error {
 }
 
 func listRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket := strings.TrimPrefix(args[0], "gs://")
 
-	ctx := cliCtx()
-	list, err := berglas.List(ctx, &berglas.ListRequest{
+	list, err := client.List(ctx, &berglas.ListRequest{
 		Bucket:      bucket,
 		Prefix:      listPrefix,
 		Generations: listGenerations,
@@ -810,6 +847,12 @@ func listRun(_ *cobra.Command, args []string) error {
 }
 
 func revokeRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
@@ -817,8 +860,7 @@ func revokeRun(_ *cobra.Command, args []string) error {
 
 	sort.Strings(members)
 
-	ctx := cliCtx()
-	if err := berglas.Revoke(ctx, &berglas.RevokeRequest{
+	if err := client.Revoke(ctx, &berglas.RevokeRequest{
 		Bucket:  bucket,
 		Object:  object,
 		Members: members,
@@ -832,6 +874,12 @@ func revokeRun(_ *cobra.Command, args []string) error {
 }
 
 func updateRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
 	bucket, object, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
@@ -845,8 +893,7 @@ func updateRun(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	ctx := cliCtx()
-	secret, err := berglas.Update(ctx, &berglas.UpdateRequest{
+	secret, err := client.Update(ctx, &berglas.UpdateRequest{
 		Bucket:          bucket,
 		Object:          object,
 		Key:             key,
