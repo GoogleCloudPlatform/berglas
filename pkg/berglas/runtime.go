@@ -26,50 +26,88 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	cloudfunctions "google.golang.org/api/cloudfunctions/v1"
 	iam "google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 )
 
-// RuntimeEnvironment is an interface for getting the envvars of a runtime.
-type RuntimeEnvironment interface {
-	EnvVars(context.Context) (map[string]string, error)
+// DetectRuntimeEnvironment returns the most likely runtime environment.
+func DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
+	client, err := New(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return client.DetectRuntimeEnvironment()
 }
 
-// DetectRuntimeEnvironment returns the most like runtime environment.
-func DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
+// DetectRuntimeEnvironment returns the most likely runtime environment.
+func (c *Client) DetectRuntimeEnvironment() (RuntimeEnvironment, error) {
+	logger := c.Logger().WithFields(logrus.Fields{
+		"X_GOOGLE_FUNCTION_NAME": os.Getenv("X_GOOGLE_FUNCTION_NAME"),
+		"K_REVISION":             os.Getenv("K_REVISION"),
+		"GAE_SERVICE":            os.Getenv("GAE_SERVICE"),
+		"GAE_INSTANCE":           os.Getenv("GAE_INSTANCE"),
+	})
+
+	logger.Debug("detectRuntimeEnvironment.start")
+	defer logger.Debug("detectRuntimeEnvironment.finish")
+
 	if os.Getenv("X_GOOGLE_FUNCTION_NAME") != "" {
-		return new(cloudFunctionEnv), nil
+		logger.Debug("detected cloud function")
+		return &cloudFunctionEnv{
+			logger: c.Logger(),
+		}, nil
 	}
 
 	if os.Getenv("K_REVISION") != "" {
-		return new(cloudRunEnv), nil
+		logger.Debug("detected cloud run")
+		return &cloudRunEnv{
+			logger: c.Logger(),
+		}, nil
 	}
 
 	if os.Getenv("GAE_SERVICE") != "" || os.Getenv("GAE_INSTANCE") != "" {
-		return new(gaeEnv), nil
+		logger.Debug("detected appengine")
+		return &gaeEnv{
+			logger: c.Logger(),
+		}, nil
 	}
 
 	return nil, errors.New("unknown runtime")
 }
 
+// RuntimeEnvironment is an interface for getting the envvars of a runtime.
+type RuntimeEnvironment interface {
+	EnvVars(context.Context) (map[string]string, error)
+}
+
 // cloudFunctionEnv is a Google Cloud Functions environment.
-type cloudFunctionEnv struct{}
+type cloudFunctionEnv struct {
+	logger *logrus.Logger
+}
 
 // EnvVars returns the list of envvars set on the function.
 func (e *cloudFunctionEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+	e.logger.Debug("cloudfunctions.envvars.start")
+	defer e.logger.Debug("cloudfunctions.envvars.finish")
+
 	// Compute the name of the function
 	name := fmt.Sprintf("projects/%s/locations/%s/functions/%s",
 		os.Getenv("X_GOOGLE_GCP_PROJECT"),
 		os.Getenv("X_GOOGLE_FUNCTION_REGION"),
 		os.Getenv("X_GOOGLE_FUNCTION_NAME"))
 
+	e.logger.WithField("name", name).Debug("computed function name")
+
 	client, err := cloudfunctions.NewService(ctx,
 		option.WithUserAgent(UserAgent))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create cloud functions client")
 	}
+
+	e.logger.Debug("attempted to lookup function variables")
 
 	f, err := client.
 		Projects.
@@ -85,10 +123,15 @@ func (e *cloudFunctionEnv) EnvVars(ctx context.Context) (map[string]string, erro
 }
 
 // cloudRunEnv is a Google Cloud Run environment.
-type cloudRunEnv struct{}
+type cloudRunEnv struct {
+	logger *logrus.Logger
+}
 
 // EnvVars returns the list of envvars set on the virtual machine.
 func (e *cloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+	e.logger.Debug("cloudrun.envvars.start")
+	defer e.logger.Debug("cloudrun.envvars.finish")
+
 	revision := os.Getenv("K_REVISION")
 
 	project, err := valueFromMetadata(ctx, "project/project-id")
@@ -112,6 +155,13 @@ func (e *cloudRunEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 
 	endpoint := fmt.Sprintf("https://%s-run.googleapis.com/apis/serving.knative.dev/v1alpha1/namespaces/%s/revisions/%s",
 		region, project, revision)
+
+	e.logger.WithFields(logrus.Fields{
+		"project":  project,
+		"revision": revision,
+		"region":   region,
+		"endpoint": endpoint,
+	}).Debug("attempting to lookup service variables")
 
 	client, err := google.DefaultClient(ctx, iam.CloudPlatformScope)
 	if err != nil {
@@ -211,7 +261,9 @@ type cloudRunContainer struct {
 }
 
 // gaeEnv is a Google App Engine environment.
-type gaeEnv struct{}
+type gaeEnv struct {
+	logger *logrus.Logger
+}
 
 type appengineVersion struct {
 	EnvVariables map[string]string `json:"envVariables"`
@@ -219,6 +271,9 @@ type appengineVersion struct {
 
 // EnvVars returns the list of envvars set on this app engine version
 func (e *gaeEnv) EnvVars(ctx context.Context) (map[string]string, error) {
+	e.logger.Debug("appengine.envvars.start")
+	defer e.logger.Debug("appengine.envvars.finish")
+
 	version := os.Getenv("GAE_VERSION")
 	service := os.Getenv("GAE_SERVICE")
 
@@ -229,6 +284,13 @@ func (e *gaeEnv) EnvVars(ctx context.Context) (map[string]string, error) {
 
 	endpoint := fmt.Sprintf("https://appengine.googleapis.com/v1/apps/%s/services/%s/versions/%s?view=FULL",
 		project, service, version)
+
+	e.logger.WithFields(logrus.Fields{
+		"project":  project,
+		"version":  version,
+		"service":  service,
+		"endpoint": endpoint,
+	}).Debug("attempting to lookup instance variables")
 
 	client, err := google.DefaultClient(ctx, iam.CloudPlatformScope)
 	if err != nil {

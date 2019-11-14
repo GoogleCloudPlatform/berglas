@@ -43,4 +43,6 @@
 // continue executing even if resolution or communication fails, set the
 // environment variable `BERGLAS_CONTINUE_ON_ERROR` to `true` or do not use the
 // auto package.
+//
+// To see log output, set `BERGLAS_LOG_LEVEL` to "trace" or "debug".
 package auto

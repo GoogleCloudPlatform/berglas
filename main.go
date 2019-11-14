@@ -754,7 +754,7 @@ func execRun(_ *cobra.Command, args []string) error {
 		}
 	} else {
 		// Parse remote env
-		runtimeEnv, err := berglas.DetectRuntimeEnvironment()
+		runtimeEnv, err := client.DetectRuntimeEnvironment()
 		if err != nil {
 			err = errors.Wrap(err, "failed to detect runtime environment")
 			return misuseError(err)
