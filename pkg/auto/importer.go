@@ -24,6 +24,7 @@ import (
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/GoogleCloudPlatform/berglas/pkg/retry"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/googleapi"
 )
 
@@ -34,12 +35,22 @@ var (
 	// continueOnError controls whether Berglas should continue on error or panic.
 	// The default behavior is to panic.
 	continueOnError, _ = strconv.ParseBool(os.Getenv("BERGLAS_CONTINUE_ON_ERROR"))
+
+	// logLevel is the log level to use.
+	logLevel, _ = logrus.ParseLevel(os.Getenv("BERGLAS_LOG_LEVEL"))
 )
 
 func init() {
 	ctx := context.Background()
 
-	runtimeEnv, err := berglas.DetectRuntimeEnvironment()
+	client, err := berglas.New(ctx)
+	if err != nil {
+		handleError(errors.Wrap(err, "failed to initialize berglas client"))
+		return
+	}
+	client.SetLogLevel(logLevel)
+
+	runtimeEnv, err := client.DetectRuntimeEnvironment()
 	if err != nil {
 		handleError(errors.Wrap(err, "failed to detect environment"))
 		return
@@ -53,12 +64,6 @@ func init() {
 
 	if len(envvarRefs) == 0 {
 		log.Printf("[WARN] berglas auto was included, but no secrets were found in the environment")
-		return
-	}
-
-	client, err := berglas.New(ctx)
-	if err != nil {
-		handleError(errors.Wrap(err, "failed to initialize berglas client"))
 		return
 	}
 

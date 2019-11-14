@@ -10,6 +10,7 @@ All notable changes to Berglas will be documented in this file. This file is mai
 ### Added
 - core: add structured logging support (cli default is "text" and sdk default is
   "json")
+- core: `DetectRuntimeEnvironment` is now available on the client too
 - cli: add --log-format and --log-level flags for controlling output
 
 ### Changed
