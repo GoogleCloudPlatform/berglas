@@ -2,8 +2,18 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.2.2] Unreleased
+## [0.3.0] Unreleased
+### Breaking
+- cli: remove local command short flags, use long-form flags instead, short
+  flags will be reserved for global flags moving forward
 
+### Added
+- core: add structured logging support (cli default is "text" and sdk default is
+  "json")
+- cli: add --log-format and --log-level flags for controlling output
+
+### Changed
+- core: fix nil pointer when finalizing object writes
 
 ## [0.2.1] 2019-10-11
 ### Changed

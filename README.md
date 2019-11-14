@@ -301,6 +301,15 @@ its child command, if one was provided.
   plaintext environment replaced. This is great for initd, systemd, or
   non-containerized workloads.
 
+## Logging
+
+Both the berglas CLI and berglas library support debug-style logging. This logging is off by default because it adds additional overhead and logs information that may be security-sensitive.
+
+The default logging behavior for the berglas CLI is "text" (it can be changed
+with the `--log-format` flag). The default logging behavior for the berglas
+library is structured JSON which integrates well with Stackdriver (it can be
+changed to any valid formatter and you can even inject your own logger).
+
 
 ## Examples
 
