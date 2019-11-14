@@ -28,8 +28,8 @@ cleanup-gcr:
 
 deps:
 	@go get -u ./...
-	@go mod vendor
 	@go mod tidy
+	@go mod vendor
 .PHONY: deps
 
 dev:
