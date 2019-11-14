@@ -721,8 +721,6 @@ func execRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	_ = client
-
 	execCmd := args[0]
 	execArgs := args[1:]
 
