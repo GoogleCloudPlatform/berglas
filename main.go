@@ -215,7 +215,7 @@ containers or languages that do not support auto-import.
 
 By default, this command attempts to communicate with the Cloud APIs to find the
 list of environment variables set on a resource. If you are not running inside a
-supported runtime, you can specify "-local" to parse the local environment
+supported runtime, you can specify "--local" to parse the local environment
 variables instead.
 
 Berglas will remain the parent process, but stdin, stdout, stderr, and any
