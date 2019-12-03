@@ -77,7 +77,7 @@ environment variables:
 1. Access the service:
 
     ```text
-    curl $(gcloud beta run services describe berglas-example-python --project ${PROJECT_ID} --region us-central1 --format 'value(status.domain)')
+    curl $(gcloud beta run services describe berglas-example-python --project ${PROJECT_ID} --region us-central1 --format 'value(status.address.url)')
     ```
 
 1. (Optional) Cleanup the deployment:
@@ -88,7 +88,7 @@ environment variables:
       --project ${PROJECT_ID} \
       --region us-central1
     ```
-   
+
     ```text
     IMAGE=gcr.io/${PROJECT_ID}/berglas-example-python
     for DIGEST in $(gcloud container images list-tags ${IMAGE} --format='get(digest)'); do
