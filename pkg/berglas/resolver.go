@@ -17,10 +17,14 @@ package berglas
 import (
 	"context"
 	"os"
+	"runtime"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+// chmodSupported indicates whether the OS supports chmod
+const chmodSupported = runtime.GOOS != "windows" && runtime.GOOS != "plan9"
 
 // Resolve parses and extracts a berglas reference. See Client.Resolve for more
 // details and examples.
@@ -64,8 +68,10 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 			return nil, errors.Wrapf(err, "failed to open filepath %s", pth)
 		}
 
-		if err := f.Chmod(0600); err != nil {
-			return nil, errors.Wrapf(err, "failed to chmod filepath %s", pth)
+		if chmodSupported {
+			if err := f.Chmod(0600); err != nil {
+				return nil, errors.Wrapf(err, "failed to chmod filepath %s", pth)
+			}
 		}
 
 		if _, err := f.Write(plaintext); err != nil {
