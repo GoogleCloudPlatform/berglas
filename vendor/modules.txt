@@ -15,6 +15,8 @@ github.com/BurntSushi/toml
 github.com/gammazero/deque
 # github.com/gammazero/workerpool v0.0.0-20191005194639-971bc780f6d7
 github.com/gammazero/workerpool
+# github.com/gofrs/uuid v3.2.0+incompatible
+github.com/gofrs/uuid
 # github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.2
@@ -47,8 +49,6 @@ github.com/jstemmer/go-junit-report/parser
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
-# github.com/satori/go.uuid v1.2.0
-github.com/satori/go.uuid
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
 # github.com/spf13/cobra v0.0.5
