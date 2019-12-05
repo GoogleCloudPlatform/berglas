@@ -407,11 +407,14 @@ documentation][iam-service-accounts].
 To control who or what has access to a secret, use `berglas grant` and `berglas
 revoke` or the associated API methods. These methods use [Cloud IAM][cloud-iam]
 internally. The following information is relevant only if you plan to grant IAM
-permissions manually:
+permissions manually.
 
 Most operations require access to the Cloud KMS key and the Cloud Storage
 bucket. You can read more about [Cloud KMS IAM][cloud-kms-iam] and [Cloud
 Storage IAM][cloud-storage-iam] in the documentation.
+
+Any service account or entity using Berglas will need to authorize using the
+`cloud-platform` scope.
 
 ### Create
 
