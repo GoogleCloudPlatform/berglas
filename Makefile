@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+NAME = berglas
 GOOSES = darwin linux windows
 GOARCHES = amd64
+
+export GO111MODULE = on
+export GOFLAGS = -mod=vendor
+export CGO_ENABLED = 0
 
 builders:
 	@cd cloudbuild/builders/go-gcloud-make && \
@@ -27,13 +32,13 @@ cleanup-gcr:
 .PHONY: cleanup-gcr
 
 deps:
-	@go get -u ./...
+	@go get -mod="" -u ./...
 	@go mod tidy
 	@go mod vendor
 .PHONY: deps
 
 dev:
-	@go install -mod=vendor ./...
+	@go install -i .
 .PHONY: dev
 
 docker-push:
@@ -45,9 +50,9 @@ publish:
 .PHONY: publish
 
 test:
-	@go test -mod=vendor -short -parallel=40 ./...
+	@go test -short -parallel=40 ./...
 .PHONY: test
 
 test-acc:
-	@go test -mod=vendor -parallel=40 -count=1 ./...
+	@go test -parallel=40 -count=1 ./...
 .PHONY: test-acc
