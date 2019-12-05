@@ -122,10 +122,10 @@ func (m *BerglasMutator) mutateContainer(_ context.Context, c *corev1.Container)
 	// Add the shared volume mount
 	c.VolumeMounts = append(c.VolumeMounts, binVolumeMount)
 
-	// Prepend the command with berglas exec --local --
+	// Prepend the command with berglas exec --
 	original := append(c.Command, c.Args...)
 	c.Command = []string{binVolumeMountPath + "berglas"}
-	c.Args = append([]string{"exec", "--local", "--"}, original...)
+	c.Args = append([]string{"exec", "--"}, original...)
 
 	return c, true
 }

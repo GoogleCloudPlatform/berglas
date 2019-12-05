@@ -214,10 +214,7 @@ stored in [Cloud Storage][cloud-storage].
     berglas exec -- myapp --flag-a --flag-b
     ```
 
-    This will spawn `myapp` with an environment parsed by berglas. This will
-    only work when run from a GCP resource. To parse local environment
-    variables, use the `--local` flag. For more information, please run `berglas
-    exec -h`.
+    This will spawn `myapp` with an environment parsed by berglas.
 
 1. Access data from a specific generation of a secret:
 
@@ -295,14 +292,10 @@ its child command, if one was provided.
   See [examples/kubernetes](examples/kubernetes) for samples and installation
   instructions.
 
-- **Anything** - Wrap any process with `berglas exec --local` and Berglas will
+- **Anything** - Wrap any process with `berglas exec --` and Berglas will
   parse any local environment variables with the [`berglas://` reference
   syntax][reference-syntax] and spawn your app as a subprocess with the
-  plaintext environment replaced. This is great for initd, systemd, or
-  non-containerized workloads. Be warned that this is the _least secure_ way of
-  operating berglas, since it exposes the plaintext secrets to the entire
-  childprocess. Ensure you have audited and trust all dependencies in your
-  software supply chain before using `berglas exec`.
+  plaintext environment replaced.
 
 ## Logging
 

@@ -213,11 +213,6 @@ Parse berglas references and spawn the given command with the secrets in the
 childprocess environment similar to exec(1). This is very useful in Docker
 containers or languages that do not support auto-import.
 
-By default, this command attempts to communicate with the Cloud APIs to find the
-list of environment variables set on a resource. If you are not running inside a
-supported runtime, you can specify "--local" to parse the local environment
-variables instead.
-
 Berglas will remain the parent process, but stdin, stdout, stderr, and any
 signals are proxied to the child process.
 
@@ -229,9 +224,6 @@ resolved secrets will be in plaintext and available to the entire process.
 	Example: strings.Trim(`
   # Spawn a subshell with secrets populated
   berglas exec -- ${SHELL}
-
-  # Run "myapp" after parsing local references
-  berglas exec --local -- myapp --with-args
 `, "\n"),
 	Args: cobra.MinimumNArgs(1),
 	RunE: execRun,
@@ -439,8 +431,10 @@ func main() {
 		"KMS key to use for encryption (only used when secret doesn't exist)")
 
 	rootCmd.AddCommand(execCmd)
-	execCmd.Flags().BoolVar(&execLocal, "local", false,
-		"Parse local environment variables for secrets instead of querying the Cloud APIs")
+	execCmd.Flags().BoolVar(&execLocal, "local", false, "")
+	if err := execCmd.Flags().MarkDeprecated("local", "there is no replacement"); err != nil {
+		panic(err)
+	}
 
 	rootCmd.AddCommand(grantCmd)
 	grantCmd.Flags().StringSliceVar(&members, "member", nil,
@@ -724,57 +718,25 @@ func execRun(_ *cobra.Command, args []string) error {
 	execCmd := args[0]
 	execArgs := args[1:]
 
-	c, err := berglas.New(ctx)
-	if err != nil {
-		return apiError(err)
-	}
-
+	// Parse local env
 	env := os.Environ()
 
-	if execLocal {
-		// Parse local env
-		for i, e := range env {
-			p := strings.SplitN(e, "=", 2)
-			if len(p) < 2 {
-				continue
-			}
-
-			k, v := p[0], p[1]
-			if !berglas.IsReference(v) {
-				continue
-			}
-
-			s, err := c.Resolve(ctx, v)
-			if err != nil {
-				return apiError(err)
-			}
-			env[i] = fmt.Sprintf("%s=%s", k, s)
+	for i, e := range env {
+		p := strings.SplitN(e, "=", 2)
+		if len(p) < 2 {
+			continue
 		}
-	} else {
-		// Parse remote env
-		runtimeEnv, err := client.DetectRuntimeEnvironment()
+
+		k, v := p[0], p[1]
+		if !berglas.IsReference(v) {
+			continue
+		}
+
+		s, err := client.Resolve(ctx, v)
 		if err != nil {
-			err = errors.Wrap(err, "failed to detect runtime environment")
-			return misuseError(err)
+			return apiError(err)
 		}
-
-		envvars, err := runtimeEnv.EnvVars(ctx)
-		if err != nil {
-			err = errors.Wrap(err, "failed to find environment variables")
-			return misuseError(err)
-		}
-
-		for k, v := range envvars {
-			if !berglas.IsReference(v) {
-				continue
-			}
-
-			s, err := c.Resolve(ctx, v)
-			if err != nil {
-				return apiError(err)
-			}
-			env = append(env, fmt.Sprintf("%s=%s", k, s))
-		}
+		env[i] = fmt.Sprintf("%s=%s", k, s)
 	}
 
 	// Spawn the command
