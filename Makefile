@@ -32,7 +32,7 @@ cleanup-gcr:
 .PHONY: cleanup-gcr
 
 deps:
-	@go get -mod="" -u ./...
+	@go get -mod="" -u -t ./...
 	@go mod tidy
 	@go mod vendor
 .PHONY: deps

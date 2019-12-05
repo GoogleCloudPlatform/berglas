@@ -1,5 +1,5 @@
 module github.com/GoogleCloudPlatform/berglas/examples/cloudfunctions/go
 
-go 1.12
+go 1.13
 
-require github.com/GoogleCloudPlatform/berglas v0.1.4
+require github.com/GoogleCloudPlatform/berglas v0.4.0
