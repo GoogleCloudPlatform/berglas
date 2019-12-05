@@ -2,6 +2,15 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
+## [0.4.0] 2019-12-05
+### Breaking
+- core: drop runtime environment lookup and associated API methods (see #87 for
+  details)
+
+### Changed
+- core: do not attempt to chmod on windows and plan9
+- docs: various updates for products that have gone GA
+
 ## [0.3.0] 2019-11-13
 ### Breaking
 - cli: remove local command short flags, use long-form flags instead, short
