@@ -18,7 +18,7 @@ steps:
   env:
   - API_KEY=berglas://${_BUCKET_ID}/api-key?destination=/secrets/api-key
   - TLS_KEY=berglas://${_BUCKET_ID}/tls-key?destination=/secrets/tls-key
-  args: ["exec", "--local", "--", "/bin/sh"]
+  args: ["exec", "--", "/bin/sh"]
   volumes:
   - name: secrets
     path: /secrets

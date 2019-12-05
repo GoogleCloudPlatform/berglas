@@ -38,19 +38,10 @@ instructions):
       --display-name "berglas Cloud Functions Example"
     ```
 
-    Save the service account email because it will be used later:
+1. Save the service account email because it will be used later:
 
     ```text
     export SA_EMAIL=berglas-service-account@${PROJECT_ID}.iam.gserviceaccount.com
-    ```
-
-1. Grant the service account access to read the Cloud Function's environment
-variables:
-
-    ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member serviceAccount:${SA_EMAIL} \
-      --role roles/cloudfunctions.viewer
     ```
 
 1. Grant the service account access to the secrets:
@@ -63,7 +54,7 @@ variables:
 1. Deploy the Cloud Function:
 
     ```text
-    gcloud beta functions deploy berglas-example-go \
+    gcloud functions deploy berglas-example-go \
       --project ${PROJECT_ID} \
       --region us-central1 \
       --runtime go111 \
@@ -72,32 +63,21 @@ variables:
       --service-account ${SA_EMAIL} \
       --set-env-vars "API_KEY=berglas://${BUCKET_ID}/api-key,TLS_KEY=berglas://${BUCKET_ID}/tls-key?destination=tempfile" \
       --entry-point F \
-      --trigger-http
+      --trigger-http \
+      --allow-unauthenticated
     ```
-
-1. Make the Cloud Function accessible:
-
-    ```text
-    gcloud alpha functions add-iam-policy-binding berglas-example-go \
-      --project ${PROJECT_ID} \
-      --role roles/cloudfunctions.invoker \
-      --member allUsers
-    ```
-
-    This example makes the function accessible to everyone, which might not be
-    desirable. You can grant finer-grained permissions, but that is not
-    discussed in this tutorial.
 
 1. Access the function:
 
     ```text
-    curl $(gcloud beta functions describe berglas-example-go --project ${PROJECT_ID} --format 'value(httpsTrigger.url)')
+    curl $(gcloud functions describe berglas-example-go --project ${PROJECT_ID} --format 'value(httpsTrigger.url)')
     ```
 
 1. (Optional) Delete the function:
 
    ```text
    gcloud functions delete berglas-example-go \
+     --quiet \
      --project ${PROJECT_ID} \
      --region us-central1
    ```

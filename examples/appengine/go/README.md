@@ -42,15 +42,6 @@ instructions):
     export SA_EMAIL=${PROJECT_ID}@appspot.gserviceaccount.com
     ```
 
-1. Grant the service account access to read the App Engine deployment's
-environment variables:
-
-    ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member serviceAccount:${SA_EMAIL} \
-      --role roles/appengine.appViewer
-    ```
-
 1. Grant the service account access to the secrets:
 
     ```text

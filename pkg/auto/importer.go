@@ -16,22 +16,17 @@ package auto
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
-	"time"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/GoogleCloudPlatform/berglas/pkg/retry"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/api/googleapi"
 )
 
 var (
-	retryBase  = 500 * time.Millisecond
-	retryTries = 5
-
 	// continueOnError controls whether Berglas should continue on error or panic.
 	// The default behavior is to panic.
 	continueOnError, _ = strconv.ParseBool(os.Getenv("BERGLAS_CONTINUE_ON_ERROR"))
@@ -45,66 +40,33 @@ func init() {
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		handleError(errors.Wrap(err, "failed to initialize berglas client"))
+		handleError(fmt.Errorf("failed to initialize berglas client: %s", err))
 		return
 	}
 	client.SetLogLevel(logLevel)
 
-	runtimeEnv, err := client.DetectRuntimeEnvironment()
-	if err != nil {
-		handleError(errors.Wrap(err, "failed to detect environment"))
-		return
-	}
-
-	envvarRefs, err := Resolve(ctx, runtimeEnv)
-	if err != nil {
-		handleError(errors.Wrap(err, "failed to resolve environment variables"))
-		return
-	}
-
-	if len(envvarRefs) == 0 {
-		log.Printf("[WARN] berglas auto was included, but no secrets were found in the environment")
-		return
-	}
-
-	for k, v := range envvarRefs {
-		if err := client.ReplaceValue(ctx, k, v); err != nil {
-			handleError(errors.Wrapf(err, "failed to set %s", k))
+	for _, e := range os.Environ() {
+		p := strings.SplitN(e, "=", 2)
+		if len(p) < 2 {
+			continue
 		}
-	}
-}
 
-// Resolve resolves the environment variables. Importing the package calls
-// Resolve. It's a separate method primarily for testing. Implementers should
-// not call this method.
-func Resolve(ctx context.Context, runtimeEnv berglas.RuntimeEnvironment) (map[string]string, error) {
-	var envvars map[string]string
-	var err error
-	if err := retry.RetryFib(ctx, retryBase, retryTries, func() error {
-		envvars, err = runtimeEnv.EnvVars(ctx)
+		k, v := p[0], p[1]
+		if !berglas.IsReference(v) {
+			continue
+		}
+
+		s, err := client.Resolve(ctx, v)
 		if err != nil {
-			if terr, ok := errors.Cause(err).(*googleapi.Error); ok {
-				// Do not retry 400-level errors
-				if terr.Code >= 400 && terr.Code <= 499 {
-					return terr
-				}
-			}
-
-			return retry.RetryableError(err)
+			handleError(fmt.Errorf("failed to parse %q: %w", k, err))
+			continue
 		}
-		return nil
-	}); err != nil {
-		return nil, errors.Wrap(err, "failed to find environment variables")
-	}
 
-	envvarRefs := make(map[string]string)
-	for k, v := range envvars {
-		if berglas.IsReference(v) {
-			envvarRefs[k] = v
+		if err := os.Setenv(k, string(s)); err != nil {
+			handleError(fmt.Errorf("failed to set %q: %w", k, err))
+			continue
 		}
 	}
-
-	return envvarRefs, nil
 }
 
 func handleError(err error) {

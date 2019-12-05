@@ -36,15 +36,6 @@ instructions):
     export SA_EMAIL=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
     ```
 
-1. Grant the service account access to read the Cloud Run deployment's
-environment variables:
-
-    ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member serviceAccount:${SA_EMAIL} \
-      --role roles/run.viewer
-    ```
-
 1. Grant the service account access to the secrets:
 
     ```text
@@ -64,8 +55,9 @@ environment variables:
 1. Deploy the container on Cloud Run:
 
     ```text
-    gcloud beta run deploy berglas-example-python \
+    gcloud run deploy berglas-example-python \
       --project ${PROJECT_ID} \
+      --platform managed \
       --region us-central1 \
       --image gcr.io/${PROJECT_ID}/berglas-example-python:0.0.1 \
       --memory 1G \
@@ -77,14 +69,19 @@ environment variables:
 1. Access the service:
 
     ```text
-    curl $(gcloud beta run services describe berglas-example-python --project ${PROJECT_ID} --region us-central1 --format 'value(status.address.url)')
+    curl $(gcloud run services describe berglas-example-python \
+      --project ${PROJECT_ID} \
+      --platform managed \
+      --region us-central1 \
+      --format 'value(status.address.url)')
     ```
 
 1. (Optional) Cleanup the deployment:
 
     ```text
-    gcloud beta run services delete berglas-example-python \
+    gcloud run services delete berglas-example-python \
       --quiet \
+      --platform managed \
       --project ${PROJECT_ID} \
       --region us-central1
     ```
