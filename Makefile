@@ -56,3 +56,15 @@ test:
 test-acc:
 	@go test -parallel=40 -count=1 ./...
 .PHONY: test-acc
+
+update-go-samples:
+	for p in $(shell find examples -name go.mod -type f); do \
+		dir=$$(dirname $${p}) ; \
+		rm -f $${dir}/go.mod $${dir}/go.sum ; \
+		(cd $${dir} && \
+			go mod init github.com/GoogleCloudPlatform/berglas/$${dir} && \
+			go get -mod="" github.com/GoogleCloudPlatform/berglas@master && \
+			go get -mod="" ./... && \
+			go mod tidy) ; \
+	done
+.PHONY: update-go-samples
