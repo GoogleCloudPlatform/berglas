@@ -324,11 +324,8 @@ import (
 
 When imported, the `berglas` package will:
 
-1. Detect the runtime environment and call the appropriate API to get the list
-of environment variables that were set on the resource at deploy time
-
 1. Download and decrypt any secrets that match the [Berglas environment
-variable reference syntax][reference-syntax]
+variable reference syntax][reference-syntax] in the environment
 
 1. Replace the value for the environment variable with the decrypted secret
 
