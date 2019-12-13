@@ -15,7 +15,6 @@
 package berglas
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -25,364 +24,6 @@ import (
 
 	"github.com/gofrs/uuid"
 )
-
-func TestBerglasIntegration(t *testing.T) {
-	t.Parallel()
-
-	if testing.Short() {
-		t.Skip("skipping integration tests (short)")
-	}
-
-	t.Run("access", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-		plaintext := []byte("my secret value")
-
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		accessPlaintext, err := client.Access(ctx, &AccessRequest{
-			Bucket: bucket,
-			Object: object,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if act, exp := accessPlaintext, plaintext; !bytes.Equal(act, exp) {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-	})
-
-	t.Run("create", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-		plaintext := []byte("my secret value")
-
-		createdSecret, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		readSecret, err := client.Read(ctx, &ReadRequest{
-			Bucket:     bucket,
-			Object:     object,
-			Generation: createdSecret.Generation,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if act, exp := readSecret.Plaintext, plaintext; !bytes.Equal(act, exp) {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-		plaintext := []byte("my secret value")
-
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		if err := client.Delete(ctx, &DeleteRequest{
-			Bucket: bucket,
-			Object: object,
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if _, err := client.Access(ctx, &AccessRequest{
-			Bucket: bucket,
-			Object: object,
-		}); err == nil {
-			t.Errorf("expected secret to be deleted")
-		}
-	})
-
-	t.Run("grant_revoke", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key, serviceAccount := testBucket(t), testObject(t), testKey(t), testServiceAccount(t)
-		plaintext := []byte("my secret value")
-
-		policyIncludesServiceAccount := func() bool {
-			handle := client.storageIAM(bucket, object)
-			policy, err := getIAMPolicy(ctx, handle)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			found := false
-			members := policy.Members(iamObjectReader)
-			for _, member := range members {
-				if member == serviceAccount {
-					found = true
-				}
-			}
-			return found
-		}
-
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		if err := client.Grant(ctx, &GrantRequest{
-			Bucket:  bucket,
-			Object:  object,
-			Members: []string{serviceAccount},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if !policyIncludesServiceAccount() {
-			t.Errorf("expected policy to include %q", serviceAccount)
-		}
-
-		if err := client.Revoke(ctx, &RevokeRequest{
-			Bucket:  bucket,
-			Object:  object,
-			Members: []string{serviceAccount},
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		if policyIncludesServiceAccount() {
-			t.Errorf("expected policy to not include %q", serviceAccount)
-		}
-	})
-
-	t.Run("list", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, key := testBucket(t), testKey(t)
-		plaintext := []byte("my secret value")
-
-		object1 := "list-" + testObject(t)
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object1,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object1)
-
-		secret1, err := client.Read(ctx, &ReadRequest{
-			Bucket: bucket,
-			Object: object1,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		object2 := "list-" + testObject(t)
-		secret2, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object2,
-			Key:       key,
-			Plaintext: plaintext,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object2)
-
-		updatedSecret2, err := client.Update(ctx, &UpdateRequest{
-			Bucket:    bucket,
-			Object:    object2,
-			Plaintext: plaintext,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		list, err := client.List(ctx, &ListRequest{
-			Bucket:      bucket,
-			Prefix:      "list-",
-			Generations: true,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		secrets := list.Secrets
-
-		if !testSecretsInclude(secrets, secret1) {
-			t.Errorf("expected %#v to include %#v", secrets, secret1)
-		}
-
-		if !testSecretsInclude(secrets, secret2) {
-			t.Errorf("expected %#v to include %#v", secrets, secret2)
-		}
-
-		if !testSecretsInclude(secrets, updatedSecret2) {
-			t.Errorf("expected %#v to include %#v", secrets, updatedSecret2)
-		}
-	})
-
-	t.Run("replace", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-		plaintext := []byte("my secret value")
-
-		if _, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		ref := fmt.Sprintf("berglas://%s/%s", bucket, object)
-		os.Setenv("REPLACE_BAD", "not_a_ref")
-		os.Setenv("REPLACE_GOOD", ref)
-
-		if err := client.Replace(ctx, "REPLACE_BAD"); err == nil {
-			t.Fatalf("expected error, got %s", os.Getenv("REPLACE_BAD"))
-		}
-		if act, exp := os.Getenv("REPLACE_BAD"), "not_a_ref"; act != exp {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-
-		if err := client.Replace(ctx, "REPLACE_GOOD"); err != nil {
-			t.Fatal(err)
-		}
-		if act, exp := os.Getenv("REPLACE_GOOD"), string(plaintext); act != exp {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-	})
-
-	t.Run("replace_value", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-		plaintext := []byte("my secret value")
-		var generation int64
-
-		if createdSecret, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: plaintext,
-		}); err != nil {
-			t.Fatal(err)
-		} else {
-			generation = createdSecret.Generation
-		}
-		defer testCleanup(t, bucket, object)
-
-		ref := fmt.Sprintf("berglas://%s/%s", bucket, object)
-		os.Setenv("REPLACE_VALUE_GOOD", "should_not_be_read")
-		if err := client.ReplaceValue(ctx, "REPLACE_VALUE_GOOD", ref); err != nil {
-			t.Fatal(err)
-		}
-		if act, exp := os.Getenv("REPLACE_VALUE_GOOD"), string(plaintext); act != exp {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-
-		_, err := client.Update(ctx, &UpdateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: []byte("my new secret value"),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		// access older version of the secret
-		if err := client.ReplaceValue(ctx, "SECRET", fmt.Sprintf("berglas://%s/%s#%d", bucket, object, generation)); err != nil {
-			t.Fatal(err)
-		}
-		if v, exp := os.Getenv("SECRET"), string(plaintext); v != exp {
-			t.Errorf("expected %q to be %q", v, exp)
-		}
-	})
-
-	t.Run("update", func(t *testing.T) {
-		t.Parallel()
-
-		client, ctx := testClient(t)
-		bucket, object, key := testBucket(t), testObject(t), testKey(t)
-
-		createdSecret, err := client.Create(ctx, &CreateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: []byte("my secret value"),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer testCleanup(t, bucket, object)
-
-		updatedSecret, err := client.Update(ctx, &UpdateRequest{
-			Bucket:    bucket,
-			Object:    object,
-			Key:       key,
-			Plaintext: []byte("my new secret value"),
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if act, exp := createdSecret.Generation, updatedSecret.Generation; act == exp {
-			t.Errorf("expected %q to be different than %q", act, exp)
-		}
-
-		accessPlaintext, err := client.Access(ctx, &AccessRequest{
-			Bucket: bucket,
-			Object: object,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if act, exp := accessPlaintext, updatedSecret.Plaintext; !bytes.Equal(act, exp) {
-			t.Errorf("expected %q to be %q", act, exp)
-		}
-	})
-}
 
 func TestKMSKeyTrimVersion(t *testing.T) {
 	t.Parallel()
@@ -433,6 +74,16 @@ func testClient(tb testing.TB) (*Client, context.Context) {
 	return client, ctx
 }
 
+func testProject(tb testing.TB) string {
+	tb.Helper()
+
+	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if project == "" {
+		tb.Fatal("missing GOOGLE_CLOUD_PROJECT")
+	}
+	return project
+}
+
 func testBucket(tb testing.TB) string {
 	tb.Helper()
 
@@ -443,7 +94,7 @@ func testBucket(tb testing.TB) string {
 	return bucket
 }
 
-func testObject(tb testing.TB) string {
+func testName(tb testing.TB) string {
 	tb.Helper()
 
 	u, err := uuid.NewV4()
@@ -476,18 +127,26 @@ func testServiceAccount(tb testing.TB) string {
 	return sa
 }
 
-func testSecretsInclude(list []*Secret, s *Secret) bool {
-	for _, v := range list {
-		if v.Name == s.Name &&
-			(v.Plaintext == nil || s.Plaintext == nil || bytes.Equal(v.Plaintext, s.Plaintext)) &&
-			(v.Generation == 0 || s.Generation == 0 || v.Generation == s.Generation) {
-			return true
-		}
+func testSecretManagerCleanup(tb testing.TB, project, name string) {
+	tb.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := New(context.Background())
+	if err != nil {
+		tb.Fatal(err)
 	}
-	return false
+
+	if err := client.Delete(ctx, &SecretManagerDeleteRequest{
+		Project: project,
+		Name:    name,
+	}); err != nil {
+		tb.Fatal(err)
+	}
 }
 
-func testCleanup(tb testing.TB, bucket, object string) {
+func testStorageCleanup(tb testing.TB, bucket, object string) {
 	tb.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -501,7 +160,15 @@ func testCleanup(tb testing.TB, bucket, object string) {
 	if err := client.Delete(ctx, &DeleteRequest{
 		Object: object,
 		Bucket: bucket,
-	}); err != nil && !IsSecretDoesNotExistErr(err) {
+	}); err != nil {
 		tb.Fatal(err)
 	}
+}
+
+func testAcc(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping acceptance tests (-short)")
+	}
+
+	t.Parallel()
 }

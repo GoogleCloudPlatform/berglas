@@ -16,13 +16,54 @@ package berglas
 
 import (
 	"context"
+	"fmt"
+	"path"
 	"sort"
+	"strings"
 
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secrets/v1beta1"
 )
+
+type listRequest interface {
+	isListRequest()
+}
+
+// StorageListrequest is used as input to list secrets from Cloud Storage.
+type StorageListRequest struct {
+	// Bucket is the name of the bucket where the secrets live.
+	Bucket string
+
+	// Prefix matches secret names to filter.
+	Prefix string
+
+	// Generations indicates that all generations of secrets should be listed.
+	Generations bool
+}
+
+func (r *StorageListRequest) isListRequest() {}
+
+// ListRequest is an alias for StorageListRequest for backwards-compatability.
+// New clients should use StorageListRequest.
+type ListRequest = StorageListRequest
+
+// SecretManagerListRequest is used as input to list secrets from Secret
+// Manager.
+type SecretManagerListRequest struct {
+	// Project is the ID or number of the project from which to list secrets.
+	Project string
+
+	// Prefix matches secret names to filter.
+	Prefix string
+
+	// Versions indicates that all versions of secrets should be listed.
+	Versions bool
+}
+
+func (r *SecretManagerListRequest) isListRequest() {}
 
 // ListResponse is the response from a list call.
 type ListResponse struct {
@@ -42,6 +83,9 @@ func (s secretList) Len() int {
 // index i should sort before the element with index j.
 func (s secretList) Less(i, j int) bool {
 	if s[i].Name == s[j].Name {
+		if s[i].Generation == s[j].Generation {
+			return s[i].Version > s[j].Version
+		}
 		return s[i].Generation > s[j].Generation
 	}
 	return s[i].Name > s[j].Name
@@ -54,7 +98,7 @@ func (s secretList) Swap(i, j int) {
 
 // List is a top-level package function for listing secrets. This doesn't
 // fetch the plaintext value of secrets.
-func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
+func List(ctx context.Context, i listRequest) (*ListResponse, error) {
 	client, err := New(ctx)
 	if err != nil {
 		return nil, err
@@ -62,26 +106,111 @@ func List(ctx context.Context, i *ListRequest) (*ListResponse, error) {
 	return client.List(ctx, i)
 }
 
-// ListRequest is used as input to a list all secrets in a bucket.
-type ListRequest struct {
-	// Bucket is the name of the bucket where the secrets live.
-	Bucket string
-
-	// Prefix matches secret names to filter
-	Prefix string
-
-	// Generations indicates that all generations of secrets should be listed
-	Generations bool
-}
-
 // List lists all secrets in the bucket. This doesn't fetch the plaintext value
 // of secrets.
-func (c *Client) List(
-	ctx context.Context, i *ListRequest) (*ListResponse, error) {
+func (c *Client) List(ctx context.Context, i listRequest) (*ListResponse, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerListRequest:
+		return c.secretManagerList(ctx, t)
+	case *StorageListRequest:
+		return c.storageList(ctx, t)
+	default:
+		return nil, errors.Errorf("unknown list type %T", t)
+	}
+}
+
+func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequest) (*ListResponse, error) {
+	project := i.Project
+	if project == "" {
+		return nil, errors.New("missing project")
+	}
+
+	prefix := i.Prefix
+	versions := i.Versions
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"project":  project,
+		"prefix":   prefix,
+		"versions": versions,
+	})
+
+	logger.Debug("list.start")
+	defer logger.Debug("list.finish")
+
+	allSecrets := []*Secret{}
+
+	it := c.secretManagerClient.ListSecrets(ctx, &secretspb.ListSecretsRequest{
+		Parent: fmt.Sprintf("projects/%s", project),
+	})
+	for {
+		resp, err := it.Next()
+		if err == iterator.Done {
+			logger.Debug("out of secrets")
+			break
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to list secrets")
+		}
+
+		if strings.HasPrefix(path.Base(resp.Name), prefix) {
+			allSecrets = append(allSecrets, &Secret{
+				Parent:    project,
+				Name:      path.Base(resp.Name),
+				UpdatedAt: timestampToTime(resp.CreateTime),
+			})
+		}
+	}
+
+	if !versions {
+		sort.Sort(secretList(allSecrets))
+		return &ListResponse{
+			Secrets: allSecrets,
+		}, nil
+	}
+
+	allSecretVersions := make([]*Secret, 0, len(allSecrets)*2)
+
+	for _, s := range allSecrets {
+		logger = logger.WithFields(logrus.Fields{
+			"project": s.Parent,
+			"name":    s.Name,
+		})
+		logger.Debug("listing secret versions")
+
+		it := c.secretManagerClient.ListSecretVersions(ctx, &secretspb.ListSecretVersionsRequest{
+			Parent: fmt.Sprintf("projects/%s/secrets/%s", s.Parent, s.Name),
+		})
+		for {
+			resp, err := it.Next()
+			if err == iterator.Done {
+				logger.Debug("out of versions")
+				break
+			}
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to list versions for %s", s.Name)
+			}
+
+			allSecretVersions = append(allSecretVersions, &Secret{
+				Parent:    project,
+				Name:      s.Name,
+				Version:   path.Base(resp.Name),
+				UpdatedAt: timestampToTime(resp.CreateTime),
+			})
+		}
+	}
+
+	sort.Sort(secretList(allSecretVersions))
+
+	return &ListResponse{
+		Secrets: allSecretVersions,
+	}, nil
+}
+
+func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListResponse, error) {
 	bucket := i.Bucket
 	if bucket == "" {
 		return nil, errors.New("missing bucket name")
@@ -150,7 +279,7 @@ func (c *Client) List(
 
 		if foundLiveObject {
 			for _, obj := range objects {
-				result = append(result, secretFromAttrs(obj, nil))
+				result = append(result, secretFromAttrs(bucket, obj, nil))
 			}
 		}
 	}

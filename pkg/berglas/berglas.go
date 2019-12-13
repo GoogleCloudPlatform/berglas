@@ -27,7 +27,10 @@ import (
 	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
 	"cloud.google.com/go/storage"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
@@ -64,9 +67,10 @@ const (
 
 // Client is a berglas client
 type Client struct {
-	kmsClient        *kms.KeyManagementClient
-	storageClient    *storage.Client
-	storageIAMClient *storagev1.Service
+	kmsClient           *kms.KeyManagementClient
+	secretManagerClient *secretmanager.Client
+	storageClient       *storage.Client
+	storageIAMClient    *storagev1.Service
 
 	loggerLock sync.RWMutex
 	logger     *logrus.Logger
@@ -83,6 +87,12 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 		return nil, errors.Wrap(err, "failed to create kms client")
 	}
 	c.kmsClient = kmsClient
+
+	secretManagerClient, err := secretmanager.NewClient(ctx, opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create secretManager client")
+	}
+	c.secretManagerClient = secretManagerClient
 
 	storageClient, err := storage.NewClient(ctx, opts...)
 	if err != nil {
@@ -107,33 +117,37 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 	return &c, nil
 }
 
-// Secret represents a specific secret stored in Google Cloud Storage
-// The attributes on this object should ideally map 1:1 with
-// storage.ObjectAttrs
+// Secret represents a secret.
 type Secret struct {
-	// Name of the secret
+	// Parent is the resource container. For Cloud Storage secrets, this is the
+	// bucket name. For Secret Manager secrets, this is the project ID.
+	Parent string
+
+	// Name of the secret.
 	Name string
 
-	// Generation indicates a secret's version
-	Generation int64
-
-	// KMSKey is the key used to encrypt the secret key
-	KMSKey string
-
-	// Metageneration indicates a secret's metageneration
-	Metageneration int64
-
-	// Plaintext value of the secret (may not be filled in)
+	// Plaintext value of the secret. This may be empty.
 	Plaintext []byte
 
-	// UpdatedAt indicates when a secret was last updated
+	// Version indicates a secret's version. Secret Manager only.
+	Version string
+
+	// UpdatedAt indicates when a secret was last updated.
 	UpdatedAt time.Time
+
+	// Generation and Metageneration indicates a secret's version. Cloud Storage
+	// only.
+	Generation, Metageneration int64
+
+	// KMSKey is the key used to encrypt the secret key. Cloud Storage only.
+	KMSKey string
 }
 
 // secretFromAttrs constructs a secret from the given object attributes and
 // plaintext.
-func secretFromAttrs(attrs *storage.ObjectAttrs, plaintext []byte) *Secret {
+func secretFromAttrs(bucket string, attrs *storage.ObjectAttrs, plaintext []byte) *Secret {
 	return &Secret{
+		Parent:         bucket,
 		Name:           attrs.Name,
 		Generation:     attrs.Generation,
 		Metageneration: attrs.Metageneration,
@@ -141,6 +155,11 @@ func secretFromAttrs(attrs *storage.ObjectAttrs, plaintext []byte) *Secret {
 		KMSKey:         attrs.Metadata[MetadataKMSKey],
 		Plaintext:      plaintext,
 	}
+}
+
+func timestampToTime(ts *timestamp.Timestamp) time.Time {
+	t, _ := ptypes.Timestamp(ts)
+	return t
 }
 
 // kmsKeyIncludesVersion returns true if the given KMS key reference includes

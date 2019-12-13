@@ -16,25 +16,25 @@ package berglas
 
 import (
 	"context"
+	"fmt"
+	"path"
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secrets/v1beta1"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Update is a top-level package function for creating a secret. For large
-// volumes of secrets, please update a client instead.
-func Update(ctx context.Context, i *UpdateRequest) (*Secret, error) {
-	client, err := New(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return client.Update(ctx, i)
+type updateRequest interface {
+	isUpdateRequest()
 }
 
-// UpdateRequest is used as input to a update a secret.
-type UpdateRequest struct {
+// StorageUpdateRequest is used as input to update a secret from Cloud Storage
+// encrypted with Cloud KMS.
+type StorageUpdateRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
 	Bucket string
 
@@ -50,7 +50,7 @@ type UpdateRequest struct {
 	// Metageneration indicates a secret's metageneration.
 	Metageneration int64
 
-	// Plaintext value of the secret (may not be filled in)
+	// Plaintext value of the secret.
 	Plaintext []byte
 
 	// CreateIfMissing indicates that the updater should create a secret with the
@@ -58,13 +58,145 @@ type UpdateRequest struct {
 	CreateIfMissing bool
 }
 
-// Update changes the contents of an existing secret. If the secret does not
-// exist, an error is returned.
-func (c *Client) Update(ctx context.Context, i *UpdateRequest) (*Secret, error) {
+func (r *StorageUpdateRequest) isUpdateRequest() {}
+
+// UpdateRequest is an alias for StorageUpdateRequest for
+// backwards-compatability. New clients should use StorageUpdateRequest.
+type UpdateRequest = StorageUpdateRequest
+
+// SecretManagerUpdateRequest is used as input to update a secret using Secret Manager.
+type SecretManagerUpdateRequest struct {
+	// Project is the ID or number of the project from which to update the secret.
+	Project string
+
+	// Name is the name of the secret to update.
+	Name string
+
+	// Plaintext is the plaintext to store.
+	Plaintext []byte
+
+	// CreateIfMissing indicates that the updater should create a secret with the
+	// given parameters if one does not already exist.
+	CreateIfMissing bool
+}
+
+func (r *SecretManagerUpdateRequest) isUpdateRequest() {}
+
+// Update is a top-level package function for updating a secret. For large
+// volumes of secrets, please update a client instead.
+func Update(ctx context.Context, i updateRequest) (*Secret, error) {
+	client, err := New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return client.Update(ctx, i)
+}
+
+// Update updates a secret. When given a SecretManagerUpdateRequest, this
+// updates a secret in Secret Manager. When given a StorageUpdateRequest, this
+// updates a secret stored in Cloud Storage encrypted with Cloud KMS.
+func (c *Client) Update(ctx context.Context, i updateRequest) (*Secret, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerUpdateRequest:
+		return c.secretManagerUpdate(ctx, t)
+	case *StorageUpdateRequest:
+		return c.storageUpdate(ctx, t)
+	default:
+		return nil, errors.Errorf("unknown update type %T", t)
+	}
+}
+
+func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdateRequest) (*Secret, error) {
+	project := i.Project
+	if project == "" {
+		return nil, errors.New("missing project")
+	}
+
+	name := i.Name
+	if name == "" {
+		return nil, errors.New("missing secret name")
+	}
+
+	plaintext := i.Plaintext
+	if plaintext == nil {
+		return nil, errors.New("missing plaintext")
+	}
+
+	createIfMissing := i.CreateIfMissing
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"project":           project,
+		"name":              name,
+		"create_if_missing": createIfMissing,
+	})
+
+	logger.Debug("update.start")
+	defer logger.Debug("update.finish")
+
+	logger.Debug("reading existing secret")
+
+	secretResp, err := c.secretManagerClient.GetSecret(ctx, &secretspb.GetSecretRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s", project, name),
+	})
+	if err != nil {
+		terr, ok := grpcstatus.FromError(err)
+		if !ok || terr.Code() != grpccodes.NotFound {
+			return nil, errors.Wrap(err, "failed to read secret for updating")
+		}
+
+		logger.Debug("secret does not exist")
+
+		if !createIfMissing {
+			return nil, errSecretDoesNotExist
+		}
+
+		logger.Debug("creating secret")
+
+		secretResp, err = c.secretManagerClient.CreateSecret(ctx, &secretspb.CreateSecretRequest{
+			Parent:   fmt.Sprintf("projects/%s", project),
+			SecretId: name,
+			Secret: &secretspb.Secret{
+				Replication: &secretspb.Replication{
+					Replication: &secretspb.Replication_Automatic_{
+						Automatic: &secretspb.Replication_Automatic{},
+					},
+				},
+			},
+		})
+		if err != nil {
+			terr, ok := grpcstatus.FromError(err)
+			if !ok || terr.Code() != grpccodes.AlreadyExists {
+				return nil, errors.Wrapf(err, "failed to create secret")
+			}
+		}
+	}
+
+	logger.Debug("creating secret version")
+
+	versionResp, err := c.secretManagerClient.AddSecretVersion(ctx, &secretspb.AddSecretVersionRequest{
+		Parent: secretResp.Name,
+		Payload: &secretspb.SecretPayload{
+			Data: plaintext,
+		},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create secret version")
+	}
+
+	return &Secret{
+		Parent:    project,
+		Name:      name,
+		Version:   path.Base(versionResp.Name),
+		Plaintext: plaintext,
+		UpdatedAt: timestampToTime(versionResp.CreateTime),
+	}, nil
+}
+
+func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*Secret, error) {
 	bucket := i.Bucket
 	if bucket == "" {
 		return nil, errors.New("missing bucket name")
