@@ -417,9 +417,6 @@ func main() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption")
-	if err := createCmd.MarkFlagRequired("key"); err != nil {
-		panic(err)
-	}
 
 	rootCmd.AddCommand(deleteCmd)
 
@@ -474,21 +471,36 @@ func accessRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
-	plaintext, err := client.Access(ctx, &berglas.AccessRequest{
-		Bucket:     bucket,
-		Object:     object,
-		Generation: accessGeneration,
-	})
-	if err != nil {
-		return apiError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		plaintext, err := client.Access(ctx, &berglas.SecretManagerAccessRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+			Version: ref.Version(),
+		})
+		if err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "%s", plaintext)
+	case berglas.ReferenceTypeStorage:
+		plaintext, err := client.Access(ctx, &berglas.StorageAccessRequest{
+			Bucket:     ref.Bucket(),
+			Object:     ref.Object(),
+			Generation: ref.Generation(),
+		})
+		if err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "%s", plaintext)
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "%s", plaintext)
 	return nil
 }
 
@@ -565,7 +577,7 @@ func createRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
@@ -576,17 +588,34 @@ func createRun(_ *cobra.Command, args []string) error {
 		return misuseError(err)
 	}
 
-	var secret *berglas.Secret
-	if secret, err = client.Create(ctx, &berglas.CreateRequest{
-		Bucket:    bucket,
-		Object:    object,
-		Key:       key,
-		Plaintext: plaintext,
-	}); err != nil {
-		return apiError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		secret, err := client.Create(ctx, &berglas.SecretManagerCreateRequest{
+			Project:   ref.Project(),
+			Name:      ref.Name(),
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully created secret [%s] with version [%s]\n",
+			secret.Name, secret.Version)
+	case berglas.ReferenceTypeStorage:
+		secret, err := client.Create(ctx, &berglas.StorageCreateRequest{
+			Bucket:    ref.Bucket(),
+			Object:    ref.Object(),
+			Key:       key,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully created secret [%s] with generation [%d]\n",
+			secret.Name, secret.Generation)
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "Successfully created secret [%s] with generation [%d]\n", object, secret.Generation)
 	return nil
 }
 
@@ -597,19 +626,34 @@ func deleteRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
-	if err := client.Delete(ctx, &berglas.DeleteRequest{
-		Bucket: bucket,
-		Object: object,
-	}); err != nil {
-		return apiError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		if err := client.Delete(ctx, &berglas.SecretManagerDeleteRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully deleted secret [%s] if it existed\n",
+			ref.Name())
+	case berglas.ReferenceTypeStorage:
+		if err := client.Delete(ctx, &berglas.StorageDeleteRequest{
+			Bucket: ref.Bucket(),
+			Object: ref.Object(),
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully deleted secret [%s] if it existed\n",
+			ref.Object())
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "Successfully deleted secret [%s] if it existed\n", object)
 	return nil
 }
 
@@ -633,16 +677,31 @@ func editRun(_ *cobra.Command, args []string) error {
 		return apiError(err)
 	}
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
+	var originalSecret *berglas.Secret
+
 	// Get the existing secret
-	originalSecret, err := client.Read(ctx, &berglas.ReadRequest{
-		Bucket: bucket,
-		Object: object,
-	})
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		originalSecret, err = client.Read(ctx, &berglas.SecretManagerReadRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+			Version: ref.Version(),
+		})
+	case berglas.ReferenceTypeStorage:
+		originalSecret, err = client.Read(ctx, &berglas.StorageReadRequest{
+			Bucket:     ref.Bucket(),
+			Object:     ref.Object(),
+			Generation: ref.Generation(),
+		})
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
+	}
+
 	if err != nil {
 		return apiError(err)
 	}
@@ -716,21 +775,40 @@ func editRun(_ *cobra.Command, args []string) error {
 	}
 
 	// Update the secret
-	updatedSecret, err := client.Update(ctx, &berglas.UpdateRequest{
-		Bucket:         bucket,
-		Object:         object,
-		Generation:     originalSecret.Generation,
-		Key:            originalSecret.KMSKey,
-		Metageneration: originalSecret.Metageneration,
-		Plaintext:      newPlaintext,
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "failed to update secret")
-		return misuseError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		updatedSecret, err := client.Update(ctx, &berglas.SecretManagerUpdateRequest{
+			Project:   ref.Project(),
+			Name:      ref.Name(),
+			Plaintext: newPlaintext,
+		})
+		if err != nil {
+			err = errors.Wrapf(err, "failed to update secret")
+			return misuseError(err)
+		}
+
+		fmt.Fprintf(stdout, "Successfully updated secret [%s] to version [%s]\n",
+			updatedSecret.Name, updatedSecret.Version)
+	case berglas.ReferenceTypeStorage:
+		updatedSecret, err := client.Update(ctx, &berglas.StorageUpdateRequest{
+			Bucket:         ref.Bucket(),
+			Object:         ref.Object(),
+			Generation:     originalSecret.Generation,
+			Key:            originalSecret.KMSKey,
+			Metageneration: originalSecret.Metageneration,
+			Plaintext:      newPlaintext,
+		})
+		if err != nil {
+			err = errors.Wrapf(err, "failed to update secret")
+			return misuseError(err)
+		}
+
+		fmt.Fprintf(stdout, "Successfully updated secret [%s] with generation [%d]\n",
+			updatedSecret.Name, updatedSecret.Generation)
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "Successfully updated secret [%s] with generation [%d]\n",
-		object, updatedSecret.Generation)
 	return nil
 }
 
@@ -815,23 +893,38 @@ func grantRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
 	sort.Strings(members)
 
-	if err := client.Grant(ctx, &berglas.GrantRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: members,
-	}); err != nil {
-		return apiError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		if err := client.Grant(ctx, &berglas.SecretManagerGrantRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+			Members: members,
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully granted permission on [%s] to: \n- %s\n",
+			ref.Name(), strings.Join(members, "\n- "))
+	case berglas.ReferenceTypeStorage:
+		if err := client.Grant(ctx, &berglas.StorageGrantRequest{
+			Bucket:  ref.Bucket(),
+			Object:  ref.Object(),
+			Members: members,
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully granted permission on [%s] to: \n- %s\n",
+			ref.Object(), strings.Join(members, "\n- "))
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "Successfully granted permission on [%s] to: \n- %s\n",
-		object, strings.Join(members, "\n- "))
 	return nil
 }
 
@@ -842,28 +935,66 @@ func listRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket := strings.TrimPrefix(args[0], "gs://")
+	var list *berglas.ListResponse
 
-	list, err := client.List(ctx, &berglas.ListRequest{
+	switch {
+	case strings.HasPrefix(args[0], "sm://"):
+		project := strings.Trim(strings.TrimPrefix(args[0], "sm://"), "/")
+		list, err = client.List(ctx, &berglas.SecretManagerListRequest{
+			Project:  project,
+			Prefix:   listPrefix,
+			Versions: listGenerations,
+		})
+		if err != nil {
+			return apiError(err)
+		}
+
+		if len(list.Secrets) == 0 {
+			return nil
+		}
+
+		tw := new(tabwriter.Writer)
+		tw.Init(stdout, 0, 4, 4, ' ', 0)
+		fmt.Fprintf(tw, "NAME\tVERSION\tUPDATED\n")
+		for _, s := range list.Secrets {
+			fmt.Fprintf(tw, "%s\t%s\t%s\n", s.Name, s.Version, s.UpdatedAt.Local())
+		}
+		tw.Flush()
+	default:
+		bucket := strings.Trim(strings.TrimPrefix(args[0], "gs://"), "/")
+		list, err = client.List(ctx, &berglas.ListRequest{
+			Bucket:      bucket,
+			Prefix:      listPrefix,
+			Generations: listGenerations,
+		})
+		if err != nil {
+			return apiError(err)
+		}
+
+		if len(list.Secrets) == 0 {
+			return nil
+		}
+
+		tw := new(tabwriter.Writer)
+		tw.Init(stdout, 0, 4, 4, ' ', 0)
+		fmt.Fprintf(tw, "NAME\tGENERATION\tUPDATED\n")
+		for _, s := range list.Secrets {
+			fmt.Fprintf(tw, "%s\t%d\t%s\n", s.Name, s.Generation, s.UpdatedAt.Local())
+		}
+		tw.Flush()
+	}
+
+	return nil
+}
+
 		Bucket:      bucket,
-		Prefix:      listPrefix,
-		Generations: listGenerations,
 	})
 	if err != nil {
 		return apiError(err)
 	}
 
-	if len(list.Secrets) == 0 {
-		return nil
-	}
 
-	tw := new(tabwriter.Writer)
-	tw.Init(stdout, 0, 4, 4, ' ', 0)
-	fmt.Fprintf(tw, "NAME\tGENERATION\tUPDATED\n")
-	for _, s := range list.Secrets {
-		fmt.Fprintf(tw, "%s\t%d\t%s\n", s.Name, s.Generation, s.UpdatedAt.Local())
 	}
-	tw.Flush()
 
 	return nil
 }
@@ -875,23 +1006,38 @@ func revokeRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
 
 	sort.Strings(members)
 
-	if err := client.Revoke(ctx, &berglas.RevokeRequest{
-		Bucket:  bucket,
-		Object:  object,
-		Members: members,
-	}); err != nil {
-		return apiError(err)
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		if err := client.Revoke(ctx, &berglas.SecretManagerRevokeRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+			Members: members,
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully revoked permission on [%s] from: \n- %s\n",
+			ref.Name(), strings.Join(members, "\n- "))
+	case berglas.ReferenceTypeStorage:
+		if err := client.Revoke(ctx, &berglas.StorageRevokeRequest{
+			Bucket:  ref.Bucket(),
+			Object:  ref.Object(),
+			Members: members,
+		}); err != nil {
+			return apiError(err)
+		}
+		fmt.Fprintf(stdout, "Successfully revoked permission on [%s] from: \n- %s\n",
+			ref.Object(), strings.Join(members, "\n- "))
+	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
-	fmt.Fprintf(stdout, "Successfully revoked permission on [%s] from: \n- %s\n",
-		object, strings.Join(members, "\n- "))
 	return nil
 }
 
@@ -902,7 +1048,7 @@ func updateRun(_ *cobra.Command, args []string) error {
 	}
 	defer closer()
 
-	bucket, object, err := parseRef(args[0])
+	ref, err := parseRef(args[0])
 	if err != nil {
 		return misuseError(err)
 	}
@@ -915,29 +1061,34 @@ func updateRun(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	secret, err := client.Update(ctx, &berglas.UpdateRequest{
-		Bucket:          bucket,
-		Object:          object,
-		Key:             key,
-		Plaintext:       plaintext,
-		CreateIfMissing: createIfMissing,
-		Generation:      0,
-		Metageneration:  0,
-	})
-	if err != nil {
-		return apiError(err)
-	}
-
-	fmt.Fprintf(stdout, "Successfully updated secret [%s] to generation [%d]\n",
-		object, secret.Generation)
-	return nil
-}
-
+	switch t := ref.Type(); t {
+	case berglas.ReferenceTypeSecretManager:
+		secret, err := client.Update(ctx, &berglas.SecretManagerUpdateRequest{
+			Project:         ref.Project(),
+			Name:            ref.Name(),
+			Plaintext:       plaintext,
+			CreateIfMissing: createIfMissing,
+		})
+		if err != nil {
 			return apiError(err)
 		}
+		fmt.Fprintf(stdout, "Successfully updated secret [%s] to version [%s]\n",
+			secret.Name, secret.Version)
+	case berglas.ReferenceTypeStorage:
+		secret, err := client.Update(ctx, &berglas.StorageUpdateRequest{
+			Bucket:          ref.Bucket(),
+			Object:          ref.Object(),
+			Key:             key,
+			Plaintext:       plaintext,
+			CreateIfMissing: createIfMissing,
+		})
+		if err != nil {
 			return apiError(err)
 		}
+		fmt.Fprintf(stdout, "Successfully updated secret [%s] to generation [%d]\n",
+			secret.Name, secret.Generation)
 	default:
+		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
 
 	return nil
@@ -1048,15 +1199,23 @@ func readData(s string) ([]byte, error) {
 	}
 }
 
-// parseRef parses a secret ref into a bucket, secret path, and any errors.
-func parseRef(s string) (string, string, error) {
-	s = strings.TrimPrefix(s, "gs://")
-	s = strings.TrimPrefix(s, "berglas://")
+// parseRef parses a secret ref and returns any errors.
+func parseRef(r string) (*berglas.Reference, error) {
+	s := r
 
-	ss := strings.SplitN(s, "/", 2)
-	if len(ss) < 2 {
-		return "", "", errors.Errorf("secret does not match format gs://<bucket>/<secret> or the format berglas://<bucket>/<secret>: %s", s)
+	// Replace gs:// with berglas://
+	if strings.HasPrefix(s, "gs://") {
+		s = "berglas://" + s[5:]
 	}
 
-	return ss[0], ss[1], nil
+	// If there's no protocol, assume berglas:// (backwards compat)
+	if !strings.Contains(s, "://") {
+		s = "berglas://" + s
+	}
+
+	ref, err := berglas.ParseReference(s)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse reference %q", s)
+	}
+	return ref, nil
 }
