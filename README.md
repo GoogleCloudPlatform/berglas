@@ -7,7 +7,7 @@
 
 Berglas is a command line tool and library for storing and retrieving
 secrets on Google Cloud. Secrets are encrypted with [Cloud KMS][cloud-kms] and
-stored in [Cloud Storage][cloud-storage].
+stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists with [Secret Manager][secret-manager].
 
 - As a **CLI**, `berglas` automates the process of encrypting, decrypting, and
   storing data on Google Cloud.
@@ -489,6 +489,14 @@ For more information, please see the [security and threat model][threat-model].
 
 ## FAQ
 
+**Q: Should I use Berglas or [Secret Manager][secret-manager]?**
+<br>
+Berglas is compatible with [Secret Manager][secret-manager] and offers
+convenience wrappers around managing secrets regardless of whether they reside
+in Cloud Storage or Secret Manager. New projects should investigate using Secret
+Manager directly as it has less operational overhead and complexity, but Berglas
+will continue to support Cloud Storage + Cloud KMS secrets.
+
 **Q: Is there a size limit on the data I can encrypt?**
 <br>
 Berglas is targeted at application secrets like certificates, passwords, and
@@ -550,6 +558,7 @@ This library is licensed under Apache 2.0. Full license text is available in
 [cloud-shell]: https://cloud.google.com/shell
 [cloud-sdk]: https://cloud.google.com/sdk
 [k8s-mutating]: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/
+[secret-manager]: https://cloud.google.com/secret-manager
 [go-crypto]: https://golang.org/pkg/crypto/
 [envelope-encryption]: https://cloud.google.com/kms/docs/envelope-encryption
 [custom-setup]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/custom-setup.md

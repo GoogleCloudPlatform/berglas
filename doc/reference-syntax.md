@@ -6,17 +6,34 @@ parse these strings at the library level too.
 
 ## Syntax
 
+### Storage
+
 ```text
-berglas://[BUCKET]/[SECRET]?[OPTIONS]#[GENERATION]
+berglas://[BUCKET]/[OBJECT]?[OPTIONS]#[GENERATION]
 ```
 
 - `BUCKET` - name of the Cloud Storage bucket where the secret is stored
 
-- `SECRET` - name of the secret in the Cloud Storage bucket
+- `OBJECT` - name of the secret in the Cloud Storage bucket
 
-- `OPTIONS` - options specified as URL query parameters
+- `OPTIONS` - options specified as URL query parameters (see below)
 
 - `GENERATION` - secret generation to access specified as URL fragment. Defaults to latest.
+
+### Secret Manager
+
+```text
+sm://[PROJECT]/[NAME]?[OPTIONS]#[VERSION]
+```
+
+- `PROJECT` - ID of the Google Cloud project for Secret Manager
+
+- `NAME` - name of the secret in Secret Manager
+
+- `OPTIONS` - options specified as URL query parameters (see below)
+
+- `VERSION` - secret version to access specified as URL fragment. Defaults to "latest".
+
 
 ### Options
 
@@ -31,10 +48,16 @@ berglas://[BUCKET]/[SECRET]?[OPTIONS]#[GENERATION]
 
 ## Examples
 
-Read a secret:
+Read a Cloud Storage secret:
 
 ```text
 berglas://my-bucket/my-secret
+```
+
+Read a Secret Manager secret:
+
+```text
+sm://my-project/my-secret
 ```
 
 Read a secret into a tempfile:
@@ -46,5 +69,5 @@ berglas://my-bucket/path/to/my-secret?destination=tempfile
 Read a specific generation of a secret:
 
 ```text
-berglas://my-bucket/path/to/my-secret#1563925173373377
+sm://my-project/my-secret#13
 ```

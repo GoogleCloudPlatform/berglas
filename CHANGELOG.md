@@ -2,6 +2,14 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
+## [0.5.0] Unreleased
+### Breaking
+- core: drop `ResolveValue` since it is no longer needed
+
+### Added
+- core: support for Secret Manager
+- cli: `migrate` command migrates Berglas secrets to Secret Manager
+
 ## [0.4.0] 2019-12-05
 ### Breaking
 - core: drop runtime environment lookup and associated API methods (see #87 for
