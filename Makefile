@@ -54,7 +54,7 @@ test:
 .PHONY: test
 
 test-acc:
-	@go test -parallel=40 -count=1 ./...
+	@go test -parallel=20 -count=1 ./...
 .PHONY: test-acc
 
 update-go-samples:
