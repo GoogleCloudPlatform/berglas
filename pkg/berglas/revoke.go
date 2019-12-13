@@ -22,20 +22,17 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Revoke is a top-level package function for revokeing access to a secret. For
-// large volumes of secrets, please create a client instead.
-func Revoke(ctx context.Context, i *RevokeRequest) error {
-	client, err := New(ctx)
-	if err != nil {
-		return err
-	}
-	return client.Revoke(ctx, i)
+type revokeRequest interface {
+	isRevokeRequest()
 }
 
-// RevokeRequest is used as input to a revoke secret request.
-type RevokeRequest struct {
+// StorageRevokeRequest is used as input to revoke access to a from Cloud
+// Storage encrypted with Cloud KMS.
+type StorageRevokeRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
 	Bucket string
 
@@ -47,13 +44,102 @@ type RevokeRequest struct {
 	Members []string
 }
 
+func (r *StorageRevokeRequest) isRevokeRequest() {}
+
+// RevokeRequest is an alias for StorageRevokeRequest for
+// backwards-compatability. New clients should use StorageRevokeRequest.
+type RevokeRequest = StorageRevokeRequest
+
+// SecretManagerRevokeRequest is used as input to revoke access to a secret in
+// Secret Manager.
+type SecretManagerRevokeRequest struct {
+	// Project is the ID or number of the project where secrets live.
+	Project string
+
+	// Name is the name of the secret to access.
+	Name string
+
+	// Members is the list of membership bindings. This should be in the format
+	// described at https://godoc.org/google.golang.org/api/iam/v1#Binding.
+	Members []string
+}
+
+func (r *SecretManagerRevokeRequest) isRevokeRequest() {}
+
+// Revoke is a top-level package function for revokeing access to a secret. For
+// large volumes of secrets, please create a client instead.
+func Revoke(ctx context.Context, i revokeRequest) error {
+	client, err := New(ctx)
+	if err != nil {
+		return err
+	}
+	return client.Revoke(ctx, i)
+}
+
 // Revoke removes IAM permission to the given entity on the storage object and
 // the underlying KMS key.
-func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
+func (c *Client) Revoke(ctx context.Context, i revokeRequest) error {
 	if i == nil {
 		return errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerRevokeRequest:
+		return c.secretManagerRevoke(ctx, t)
+	case *StorageRevokeRequest:
+		return c.storageRevoke(ctx, t)
+	default:
+		return errors.Errorf("unknown revoke type %T", t)
+	}
+}
+
+func (c *Client) secretManagerRevoke(ctx context.Context, i *SecretManagerRevokeRequest) error {
+	project := i.Project
+	if project == "" {
+		return errors.New("missing project")
+	}
+
+	name := i.Name
+	if name == "" {
+		return errors.New("missing secret name")
+	}
+
+	members := i.Members
+	if len(members) == 0 {
+		return nil
+	}
+	sort.Strings(members)
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"project": project,
+		"name":    name,
+		"members": members,
+	})
+
+	logger.Debug("revoke.start")
+	defer logger.Debug("revoke.finish")
+
+	logger.Debug("revoking access to seetcr")
+
+	storageHandle := c.secretManagerIAM(project, name)
+	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
+		for _, m := range members {
+			p.Remove(m, iamSecretManagerAccessor)
+		}
+		return p
+	}); err != nil {
+		terr, ok := grpcstatus.FromError(err)
+		if ok && terr.Code() == grpccodes.NotFound {
+			return errSecretDoesNotExist
+		}
+
+		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", name)
+	}
+
+	return nil
+}
+
+func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) error {
 	bucket := i.Bucket
 	if bucket == "" {
 		return errors.New("missing bucket name")
@@ -85,7 +171,7 @@ func (c *Client) Revoke(ctx context.Context, i *RevokeRequest) error {
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
-		return errors.New("secret object not found")
+		return errSecretDoesNotExist
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to read secret metadata")

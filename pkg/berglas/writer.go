@@ -127,5 +127,5 @@ func (c *Client) encryptAndWrite(
 		return nil, errors.Wrap(err, "failed to write to bucket")
 	}
 
-	return secretFromAttrs(iow.Attrs(), plaintext), nil
+	return secretFromAttrs(bucket, iow.Attrs(), plaintext), nil
 }

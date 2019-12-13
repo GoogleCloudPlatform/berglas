@@ -31,18 +31,13 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Bootstrap is a top-level package that creates a Cloud Storage bucket and
-// Cloud KMS key with the proper IAM permissions.
-func Bootstrap(ctx context.Context, i *BootstrapRequest) error {
-	client, err := New(ctx)
-	if err != nil {
-		return err
-	}
-	return client.Bootstrap(ctx, i)
+type bootstrapRequest interface {
+	isBootstrapRequest()
 }
 
-// BootstrapRequest is used as input to a bootstrap a berglas setup.
-type BootstrapRequest struct {
+// StorageAccessRequest is used as input to bootstrap Cloud Storage and Cloud
+// KMS.
+type StorageBootstrapRequest struct {
 	// ProjectID is the ID of the project where the bucket should be created.
 	ProjectID string
 
@@ -62,13 +57,50 @@ type BootstrapRequest struct {
 	KMSCryptoKey string
 }
 
+func (r *StorageBootstrapRequest) isBootstrapRequest() {}
+
+// BootstrapRequest is an alias for StorageBootstrapRequest for
+// backwards-compatability. New clients should use StorageBootstrapRequest.
+type BootstrapRequest = StorageBootstrapRequest
+
+// SecretManagerBootstrapRequest is used as input to bootstrap Secret Manager.
+// This is a noop.
+type SecretManagerBootstrapRequest struct{}
+
+func (r *SecretManagerBootstrapRequest) isBootstrapRequest() {}
+
+// Bootstrap is a top-level package that creates a Cloud Storage bucket and
+// Cloud KMS key with the proper IAM permissions.
+func Bootstrap(ctx context.Context, i bootstrapRequest) error {
+	client, err := New(ctx)
+	if err != nil {
+		return err
+	}
+	return client.Bootstrap(ctx, i)
+}
+
 // Bootstrap adds IAM permission to the given entity to the storage object and the
 // underlying KMS key.
-func (c *Client) Bootstrap(ctx context.Context, i *BootstrapRequest) error {
+func (c *Client) Bootstrap(ctx context.Context, i bootstrapRequest) error {
 	if i == nil {
 		return errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerBootstrapRequest:
+		return c.secretManagerBootstrap(ctx, t)
+	case *StorageBootstrapRequest:
+		return c.storageBootstrap(ctx, t)
+	default:
+		return errors.Errorf("unknown bootstrap type %T", t)
+	}
+}
+
+func (c *Client) secretManagerBootstrap(ctx context.Context, i *SecretManagerBootstrapRequest) error {
+	return nil // noop
+}
+
+func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapRequest) error {
 	projectID := i.ProjectID
 	if projectID == "" {
 		return errors.New("missing project ID")

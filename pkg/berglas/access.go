@@ -16,23 +16,23 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	secretspb "google.golang.org/genproto/googleapis/cloud/secrets/v1beta1"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Access is a top-level package function for accessing a secret. For large
-// volumes of secrets, please create a client instead.
-func Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
-	client, err := New(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return client.Access(ctx, i)
+type accessRequest interface {
+	isAccessRequest()
 }
 
-// AccessRequest is used as input to a get secret request.
-type AccessRequest struct {
+// StorageAccessRequest is used as input to access a secret from Cloud Storage
+// encrypted with Cloud KMS.
+type StorageAccessRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
 	Bucket string
 
@@ -43,13 +43,95 @@ type AccessRequest struct {
 	Generation int64
 }
 
-// Access reads the contents of the secret from the bucket, decrypting the
-// ciphertext using Cloud KMS.
-func (c *Client) Access(ctx context.Context, i *AccessRequest) ([]byte, error) {
+func (r *StorageAccessRequest) isAccessRequest() {}
+
+// AccessRequest is an alias for StorageAccessRequest for
+// backwards-compatability. New clients should use StorageAccessRequest.
+type AccessRequest = StorageAccessRequest
+
+// SecretManagerAccessRequest is used as input to access a secret from Secret
+// Manager.
+type SecretManagerAccessRequest struct {
+	// Project is the ID or number of the project from which to access secrets.
+	Project string
+
+	// Name is the name of the secret to access.
+	Name string
+
+	// Version is the version of the secret to access.
+	Version string
+}
+
+func (r *SecretManagerAccessRequest) isAccessRequest() {}
+
+// Access is a top-level package function for accessing a secret. For large
+// volumes of secrets, please create a client instead.
+func Access(ctx context.Context, i accessRequest) ([]byte, error) {
+	client, err := New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return client.Access(ctx, i)
+}
+
+// Access accesses a secret. When given a SecretManagerAccessRequest, this
+// accesses a secret from Secret Manager. When given a StorageAccessRequest,
+// this accesses a secret stored in Cloud Storage encrypted with Cloud KMS.
+func (c *Client) Access(ctx context.Context, i accessRequest) ([]byte, error) {
 	if i == nil {
 		return nil, errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerAccessRequest:
+		return c.secretManagerAccess(ctx, t)
+	case *StorageAccessRequest:
+		return c.storageAccess(ctx, t)
+	default:
+		return nil, errors.Errorf("unknown access type %T", t)
+	}
+}
+
+func (c *Client) secretManagerAccess(ctx context.Context, i *SecretManagerAccessRequest) ([]byte, error) {
+	project := i.Project
+	if project == "" {
+		return nil, errors.New("missing project")
+	}
+
+	name := i.Name
+	if name == "" {
+		return nil, errors.New("missing secret name")
+	}
+
+	version := i.Version
+	if version == "" {
+		version = "latest"
+	}
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"project": project,
+		"name":    name,
+		"version": version,
+	})
+
+	logger.Debug("access.start")
+	defer logger.Debug("access.finish")
+
+	resp, err := c.secretManagerClient.AccessSecretVersion(ctx, &secretspb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, name, version),
+	})
+	if err != nil {
+		terr, ok := grpcstatus.FromError(err)
+		if ok && terr.Code() == grpccodes.NotFound {
+			return nil, errSecretDoesNotExist
+		}
+		return nil, errors.Wrap(err, "failed to access secret")
+	}
+
+	return resp.Payload.Data, nil
+}
+
+func (c *Client) storageAccess(ctx context.Context, i *StorageAccessRequest) ([]byte, error) {
 	bucket := i.Bucket
 	if bucket == "" {
 		return nil, errors.New("missing bucket name")

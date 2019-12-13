@@ -51,11 +51,23 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to parse reference %s", s)
 	}
 
-	plaintext, err := c.Access(ctx, &AccessRequest{
-		Bucket:     ref.Bucket(),
-		Object:     ref.Object(),
-		Generation: ref.Generation(),
-	})
+	var req accessRequest
+	switch ref.Type() {
+	case ReferenceTypeSecretManager:
+		req = &SecretManagerAccessRequest{
+			Project: ref.Project(),
+			Name:    ref.Name(),
+			Version: ref.Version(),
+		}
+	case ReferenceTypeStorage:
+		req = &StorageAccessRequest{
+			Bucket:     ref.Bucket(),
+			Object:     ref.Object(),
+			Generation: ref.Generation(),
+		}
+	}
+
+	plaintext, err := c.Access(ctx, req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to access secret %s/%s", ref.Bucket(), ref.Object())
 	}
@@ -91,45 +103,4 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	}
 
 	return plaintext, nil
-}
-
-// Replace parses a berglas reference and replaces it. See Client.Replace for
-// more details and examples.
-func Replace(ctx context.Context, key string) error {
-	client, err := New(ctx)
-	if err != nil {
-		return err
-	}
-	return client.Replace(ctx, key)
-}
-
-// ReplaceValue parses a berglas reference from value. If parsing and extraction
-// is successful, this function sets the value of the environment variable to the
-// resolved secret reference.
-func (c *Client) ReplaceValue(ctx context.Context, key string, value string) error {
-	logger := c.Logger().WithFields(logrus.Fields{
-		"key":       key,
-		"reference": value,
-	})
-
-	logger.Debug("replacevalue.start")
-	defer logger.Debug("replacevalue.finish")
-
-	plaintext, err := c.Resolve(ctx, value)
-	if err != nil {
-		return err
-	}
-
-	if err := os.Setenv(key, string(plaintext)); err != nil {
-		return errors.Wrapf(err, "failed to set %s", key)
-	}
-	return nil
-}
-
-// Replace parses a berglas reference from the environment variable at the
-// given environment variable name. If parsing and extraction is successful,
-// this function replaces the value of the environment variable to the resolved
-// secret reference.
-func (c *Client) Replace(ctx context.Context, key string) error {
-	return c.ReplaceValue(ctx, key, os.Getenv(key))
 }

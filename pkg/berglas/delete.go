@@ -16,6 +16,7 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 
 	"cloud.google.com/go/storage"
@@ -23,20 +24,17 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secrets/v1beta1"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Delete is a top-level package function for creating a secret. For large
-// volumes of secrets, please create a client instead.
-func Delete(ctx context.Context, i *DeleteRequest) error {
-	client, err := New(ctx)
-	if err != nil {
-		return err
-	}
-	return client.Delete(ctx, i)
+type deleteRequest interface {
+	isDeleteRequest()
 }
 
-// DeleteRequest is used as input to a get secret request.
-type DeleteRequest struct {
+// StorageDeleteRequest is used as input to delete a secret from Cloud Storage.
+type StorageDeleteRequest struct {
 	// Bucket is the name of the bucket where the secret lives.
 	Bucket string
 
@@ -44,13 +42,83 @@ type DeleteRequest struct {
 	Object string
 }
 
-// Delete reads the contents of the secret from the bucket, decrypting the
-// ciphertext using Cloud KMS.
-func (c *Client) Delete(ctx context.Context, i *DeleteRequest) error {
+func (r *StorageDeleteRequest) isDeleteRequest() {}
+
+// DeleteRequest is an alias for StorageDeleteRequest for
+// backwards-compatability. New clients should use StorageDeleteRequest.
+type DeleteRequest = StorageDeleteRequest
+
+// SecretManagerDeleteRequestis used as input to delete a secret from Secret
+// Manager.
+type SecretManagerDeleteRequest struct {
+	// Project is the ID or number of the project from which to delete the secret.
+	Project string
+
+	// Name is the name of the secret to delete.
+	Name string
+}
+
+func (r *SecretManagerDeleteRequest) isDeleteRequest() {}
+
+// Delete is a top-level package function for deleting a secret. For large
+// volumes of secrets, please create a client instead.
+func Delete(ctx context.Context, i deleteRequest) error {
+	client, err := New(ctx)
+	if err != nil {
+		return err
+	}
+	return client.Delete(ctx, i)
+}
+
+// Delete deletes a secret. When given a SecretManagerDeleteRequest, this
+// deletes a secret from Secret Manager. When given a StorageDeleteRequest, this
+// deletes a secret stored in Cloud Storage.
+func (c *Client) Delete(ctx context.Context, i deleteRequest) error {
 	if i == nil {
 		return errors.New("missing request")
 	}
 
+	switch t := i.(type) {
+	case *SecretManagerDeleteRequest:
+		return c.secretManagerDelete(ctx, t)
+	case *StorageDeleteRequest:
+		return c.storageDelete(ctx, t)
+	default:
+		return errors.Errorf("unknown delete type %T", t)
+	}
+}
+
+func (c *Client) secretManagerDelete(ctx context.Context, i *SecretManagerDeleteRequest) error {
+	project := i.Project
+	if project == "" {
+		return errors.New("missing project")
+	}
+
+	name := i.Name
+	if name == "" {
+		return errors.New("missing secret name")
+	}
+
+	logger := c.Logger().WithFields(logrus.Fields{
+		"project": project,
+		"name":    name,
+	})
+
+	logger.Debug("delete.start")
+	defer logger.Debug("delete.finish")
+
+	if err := c.secretManagerClient.DeleteSecret(ctx, &secretspb.DeleteSecretRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s", project, name),
+	}); err != nil {
+		terr, ok := grpcstatus.FromError(err)
+		if !ok || terr.Code() != grpccodes.NotFound {
+			return errors.Wrap(err, "failed to delete secret")
+		}
+	}
+	return nil
+}
+
+func (c *Client) storageDelete(ctx context.Context, i *StorageDeleteRequest) error {
 	bucket := i.Bucket
 	if bucket == "" {
 		return errors.New("missing bucket name")
@@ -130,7 +198,7 @@ L:
 
 					select {
 					case <-childCtx.Done():
-					case errCh <- err:
+					case errCh <- errors.Wrap(err, "failed to delete generation"):
 						logger.Debug("worker pushed error onto channel, canceling other jobs")
 						cancel()
 					default:

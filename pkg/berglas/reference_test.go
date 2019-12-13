@@ -52,6 +52,55 @@ func TestParseReference(t *testing.T) {
 			nil,
 			true,
 		},
+
+		// Secret Manager
+		{
+			"sm-no-secret",
+			"sm://foo",
+			nil,
+			true,
+		},
+		{
+			"sm-prefix",
+			"sm://foo/bar",
+			&Reference{
+				project: "foo",
+				name:    "bar",
+				typ:     ReferenceTypeSecretManager,
+			},
+			false,
+		},
+		{
+			"folder",
+			"sm://foo/bar/baz/bacon", // secret names cannot be nested
+			nil,
+			true,
+		},
+		{
+			"destination_path",
+			"sm://foo/bar?destination=/var/foo",
+			&Reference{
+				project:  "foo",
+				name:     "bar",
+				filepath: "/var/foo",
+				typ:      ReferenceTypeSecretManager,
+			},
+			false,
+		},
+		{
+			"destination_path",
+			"sm://foo/bar?destination=/var/foo#12",
+			&Reference{
+				project:  "foo",
+				name:     "bar",
+				version:  "12",
+				filepath: "/var/foo",
+				typ:      ReferenceTypeSecretManager,
+			},
+			false,
+		},
+
+		// Storage
 		{
 			"berglas-no-secret",
 			"berglas://foo",
@@ -64,6 +113,7 @@ func TestParseReference(t *testing.T) {
 			&Reference{
 				bucket: "foo",
 				object: "bar",
+				typ:    ReferenceTypeStorage,
 			},
 			false,
 		},
@@ -73,6 +123,7 @@ func TestParseReference(t *testing.T) {
 			&Reference{
 				bucket: "foo",
 				object: "bar/baz/bacon",
+				typ:    ReferenceTypeStorage,
 			},
 			false,
 		},
@@ -83,6 +134,7 @@ func TestParseReference(t *testing.T) {
 				bucket:   "foo",
 				object:   "bar",
 				filepath: "/var/foo",
+				typ:      ReferenceTypeStorage,
 			},
 			false,
 		},
@@ -94,6 +146,7 @@ func TestParseReference(t *testing.T) {
 				object:     "bar",
 				generation: 1563925173373377,
 				filepath:   "/var/foo",
+				typ:        ReferenceTypeStorage,
 			},
 			false,
 		},
