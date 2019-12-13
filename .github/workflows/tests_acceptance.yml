@@ -1,0 +1,39 @@
+name: Tests (Acceptance)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: [1.13]
+
+    name: ${{ matrix.os }}, go ${{ matrix.go }}
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Setup credentials
+      run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > ${{ runner.temp }}/account.json
+
+    - run: make test-acc
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/account.json
+        GOOGLE_CLOUD_PROJECT: berglas-test
+        GOOGLE_CLOUD_BUCKET: berglas-test-secrets
+        GOOGLE_CLOUD_KMS_KEY: projects/berglas-test/locations/global/keyRings/my-keyring/cryptoKeys/my-key
+        GOOGLE_CLOUD_SERVICE_ACCOUNT: berglas-test@berglas-test.iam.gserviceaccount.com
