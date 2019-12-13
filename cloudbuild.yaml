@@ -13,18 +13,6 @@
 # limitations under the License.
 
 steps:
-- id: test
-  name: gcr.io/$PROJECT_ID/go-gcloud-make
-  env:
-  - PROJECT_ROOT=berglas
-  - GO111MODULE=on
-  - GOOGLE_CLOUD_PROJECT=berglas-test
-  - GOOGLE_CLOUD_BUCKET=berglas-test-secrets
-  - GOOGLE_CLOUD_KMS_KEY=projects/berglas-test/locations/global/keyRings/my-keyring/cryptoKeys/my-key
-  - GOOGLE_CLOUD_SERVICE_ACCOUNT=berglas-test@berglas-test.iam.gserviceaccount.com
-  entrypoint: make
-  args: ['test-acc']
-
 - id: docker-push
   name: gcr.io/$PROJECT_ID/go-gcloud-make
   env:
