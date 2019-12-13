@@ -2,4 +2,4 @@ module github.com/GoogleCloudPlatform/berglas/examples/appengine/go
 
 go 1.13
 
-require github.com/GoogleCloudPlatform/berglas v0.4.1-0.20191205234926-25618bda2c65
+require github.com/GoogleCloudPlatform/berglas v0.5.0
