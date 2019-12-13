@@ -50,6 +50,7 @@ func TestClient_Resolve_secretManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer testSecretManagerCleanup(t, project, name)
 
 		ref := fmt.Sprintf("sm://%s/%s#%s", project, name, secret.Version)
 
@@ -95,6 +96,7 @@ func TestClient_Resolve_storage(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer testStorageCleanup(t, bucket, object)
 
 		ref := fmt.Sprintf("berglas://%s/%s#%s", bucket, object, secret.Version)
 

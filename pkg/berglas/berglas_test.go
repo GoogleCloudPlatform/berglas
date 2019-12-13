@@ -157,7 +157,7 @@ func testStorageCleanup(tb testing.TB, bucket, object string) {
 		tb.Fatal(err)
 	}
 
-	if err := client.Delete(ctx, &DeleteRequest{
+	if err := client.Delete(ctx, &StorageDeleteRequest{
 		Object: object,
 		Bucket: bucket,
 	}); err != nil {
