@@ -36,17 +36,17 @@ const (
 // storageIAM returns an IAM storage handle to the given object since one does
 // not exist in the storage libray.
 func (c *Client) storageIAM(bucket, object string) *iam.Handle {
-	return iam.InternalNewHandleClient(&iamClient{
+	return iam.InternalNewHandleClient(&storageIAMClient{
 		raw: c.storageIAMClient,
 	}, bucket+"/"+object)
 }
 
-// iamClient implements the iam.client interface.
-type iamClient struct {
+// storageIAMClient implements the iam.client interface.
+type storageIAMClient struct {
 	raw *storagev1.Service
 }
 
-func (c *iamClient) Get(ctx context.Context, resource string) (*iampb.Policy, error) {
+func (c *storageIAMClient) Get(ctx context.Context, resource string) (*iampb.Policy, error) {
 	bucket, object, err := parseBucketObj(resource)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (c *iamClient) Get(ctx context.Context, resource string) (*iampb.Policy, er
 	return iamFromStoragePolicy(rp), nil
 }
 
-func (c *iamClient) Set(ctx context.Context, resource string, p *iampb.Policy) error {
+func (c *storageIAMClient) Set(ctx context.Context, resource string, p *iampb.Policy) error {
 	bucket, object, err := parseBucketObj(resource)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (c *iamClient) Set(ctx context.Context, resource string, p *iampb.Policy) e
 	return nil
 }
 
-func (c *iamClient) Test(ctx context.Context, resource string, perms []string) ([]string, error) {
+func (c *storageIAMClient) Test(ctx context.Context, resource string, perms []string) ([]string, error) {
 	bucket, object, err := parseBucketObj(resource)
 	if err != nil {
 		return nil, err
