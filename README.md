@@ -1,6 +1,6 @@
 # Berglas
 
-[![Build Status](https://img.shields.io/github/workflow/status/GoogleCloudPlatform/berglas/Tests%20(Acceptance).svg?style=flat-square)](https://github.com/GoogleCloudPlatform/berglas/actions)
+[![Build Status](https://img.shields.io/github/workflow/status/GoogleCloudPlatform/berglas/Test.svg?style=flat-square)](https://github.com/GoogleCloudPlatform/berglas/actions)
 [![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)][berglas-godoc]
 
 ![Berglas Logo](/logos/berglas.svg)
