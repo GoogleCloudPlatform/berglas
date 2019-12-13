@@ -315,6 +315,38 @@ the "access" command instead.
 	RunE: listRun,
 }
 
+var migrateCmd = &cobra.Command{
+	Use:   "migrate BUCKET ",
+	Short: "Migrate Berglas secrets to Secret Manager",
+	Long: strings.Trim(`
+Migrate secrets in the given Google Cloud Storage bucket to Secret Manager. This
+is designed to be a single-use command and should not be used as part of a
+regular workflow. Secrets will be migrated as-is with the following caveats:
+
+- Deeply-nested secrets in folders will be underscored. Since Secret Manager
+  does not support nested structures, any secrets in the bucket inside folders
+  will be renamed with the slash ("/") as an underscore ("_").
+
+- Generation versions are not preserved. Generations (versions) in Cloud Storage
+  are random integers. Versions in Secret Manager are auto-incrementing. While
+  relative ordering will be preserved, the versions will differ.
+
+- Secrets are NOT deleted from the Cloud Storage bucket. You can use the
+  "berglas delete" command or "gsutil" to delete the objects once they are no
+  longer necessary.
+
+This command is intentionally a slow and non-parallelized operation to both
+avoid quota limits and to discourage recurrent use.
+`, "\n"),
+	Example: strings.Trim(`
+  # Migrate all secrets in the "my-secrets" bucket to Secret Manager in the
+  # project "my-project"
+  berglas migrate my-secrets --project my-project
+`, "\n"),
+	Args: cobra.ExactArgs(1),
+	RunE: migrateRun,
+}
+
 var revokeCmd = &cobra.Command{
 	Use:   "revoke SECRET",
 	Short: "Revoke access to a secret",
@@ -444,6 +476,13 @@ func main() {
 		"List all versions of secrets")
 	listCmd.Flags().StringVar(&listPrefix, "prefix", "",
 		"List secrets that match prefix")
+
+	rootCmd.AddCommand(migrateCmd)
+	migrateCmd.Flags().StringVar(&projectID, "project", "",
+		"Google Cloud Project ID")
+	if err := migrateCmd.MarkFlagRequired("project"); err != nil {
+		panic(err)
+	}
 
 	rootCmd.AddCommand(revokeCmd)
 	revokeCmd.Flags().StringSliceVar(&members, "member", nil,
@@ -987,13 +1026,51 @@ func listRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
+func migrateRun(_ *cobra.Command, args []string) error {
+	client, ctx, closer, err := clientWithContext()
+	if err != nil {
+		return misuseError(err)
+	}
+	defer closer()
+
+	bucket := strings.Trim(strings.TrimPrefix(args[0], "gs://"), "/")
+
+	storageList, err := client.List(ctx, &berglas.StorageListRequest{
 		Bucket:      bucket,
+		Generations: true,
 	})
 	if err != nil {
 		return apiError(err)
 	}
 
+	for _, s := range storageList.Secrets {
+		name := strings.Replace(s.Name, "/", "_", -1)
+		fmt.Fprintf(stdout, "Migrating %s to projects/%s/secrets/%s... ",
+			s.Name, projectID, name)
 
+		secret, err := client.Read(ctx, &berglas.StorageReadRequest{
+			Bucket: s.Parent,
+			Object: s.Name,
+		})
+		if err != nil {
+			return apiError(err)
+		}
+
+		if len(secret.Plaintext) == 0 {
+			fmt.Fprintf(stdout, "skip (empty plaintext)\n")
+			continue
+		}
+
+		if _, err := client.Update(ctx, &berglas.SecretManagerUpdateRequest{
+			Project:         projectID,
+			Name:            name,
+			Plaintext:       secret.Plaintext,
+			CreateIfMissing: true,
+		}); err != nil {
+			return apiError(err)
+		}
+
+		fmt.Fprintf(stdout, "done!\n")
 	}
 
 	return nil
