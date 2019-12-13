@@ -141,6 +141,34 @@ returned.
 	RunE: bootstrapRun,
 }
 
+var completionCmd = &cobra.Command{
+	Use:   "completion SHELL",
+	Args:  cobra.ExactArgs(1),
+	Short: "Outputs shell completion for the given shell (bash or zsh)",
+	Long: strings.Trim(
+		`Outputs shell completion for the given shell (bash or zsh)
+
+This depends on the bash-completion package. To install it:
+
+  # Mac OS X
+  brew install bash-completion
+
+  # Debian
+  apt-get install bash-completion
+
+Zsh users may also put the file somewhere on their $fpath, like
+/usr/local/share/zsh/site-functions
+`, "\n"),
+	Example: strings.Trim(`
+  # Enable completion for bash users
+  source <(berglas completion bash)
+
+  # Enable completion for zsh users
+  source <(berglas completion zsh)
+`, "\n"),
+	RunE: completionRun,
+}
+
 var createCmd = &cobra.Command{
 	Use:   "create SECRET DATA",
 	Short: "Create a secret",
@@ -352,34 +380,6 @@ already exist.
 	RunE: updateRun,
 }
 
-var completionCmd = &cobra.Command{
-	Use:   "completion SHELL",
-	Args:  cobra.ExactArgs(1),
-	Short: "Outputs shell completion for the given shell (bash or zsh)",
-	Long: strings.Trim(
-		`Outputs shell completion for the given shell (bash or zsh)
-
-This depends on the bash-completion package. To install it:
-
-  # Mac OS X
-  brew install bash-completion
-
-  # Debian
-  apt-get install bash-completion
-
-Zsh users may also put the file somewhere on their $fpath, like
-/usr/local/share/zsh/site-functions
-`, "\n"),
-	Example: strings.Trim(`
-  # Enable completion for bash users
-  source <(berglas completion bash)
-
-  # Enable completion for zsh users
-  source <(berglas completion zsh)
-`, "\n"),
-	RunE: completionRun,
-}
-
 func main() {
 	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
 
@@ -411,6 +411,8 @@ func main() {
 		"Name of the KMS key ring to create")
 	bootstrapCmd.Flags().StringVar(&kmsCryptoKey, "kms-key", "berglas-key",
 		"Name of the KMS key to create")
+
+	rootCmd.AddCommand(completionCmd)
 
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&key, "key", "",
@@ -455,8 +457,6 @@ func main() {
 		"Create the secret if it does not already exist")
 	updateCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for re-encryption")
-
-	rootCmd.AddCommand(completionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(stderr, "%s\n", err)
@@ -529,6 +529,32 @@ func bootstrapRun(_ *cobra.Command, args []string) error {
 	fmt.Fprintf(stdout, "    --member user:jane.doe@mycompany.com\n")
 	fmt.Fprintf(stdout, "\n")
 	fmt.Fprintf(stdout, "For more help and examples, please run \"berglas -h\".\n")
+	return nil
+}
+
+func completionRun(cmd *cobra.Command, args []string) error {
+	switch shell := args[0]; shell {
+	case "bash":
+		if err := rootCmd.GenBashCompletion(stdout); err != nil {
+			err = errors.Wrap(err, "failed to generate bash completion")
+			return apiError(err)
+		}
+	case "zsh":
+		if err := rootCmd.GenZshCompletion(stdout); err != nil {
+			err = errors.Wrap(err, "failed to generate zsh completion")
+			return apiError(err)
+		}
+
+		// enable the `source <(berglas completion SHELL)` pattern for zsh
+		if _, err := io.WriteString(stdout, "compdef _berglas berglas\n"); err != nil {
+			err = errors.Wrap(err, "failed to run compdef")
+			return apiError(err)
+		}
+	default:
+		err := errors.Errorf("unknown completion %q", shell)
+		return misuseError(err)
+	}
+
 	return nil
 }
 
@@ -907,27 +933,11 @@ func updateRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func completionRun(cmd *cobra.Command, args []string) error {
-	switch shell := args[0]; shell {
-	case "bash":
-		if err := rootCmd.GenBashCompletion(stdout); err != nil {
-			err = errors.Wrap(err, "failed to generate bash completion")
 			return apiError(err)
 		}
-	case "zsh":
-		if err := rootCmd.GenZshCompletion(stdout); err != nil {
-			err = errors.Wrap(err, "failed to generate zsh completion")
-			return apiError(err)
-		}
-
-		// enable the `source <(berglas completion SHELL)` pattern for zsh
-		if _, err := io.WriteString(stdout, "compdef _berglas berglas\n"); err != nil {
-			err = errors.Wrap(err, "failed to run compdef")
 			return apiError(err)
 		}
 	default:
-		err := errors.Errorf("unknown completion %q", shell)
-		return misuseError(err)
 	}
 
 	return nil
