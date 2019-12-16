@@ -29,11 +29,15 @@ instructions):
       --key ${KMS_KEY}
     ```
 
-1. Get the Cloud Run service account email:
+1. Create a dedicated service account for the Cloud Run service:
 
     ```text
-    PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
-    export SA_EMAIL=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
+    gcloud iam service-accounts create "cloudrun-berglas-go" \
+      --project ${PROJECT_ID}
+    ```
+
+    ```text
+    export SA_EMAIL=cloudrun-berglas-go@${PROJECT_ID}.iam.gserviceaccount.com
     ```
 
 1. Grant the service account access to the secrets:
@@ -63,6 +67,7 @@ instructions):
       --memory 1G \
       --concurrency 10 \
       --set-env-vars "API_KEY=berglas://${BUCKET_ID}/api-key,TLS_KEY=berglas://${BUCKET_ID}/tls-key?destination=tempfile" \
+      --service-account ${SA_EMAIL} \
       --allow-unauthenticated
     ```
 
@@ -98,4 +103,12 @@ instructions):
     ```text
     berglas revoke ${BUCKET_ID}/api-key --member serviceAccount:${SA_EMAIL}
     berglas revoke ${BUCKET_ID}/tls-key --member serviceAccount:${SA_EMAIL}
+    ```
+
+1. (Optional) Delete the service account:
+
+    ```text
+    gcloud iam service-accounts delete "${SA_EMAIL}" \
+      --quiet \
+      --project ${PROJECT_ID}
     ```
