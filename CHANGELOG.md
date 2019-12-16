@@ -2,7 +2,7 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [0.5.0] Unreleased
+## [0.5.0] 2019-12-13
 ### Breaking
 - core: drop `ResolveValue` since it is no longer needed
 
