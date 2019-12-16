@@ -20,7 +20,6 @@ steps:
   - TAG_NAME=$TAG_NAME
   entrypoint: make
   args: ['docker-push']
-  waitFor: ['test']
 
 - id: publish
   name: gcr.io/$PROJECT_ID/go-gcloud-make
@@ -30,4 +29,3 @@ steps:
   - TAG_NAME=$TAG_NAME
   entrypoint: make
   args: ['publish']
-  waitFor: ['test']
