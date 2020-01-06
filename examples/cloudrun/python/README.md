@@ -40,13 +40,6 @@ instructions):
     export SA_EMAIL=cloudrun-berglas-python@${PROJECT_ID}.iam.gserviceaccount.com
     ```
 
-1. Get the Cloud Run service account email:
-
-    ```text
-    PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
-    export SA_EMAIL=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
-    ```
-
 1. Grant the service account access to the secrets:
 
     ```text
