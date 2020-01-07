@@ -24,7 +24,8 @@ COPY . .
 
 RUN go build \
   -a \
-  -ldflags "-s -w -extldflags 'static'" \
+  -trimpath \
+  -ldflags "-s -w -extldflags '-static'" \
   -installsuffix cgo \
   -tags netgo \
   -mod vendor \
