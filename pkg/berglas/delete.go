@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secrets/v1beta1"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

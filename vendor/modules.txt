@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.49.1-0.20191211233137-1d9fae4b756d
+# cloud.google.com/go v0.52.0
 cloud.google.com/go
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
@@ -8,17 +8,17 @@ cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 cloud.google.com/go/kms/apiv1
 cloud.google.com/go/secretmanager/apiv1beta1
-# cloud.google.com/go/storage v1.4.0
+# cloud.google.com/go/storage v1.5.0
 cloud.google.com/go/storage
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 github.com/gammazero/deque
-# github.com/gammazero/workerpool v0.0.0-20191211212902-79f70a4b5331
+# github.com/gammazero/workerpool v0.0.0-20200108033143-79b2336fad7a
 github.com/gammazero/workerpool
 # github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
-# github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9
+# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
@@ -33,7 +33,7 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/go-cmp v0.3.1
+# github.com/google/go-cmp v0.4.0
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -49,7 +49,7 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
@@ -75,13 +75,13 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/exp v0.0.0-20191129062945-2f5052295587
+# golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a
 golang.org/x/exp/apidiff
 golang.org/x/exp/cmd/apidiff
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
+# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -90,20 +90,20 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
+# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20191210023423-ac6580df4449
+# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.0.0-20191213195401-7ebc6af015c1
+# golang.org/x/tools v0.0.0-20200124021010-5c352bb417e0
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
 golang.org/x/tools/go/analysis/passes/inspect
@@ -120,8 +120,9 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/module
+golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/semver
-# google.golang.org/api v0.14.0
+# google.golang.org/api v0.15.0
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
@@ -147,17 +148,18 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20191206224255-0243a4be9c8f
+# google.golang.org/genproto v0.0.0-20200122232147-0452cf42e150
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/cloud/kms/v1
-google.golang.org/genproto/googleapis/cloud/secrets/v1beta1
+google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/grpc v1.25.1
+# google.golang.org/grpc v1.26.0
 google.golang.org/grpc
+google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/base
