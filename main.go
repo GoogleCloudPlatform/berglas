@@ -51,8 +51,6 @@ var (
 	logFormat string
 	logLevel  string
 
-	accessGeneration int64
-
 	listGenerations bool
 	listPrefix      string
 
@@ -111,7 +109,7 @@ characters.
   berglas access my-secrets/api-key
 
   # Read generation 1563925940580201 of a secret named "api-key" from the bucket "my-secrets"
-  berglas access my-secrets/api-key --generation 1563925940580201
+  berglas access my-secrets/api-key#1563925940580201
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	RunE: accessRun,
@@ -421,8 +419,6 @@ func main() {
 		"Level at which to log")
 
 	rootCmd.AddCommand(accessCmd)
-	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
-		"Get a specific generation")
 
 	rootCmd.AddCommand(bootstrapCmd)
 	bootstrapCmd.Flags().StringVar(&projectID, "project", "",
