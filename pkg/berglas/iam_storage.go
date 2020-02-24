@@ -26,6 +26,8 @@ import (
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
 	iampb "google.golang.org/genproto/googleapis/iam/v1"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
 const (
@@ -200,21 +202,29 @@ func updateIAMPolicy(ctx context.Context, h *iam.Handle, f func(*iam.Policy) *ia
 // isIAMRetryableError returns true if the given error should retry, false
 // otherwise.
 func isIAMRetryableError(err error) bool {
-	terr, ok := errors.Cause(err).(*googleapi.Error)
-	if !ok {
-		// Don't retry non-API errors
-		return false
+	if terr, ok := grpcstatus.FromError(err); ok {
+		switch terr.Code() {
+		case grpccodes.Aborted:
+			// IAM returns 10 on conflicts
+			return true
+		default:
+			return false
+		}
 	}
 
-	switch {
-	case terr.Code == 412:
-		// IAM returns 412 while propagating
-		return true
-	case terr.Code >= 400 && terr.Code <= 499:
-		// Don't retry other 400s
-		return false
-	default:
-		// Retry 500s and other things
-		return true
+	if terr, ok := err.(*googleapi.Error); ok {
+		switch {
+		case terr.Code == 412:
+			// IAM returns 412 while propagating
+			return true
+		case terr.Code >= 400 && terr.Code <= 499:
+			// Don't retry other 400s
+			return false
+		default:
+			// Retry 500s and other things
+			return true
+		}
 	}
+
+	return false
 }
