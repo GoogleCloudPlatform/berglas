@@ -111,7 +111,7 @@ characters.
   berglas access my-secrets/api-key
 
   # Read generation 1563925940580201 of a secret named "api-key" from the bucket "my-secrets"
-  berglas access my-secrets/api-key --generation 1563925940580201
+  berglas access my-secrets/api-key#1563925940580201
 `, "\n"),
 	Args: cobra.ExactArgs(1),
 	RunE: accessRun,
@@ -423,6 +423,10 @@ func main() {
 	rootCmd.AddCommand(accessCmd)
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
 		"Get a specific generation")
+	if err := accessCmd.Flags().MarkDeprecated("generation",
+		"please use hash notation instead (e.g. my-secrets/api-key#12345)"); err != nil {
+		panic(err)
+	}
 
 	rootCmd.AddCommand(bootstrapCmd)
 	bootstrapCmd.Flags().StringVar(&projectID, "project", "",
@@ -509,6 +513,11 @@ func accessRun(_ *cobra.Command, args []string) error {
 		return misuseError(err)
 	}
 	defer closer()
+
+	// Deprecated - update to new syntax
+	if accessGeneration != 0 {
+		args[0] = fmt.Sprintf("%s#%d", args[0], accessGeneration)
+	}
 
 	ref, err := parseRef(args[0])
 	if err != nil {

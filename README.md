@@ -219,7 +219,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 1. Access data from a specific generation of a secret:
 
     ```text
-    berglas access ${BUCKET_ID}/foo --generation 1563925940580201
+    berglas access ${BUCKET_ID}/foo#1563925940580201
     my-previous-secret-data
     ```
 
