@@ -2,6 +2,10 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
+## [unreleased]
+### Changed
+- cli: deprecate `--generations` in favor of hash-based syntax
+
 ## [0.5.0] 2019-12-13
 ### Breaking
 - core: drop `ResolveValue` since it is no longer needed
