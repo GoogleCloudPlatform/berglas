@@ -15,6 +15,7 @@
 package berglas
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"strconv"
@@ -100,6 +101,26 @@ func (r *Reference) Filepath() string {
 // Type is the type of reference, used for switching.
 func (r *Reference) Type() ReferenceType {
 	return r.typ
+}
+
+// String prints the best representation for the secret.
+func (r *Reference) String() string {
+	switch r.typ {
+	case ReferenceTypeSecretManager:
+		if r.version == "" {
+			return fmt.Sprintf("sm://%s/%s", r.project, r.name)
+		} else {
+			return fmt.Sprintf("sm://%s/%s#%s", r.project, r.name, r.version)
+		}
+	case ReferenceTypeStorage:
+		if r.generation == 0 {
+			return fmt.Sprintf("berglas://%s/%s", r.bucket, r.object)
+		} else {
+			return fmt.Sprintf("berglas://%s/%s#%d", r.bucket, r.object, r.generation)
+		}
+	default:
+		return fmt.Sprintf("unknown type %T", r.typ)
+	}
 }
 
 // IsReference returns true if the given string looks like a berglas or secret

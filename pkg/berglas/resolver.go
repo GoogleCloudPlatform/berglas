@@ -69,7 +69,7 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 
 	plaintext, err := c.Access(ctx, req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to access secret %s/%s", ref.Bucket(), ref.Object())
+		return nil, errors.Wrapf(err, "failed to access secret %s", ref.String())
 	}
 
 	if pth := ref.Filepath(); pth != "" {

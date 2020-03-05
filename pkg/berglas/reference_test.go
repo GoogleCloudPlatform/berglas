@@ -169,3 +169,47 @@ func TestParseReference(t *testing.T) {
 		})
 	}
 }
+
+func Reference_String(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		ref  *Reference
+		exp  string
+	}{
+		{
+			"sm_plain",
+			&Reference{project: "project", name: "secret"},
+			"project/secret",
+		},
+		{
+			"sm_version",
+			&Reference{project: "project", name: "secret", version: "123"},
+			"project/secret#123",
+		},
+		{
+			"berglas_plain",
+			&Reference{bucket: "project", object: "secret"},
+			"bucket/secret",
+		},
+		{
+			"berglas_generation",
+			&Reference{bucket: "project", object: "secret", generation: 1234567890},
+			"bucket/secret#1234567890",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			act, exp := tc.ref.String(), tc.exp
+			if act != tc.exp {
+				t.Errorf("expected %#v to be %#v", act, exp)
+			}
+		})
+	}
+}
