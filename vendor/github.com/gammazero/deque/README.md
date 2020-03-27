@@ -1,6 +1,6 @@
 # deque
 
-[![Build Status](https://travis-ci.org/gammazero/deque.svg)](https://travis-ci.org/gammazero/deque)
+[![Build Status](https://travis-ci.com/gammazero/deque.svg)](https://travis-ci.com/gammazero/deque)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gammazero/deque)](https://goreportcard.com/report/github.com/gammazero/deque)
 [![codecov](https://codecov.io/gh/gammazero/deque/branch/master/graph/badge.svg)](https://codecov.io/gh/gammazero/deque)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

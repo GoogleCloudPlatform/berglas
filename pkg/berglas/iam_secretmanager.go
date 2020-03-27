@@ -41,8 +41,15 @@ type secretManagerIAMClient struct {
 }
 
 func (c *secretManagerIAMClient) Get(ctx context.Context, resource string) (*iampb.Policy, error) {
+	return c.GetWithVersion(ctx, resource, 1)
+}
+
+func (c *secretManagerIAMClient) GetWithVersion(ctx context.Context, resource string, version int32) (*iampb.Policy, error) {
 	return c.raw.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{
 		Resource: resource,
+		Options: &iampb.GetPolicyOptions{
+			RequestedPolicyVersion: version,
+		},
 	})
 }
 

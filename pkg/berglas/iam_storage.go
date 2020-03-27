@@ -49,11 +49,16 @@ type storageIAMClient struct {
 }
 
 func (c *storageIAMClient) Get(ctx context.Context, resource string) (*iampb.Policy, error) {
+	return c.GetWithVersion(ctx, resource, 1)
+}
+
+func (c *storageIAMClient) GetWithVersion(ctx context.Context, resource string, version int32) (*iampb.Policy, error) {
 	bucket, object, err := parseBucketObj(resource)
 	if err != nil {
 		return nil, err
 	}
 
+	// Note: Object-level IAM does not support versioned IAM policies at present.
 	call := c.raw.Objects.GetIamPolicy(bucket, object)
 	setClientHeader(call.Header())
 
