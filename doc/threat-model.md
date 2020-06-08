@@ -6,6 +6,12 @@ important that you have a full understanding of the threat model.
 
 ## Rest
 
+### Secret Manager Storage
+
+Berglas uses the Secret Manager APIs directly. Secret Manager encrypts data automatically.
+
+### Cloud Storage Storage
+
 At rest, data is encrypted twice. First, the data is encrypted using a
 single-use local 256-bit AES-GCM key. Then the local key is encrypted using a
 remote Google Cloud KMS key. Only the encrypted bytes are stored in Cloud
@@ -21,7 +27,7 @@ encryption](https://cloud.google.com/security/encryption-at-rest/).
 
 ## Transit
 
-Data is protected in transit between Berglas and the Google Cloud API via TLS.
+Data is protected in transit between Berglas and the Google Cloud APIs via TLS.
 You can verify the TLS connection against Google's public CA. There is
 intentionally no way to disable TLS verification.
 
@@ -31,6 +37,12 @@ intentionally no way to disable TLS verification.
 
 
 ## Entropy
+
+### Secret Manager Storage
+
+Entropy is not required.
+
+### Cloud Storage Storage
 
 Berglas relies on local system entropy to generate AES-GCM keys for envelope
 encryption using Go's standard library. If there is not enough entropy, Berglas
@@ -60,6 +72,12 @@ permissions (such as "Owner") greatly decreases your security posturing.
 
 ## Crypto Algorithm
 
+### Secret Manager Storage
+
+N/A
+
+### Cloud Storage Storage
+
 Berglas generates and consumes AES-256 GCM keys for envelope encryption. At the
 time of this writing, there are no known exploits or compromises for limited-use
 GCM keys. Should research find that single-use AES-256-GCM keys are less secure,
@@ -71,6 +89,12 @@ Berglas will update to new algorithms and provide a migration.
 
 
 ## In-band Key Negotiation
+
+### Secret Manager Storage
+
+N/A
+
+### Cloud Storage Storage
 
 Berglas persists the Cloud KMS key ID on the secret object's metadata so that it
 need-not be specified during decryption operations. Berglas relies on IAM to
@@ -122,8 +146,8 @@ depending on how the secrets are consumed.
 
 When using Berglas auto or `berglas exec`, secrets ultimately end up in the
 process environment in plaintext. Any code running in that process (or any root
-user on the same OS with privledge to trigger a process dump) could retrieve the
-plaintext values.
+user on the same OS with privilege to trigger a process dump) could retrieve
+the plaintext values.
 
 Similarly, some languages and frameworks automatically dump their environment as
 part of debugging in the event of a crash or panic. Since that framework is

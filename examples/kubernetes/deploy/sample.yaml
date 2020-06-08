@@ -1,3 +1,4 @@
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -9,16 +10,20 @@ spec:
       labels:
         app: envserver
     spec:
+      serviceAccountName: envserver
       containers:
       - name: envserver
         image: sethvargo/envserver
         imagePullPolicy: Always
         command: ["/bin/envserver"]
         env:
+        # This is an example using Berglas with Secret Manager storage.
         - name: API_KEY
-          value: berglas://berglas-test-secrets/api-key
-        - name: TLS_KEY
-          value: berglas://berglas-test-secrets/tls-key?destination=tempfile
+          value: sm://PROJECT_ID/my-secret
+
+        # This is an example using Berglas with Cloud Storage storage.
+        - name: API_KEY
+          value: berglas://BUCKET_ID/my-secret
 
 ---
 apiVersion: v1

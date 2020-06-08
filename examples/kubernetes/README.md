@@ -40,6 +40,10 @@ To deploy on Cloud Functions:
       --trigger-http
     ```
 
+    Note: This function does **not** require authentication. It does **not**
+    need permission to access secrets. The function purely mutates YAML
+    configurations before sending them to the scheduler.
+
 1. Extract the Cloud Function URL:
 
     ```text
@@ -62,71 +66,44 @@ To deploy on Cloud Functions:
     ```
 
 
-## Permissions
+## Setup and Usage
 
 Either the pods or the Kubernetes cluster needs to be able to authenticate to
 Google Cloud using IAM with Default Application Credentials. See the
 authentication section of the main README for more details.
 
-On Google Cloud, it is strongly recommended that you have a dedicated service account for the GKE cluster. For example:
-
-1. Export your configuration variables:
-
-    ```text
-    PROJECT_ID=berglas-test
-    BUCKET_ID=berglas-test-secrets
-    KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
-    ```
+On Google Cloud, it is strongly recommended that you use [Workload
+Identity][workload-identity] or have a dedicated service account for the GKE
+cluster. For example:
 
 1. Create a service account:
 
     ```text
-    gcloud iam service-accounts create berglas-k8s \
+    gcloud iam service-accounts create berglas-accessor \
       --project ${PROJECT_ID} \
-      --display-name "Berglas K8S account"
+      --display-name "Berglas secret accessor account"
     ```
 
     ```text
-    export SA_EMAIL=berglas-k8s@${PROJECT_ID}.iam.gserviceaccount.com
+    export SA_EMAIL=berglas-accessor@${PROJECT_ID}.iam.gserviceaccount.com
     ```
 
-1. Grant the service account the required GKE permissions:
+1. Grant the Google Cloud service account permissions to access the secrets you
+   require. For example, to grant access to the secret named "my-secret":
+
+    Using Secret Manager storage:
 
     ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member "serviceAccount:${SA_EMAIL}" \
-      --role roles/logging.logWriter
+    berglas grant ${PROJECT_ID}/my-secret
     ```
+
+    Using Cloud Storage storage:
 
     ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member "serviceAccount:${SA_EMAIL}" \
-      --role roles/monitoring.metricWriter
+    berglas grant ${BUCKET_ID}/my-secret
     ```
 
-    ```text
-    gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-      --member "serviceAccount:${SA_EMAIL}" \
-      --role roles/monitoring.viewer
-    ```
-
-1. Grant Berglas permissions:
-
-    ```text
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/api-key
-    ```
-
-    ```text
-    gsutil iam ch serviceAccount:${SA_EMAIL}:legacyObjectReader gs://${BUCKET_ID}/tls-key
-    ```
-
-    ```text
-    gcloud kms keys add-iam-policy-binding ${KMS_KEY} \
-      --member serviceAccount:${SA_EMAIL} \
-      --role roles/cloudkms.cryptoKeyDecrypter
-    ```
-
-1. Create the GKE cluster with the attached service account:
+1. Create the GKE cluster:
 
     ```text
     gcloud container clusters create berglas-k8s-test \
@@ -134,20 +111,38 @@ On Google Cloud, it is strongly recommended that you have a dedicated service ac
       --region us-east1 \
       --num-nodes 1 \
       --machine-type n1-standard-2 \
-      --service-account ${SA_EMAIL} \
       --no-issue-client-certificate \
       --no-enable-basic-auth \
       --enable-autoupgrade \
       --metadata disable-legacy-endpoints=true
     ```
 
+1. Create a Kubernetes service account:
 
-## Example
+    ```text
+    kubectl create serviceaccount "envserver"
+    ```
 
-After deploying the webhook, test your configuration by deploying a sample application.
+1. Grant the Kubernetes service account permissions to act as the Google Cloud service account:
 
+    ```text
+    gcloud iam service-accounts add-iam-policy-binding \
+      --role "roles/iam.workloadIdentityUser" \
+      --member "serviceAccount:${PROJECT_ID}.svc.id.goog[default/envserver]" \
+      berglas-accessor@${PROJECT_ID}.iam.gserviceaccount.com
+    ```
 
-1. Update `deploy/sample.yaml` to refer to your secret:
+1. Annotate the Kubernetes service account with the name of the Google Cloud service account:
+
+    ```text
+    kubectl annotate serviceaccount "envserver" \
+      iam.gke.io/gcp-service-account=berglas-accessor@${PROJECT_ID}.iam.gserviceaccount.com
+    ```
+
+1. Update `deploy/sample.yaml` to refer to your secret. If you're using Secret
+   Manager storage, use the `sm://` prefix. If you're using the Cloud Storage
+   storage, use the `berglas://` prefix. See more in the Berglas [reference
+   syntax][reference-syntax].
 
 1. Deploy it:
 
@@ -161,3 +156,7 @@ After deploying the webhook, test your configuration by deploying a sample appli
 The mutator requires that containers specify a `command` in their manifest. If a
 container requests Berglas secrets and does not specify a `command`, the mutator
 will log an error and not mutate the spec.
+
+
+[workload-identity]: https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+[syntax-syntax]: doc/reference-syntax.md
