@@ -13,12 +13,14 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
   storing data on Google Cloud.
 
 - As a **library**, `berglas` automates the inclusion of secrets into various
-  Google Cloud runtimes
+  Google Cloud runtimes.
 
 **Berglas is not an officially supported Google product.**
 
 
 ## Setup
+
+### Prerequisites
 
 1. Install the [Cloud SDK][cloud-sdk] for your operating system. Alternatively,
    you can run these commands from [Cloud Shell][cloud-shell], which has the SDK
@@ -86,9 +88,19 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     _number_. You can find the project ID by running `gcloud projects list` or
     in the web UI.
 
+### Secret Manager Storage
+
+1. Enable required services on the project:
+
+    ```text
+    gcloud services enable --project ${PROJECT_ID} \
+      secretmanager.googleapis.com
+    ```
+
+### Cloud Storage Storage
+
 1. Export your desired Cloud Storage bucket name. The rest of this setup guide
    assumes this environment variable is set:
-
 
     ```text
     export BUCKET_ID=my-secrets
@@ -109,7 +121,6 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 1. Bootstrap a Berglas environment. This will create a new Cloud Storage bucket
    for storing secrets and a Cloud KMS key for encrypting data.
 
-
     ```text
     berglas bootstrap --project $PROJECT_ID --bucket $BUCKET_ID
     ```
@@ -126,7 +137,6 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
    You can specify your location by using the following command. Please see the
    list of supported locations in the [GCP bucket location documentation
    page](https://cloud.google.com/storage/docs/locations)
-
 
     ```text
     export BUCKET_LOCATION=europe-west1
@@ -189,19 +199,43 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 
 1. Create a secret:
 
+    Using Secret Manager storage:
+
+    ```text
+    berglas create ${PROJECT_ID}/foo my-secret-data
+    ```
+
+    Using Cloud Storage storage:
+
     ```text
     berglas create ${BUCKET_ID}/foo my-secret-data \
       --key projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
-    Successfully created secret: foo
     ```
 
 1. Grant access to a secret:
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas grant ${PROJECT_ID}/foo --member user:user@mydomain.com
+    ```
+
+    Using Cloud Storage storage:
 
     ```text
     berglas grant ${BUCKET_ID}/foo --member user:user@mydomain.com
     ```
 
 1. Access a secret's data:
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas access ${PROJECT_ID}/foo
+    my-secret-data
+    ```
+
+    Using Cloud Storage storage:
 
     ```text
     berglas access ${BUCKET_ID}/foo
@@ -216,7 +250,16 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 
     This will spawn `myapp` with an environment parsed by berglas.
 
-1. Access data from a specific generation of a secret:
+1. Access data from a specific version/generation of a secret:
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas access ${PROJECT_ID}/foo#1
+    my-previous-secret-data
+    ```
+
+    Using Cloud Storage storage:
 
     ```text
     berglas access ${BUCKET_ID}/foo#1563925940580201
@@ -225,15 +268,31 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 
 1. Revoke access to a secret:
 
+    Using Secret Manager storage:
+
+    ```text
+    berglas revoke ${PROJECT_ID}/foo --member user:user@mydomain.com
+    my-previous-secret-data
+    ```
+
+    Using Cloud Storage storage:
+
     ```text
     berglas revoke ${BUCKET_ID}/foo --member user:user@mydomain.com
     ```
 
 1. Delete a secret:
 
+    Using Secret Manager storage:
+
+    ```text
+    berglas delete ${PROJECT_ID}/foo
+    ```
+
+    Using Cloud Storage storage:
+
     ```text
     berglas delete ${BUCKET_ID}/foo
-    Successfully deleted secret if it existed: foo
     ```
 
 In addition to standard Unix exit codes, if the CLI exits with a known error,
@@ -303,7 +362,7 @@ Both the berglas CLI and berglas library support debug-style logging. This loggi
 
 The default logging behavior for the berglas CLI is "text" (it can be changed
 with the `--log-format` flag). The default logging behavior for the berglas
-library is structured JSON which integrates well with Stackdriver (it can be
+library is structured JSON which integrates well with Cloud Logging (it can be
 changed to any valid formatter and you can even inject your own logger).
 
 
@@ -325,9 +384,9 @@ import (
 When imported, the `berglas` package will:
 
 1. Download and decrypt any secrets that match the [Berglas environment
-variable reference syntax][reference-syntax] in the environment
+variable reference syntax][reference-syntax] in the environment.
 
-1. Replace the value for the environment variable with the decrypted secret
+1. Replace the value for the environment variable with the decrypted secret.
 
 You can also opt out of auto-parsing and call the library yourself instead:
 
@@ -395,61 +454,48 @@ documentation][iam-service-accounts].
 ## Authorization
 
 To control who or what has access to a secret, use `berglas grant` and `berglas
-revoke` or the associated API methods. These methods use [Cloud IAM][cloud-iam]
-internally. The following information is relevant only if you plan to grant IAM
-permissions manually.
-
-Most operations require access to the Cloud KMS key and the Cloud Storage
-bucket. You can read more about [Cloud KMS IAM][cloud-kms-iam] and [Cloud
-Storage IAM][cloud-storage-iam] in the documentation.
-
-Any service account or entity using Berglas will need to authorize using the
+revoke` commands. These methods use [Cloud IAM][cloud-iam] internally. Any
+service account or entity using Berglas will need to authorize using the
 `cloud-platform` scope.
 
-### Create
+### Secret Manager Storage
 
-To create a secret, the following role is required on the Cloud Storage bucket:
+Creating a secret requires `roles/secretmanager.admin` on Secret Manager in the
+project.
 
-```text
-roles/storage.objectCreator
-```
+Accessing a secret requires `roles/secretmanager.secretAccessor` on the secret
+in Secret Manager.
 
-To create a secret, the following role is required for the Cloud KMS key:
+Deleting a secret requires `roles/secretmanager.admin` on Secret Manager in the
+project.
 
-```text
-roles/cloudkms.cryptoKeyEncrypter
-```
+### Cloud Storage Storage
 
-### Access
+Creating a secret requires `roles/storage.objectCreator` on the Cloud Storage
+bucket and `roles/cloudkms.cryptoKeyEncrypter` on the Cloud KMS key.
 
-To access a secret, the following role is required on the Cloud Storage bucket:
+Accessing a secret requires `roles/storage.objectViewer` on the Cloud Storage
+bucket and `roles/cloudkms.cryptoKeyDecrypter` on the Cloud KMS key.
 
-```text
-roles/storage.objectViewer
-```
-
-To access a secret, the following role is required for the Cloud KMS key:
-
-```text
-roles/cloudkms.cryptoKeyDecrypter
-```
-
-### Delete
-
-To delete a secret, the following role is required on the Cloud Storage bucket:
-
-```text
-roles/storage.objectAdmin
-```
-
-To delete a secret, no permissions are needed on the Cloud KMS key.
+Deleting a secret requires `roles/storage.objectAdmin` on the Cloud Storage bucket.
 
 
 ## Implementation
 
-This section describes the implementation. This knowledge is not required to use
-Berglas, but it is included for security-conscious/curious users who want to
-learn about how Berglas works internally to build a threat model.
+### Secret Manager Storage
+
+This section describes the Secret Manager implementation. This knowledge is not
+required to use Berglas, but it is included for security-conscious/curious users
+who want to learn about how Berglas works internally to build a threat model.
+
+1. Berglas calls the [Secret Manager][secret-manager] API directly for all
+   operations.
+
+### Cloud Storage Storage
+
+This section describes the Cloud Storage implementation. This knowledge is not
+required to use Berglas, but it is included for security-conscious/curious users
+who want to learn about how Berglas works internally to build a threat model.
 
 When encrypting a secret:
 
@@ -478,13 +524,7 @@ encrypted DEK, and ciphertext out of the blob.
 
 ## Security &amp; Threat Model
 
-Berglas makes certain security tradeoffs in exchange for a better UX. In
-particular, KMS crypto key IDs are stored on the secret object's metadata. **An
-attacker with permission to write objects to your Cloud Storage bucket could
-overwrite existing secrets.** As such, you should follow the principles of least
-privilege and revoke default ACLs on the bucket as described in the setup guide.
-
-For more information, please see the [security and threat model][threat-model].
+See the [security and threat model][threat-model].
 
 
 ## FAQ

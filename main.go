@@ -331,10 +331,6 @@ regular workflow. Secrets will be migrated as-is with the following caveats:
   are random integers. Versions in Secret Manager are auto-incrementing. While
   relative ordering will be preserved, the versions will differ.
 
-- Secrets are NOT deleted from the Cloud Storage bucket. You can use the
-  "berglas delete" command or "gsutil" to delete the objects once they are no
-  longer necessary.
-
 This command is intentionally a slow and non-parallelized operation to both
 avoid quota limits and to discourage recurrent use.
 `, "\n"),

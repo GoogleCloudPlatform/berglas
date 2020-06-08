@@ -10,14 +10,35 @@ Storage bucket, and Cloud KMS key.
 
 1. Export the environment variables for your configuration:
 
+    Using Secret Manager storage:
+
+    ```text
+    export PROJECT_ID=my-project
+    ```
+
+    Using Cloud Storage storage:
+
     ```text
     export PROJECT_ID=my-project
     export BUCKET_ID=my-bucket
     export KMS_KEY=projects/${PROJECT_ID}/locations/global/keyRings/berglas/cryptoKeys/berglas-key
     ```
 
+
 1. Create two secrets using the `berglas` CLI (see README for installation
 instructions):
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas create ${BUCKET_ID}/api-key "xxx-yyy-zzz"
+    ```
+
+    ```text
+    berglas create ${BUCKET_ID}/tls-key "=== BEGIN RSA PRIVATE KEY..."
+    ```
+
+    Using Cloud Storage storage:
 
     ```text
     berglas create ${BUCKET_ID}/api-key "xxx-yyy-zzz" \
@@ -41,6 +62,15 @@ instructions):
     ```
 
 1. Grant the service account access to the secrets:
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas grant ${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas grant ${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
+    ```
+
+    Using Google Cloud storage:
 
     ```text
     berglas grant ${BUCKET_ID}/api-key --member serviceAccount:${SA_EMAIL}
@@ -99,6 +129,15 @@ instructions):
     ```
 
 1. (Optional) Revoke access to the secrets:
+
+    Using Secret Manager storage:
+
+    ```text
+    berglas revoke ${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas revoke ${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
+    ```
+
+    Using Cloud Storage storage:
 
     ```text
     berglas revoke ${BUCKET_ID}/api-key --member serviceAccount:${SA_EMAIL}
