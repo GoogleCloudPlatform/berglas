@@ -27,7 +27,7 @@ import (
 	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	secretmanager "cloud.google.com/go/secretmanager/apiv1beta1"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"

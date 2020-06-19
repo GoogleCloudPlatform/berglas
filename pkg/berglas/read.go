@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

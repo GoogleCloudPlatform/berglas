@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1beta1"
+	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 type listRequest interface {
