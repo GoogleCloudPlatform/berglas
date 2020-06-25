@@ -3,7 +3,7 @@ GEM
   specs:
     mustermann (1.0.3)
     puma (3.12.6)
-    rack (2.0.8)
+    rack (2.2.3)
     rack-protection (2.0.5)
       rack
     sinatra (2.0.5)
