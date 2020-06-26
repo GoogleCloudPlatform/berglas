@@ -202,7 +202,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas create ${PROJECT_ID}/foo my-secret-data
+    berglas create sm://${PROJECT_ID}/foo my-secret-data
     ```
 
     Using Cloud Storage storage:
@@ -217,7 +217,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas grant ${PROJECT_ID}/foo --member user:user@mydomain.com
+    berglas grant sm://${PROJECT_ID}/foo --member user:user@mydomain.com
     ```
 
     Using Cloud Storage storage:
@@ -231,7 +231,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas access ${PROJECT_ID}/foo
+    berglas access sm://${PROJECT_ID}/foo
     my-secret-data
     ```
 
@@ -255,7 +255,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas access ${PROJECT_ID}/foo#1
+    berglas access sm://${PROJECT_ID}/foo#1
     my-previous-secret-data
     ```
 
@@ -271,7 +271,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas revoke ${PROJECT_ID}/foo --member user:user@mydomain.com
+    berglas revoke sm://${PROJECT_ID}/foo --member user:user@mydomain.com
     my-previous-secret-data
     ```
 
@@ -286,7 +286,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     Using Secret Manager storage:
 
     ```text
-    berglas delete ${PROJECT_ID}/foo
+    berglas delete sm://${PROJECT_ID}/foo
     ```
 
     Using Cloud Storage storage:
