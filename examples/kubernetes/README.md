@@ -94,7 +94,7 @@ cluster. For example:
     Using Secret Manager storage:
 
     ```text
-    berglas grant ${PROJECT_ID}/my-secret
+    berglas grant sm://${PROJECT_ID}/my-secret
     ```
 
     Using Cloud Storage storage:

@@ -31,11 +31,11 @@ instructions):
     Using Secret Manager storage:
 
     ```text
-    berglas create ${BUCKET_ID}/api-key "xxx-yyy-zzz"
+    berglas create sm://${PROJECT_ID}/api-key "xxx-yyy-zzz"
     ```
 
     ```text
-    berglas create ${BUCKET_ID}/tls-key "=== BEGIN RSA PRIVATE KEY..."
+    berglas create sm://${PROJECT_ID}/tls-key "=== BEGIN RSA PRIVATE KEY..."
     ```
 
     Using Cloud Storage storage:
@@ -66,8 +66,8 @@ instructions):
     Using Secret Manager storage:
 
     ```text
-    berglas grant ${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
-    berglas grant ${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
+    berglas grant sm://${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas grant sm://${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
     Using Google Cloud storage:
@@ -133,8 +133,8 @@ instructions):
     Using Secret Manager storage:
 
     ```text
-    berglas revoke ${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
-    berglas revoke ${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
+    berglas revoke sm://${PROJECT_ID}/api-key --member serviceAccount:${SA_EMAIL}
+    berglas revoke sm://${PROJECT_ID}/tls-key --member serviceAccount:${SA_EMAIL}
     ```
 
     Using Cloud Storage storage:
