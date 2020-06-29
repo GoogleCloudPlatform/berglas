@@ -50,7 +50,7 @@ type StorageReadRequest struct {
 
 func (r *StorageReadRequest) isReadRequest() {}
 
-// ReadRequest is an alias for StorageReadRequest for backwards-compatability.
+// ReadRequest is an alias for StorageReadRequest for backwards-compatibility.
 // New clients should use StorageReadRequest.
 type ReadRequest = StorageReadRequest
 

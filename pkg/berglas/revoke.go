@@ -47,7 +47,7 @@ type StorageRevokeRequest struct {
 func (r *StorageRevokeRequest) isRevokeRequest() {}
 
 // RevokeRequest is an alias for StorageRevokeRequest for
-// backwards-compatability. New clients should use StorageRevokeRequest.
+// backwards-compatibility. New clients should use StorageRevokeRequest.
 type RevokeRequest = StorageRevokeRequest
 
 // SecretManagerRevokeRequest is used as input to revoke access to a secret in

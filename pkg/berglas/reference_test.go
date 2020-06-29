@@ -170,7 +170,7 @@ func TestParseReference(t *testing.T) {
 	}
 }
 
-func Reference_String(t *testing.T) {
+func TestReference_String(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -180,23 +180,23 @@ func Reference_String(t *testing.T) {
 	}{
 		{
 			"sm_plain",
-			&Reference{project: "project", name: "secret"},
-			"project/secret",
+			&Reference{project: "project", name: "secret", typ: ReferenceTypeSecretManager},
+			"sm://project/secret",
 		},
 		{
 			"sm_version",
-			&Reference{project: "project", name: "secret", version: "123"},
-			"project/secret#123",
+			&Reference{project: "project", name: "secret", version: "123", typ: ReferenceTypeSecretManager},
+			"sm://project/secret#123",
 		},
 		{
 			"berglas_plain",
-			&Reference{bucket: "project", object: "secret"},
-			"bucket/secret",
+			&Reference{bucket: "bucket", object: "secret", typ: ReferenceTypeStorage},
+			"berglas://bucket/secret",
 		},
 		{
 			"berglas_generation",
-			&Reference{bucket: "project", object: "secret", generation: 1234567890},
-			"bucket/secret#1234567890",
+			&Reference{bucket: "bucket", object: "secret", generation: 1234567890, typ: ReferenceTypeStorage},
+			"berglas://bucket/secret#1234567890",
 		},
 	}
 

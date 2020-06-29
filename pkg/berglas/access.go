@@ -46,7 +46,7 @@ type StorageAccessRequest struct {
 func (r *StorageAccessRequest) isAccessRequest() {}
 
 // AccessRequest is an alias for StorageAccessRequest for
-// backwards-compatability. New clients should use StorageAccessRequest.
+// backwards-compatibility. New clients should use StorageAccessRequest.
 type AccessRequest = StorageAccessRequest
 
 // SecretManagerAccessRequest is used as input to access a secret from Secret

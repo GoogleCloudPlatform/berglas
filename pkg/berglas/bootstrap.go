@@ -35,7 +35,7 @@ type bootstrapRequest interface {
 	isBootstrapRequest()
 }
 
-// StorageAccessRequest is used as input to bootstrap Cloud Storage and Cloud
+// StorageBootstrapRequest is used as input to bootstrap Cloud Storage and Cloud
 // KMS.
 type StorageBootstrapRequest struct {
 	// ProjectID is the ID of the project where the bucket should be created.
@@ -60,7 +60,7 @@ type StorageBootstrapRequest struct {
 func (r *StorageBootstrapRequest) isBootstrapRequest() {}
 
 // BootstrapRequest is an alias for StorageBootstrapRequest for
-// backwards-compatability. New clients should use StorageBootstrapRequest.
+// backwards-compatibility. New clients should use StorageBootstrapRequest.
 type BootstrapRequest = StorageBootstrapRequest
 
 // SecretManagerBootstrapRequest is used as input to bootstrap Secret Manager.
@@ -201,7 +201,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 		VersioningEnabled:          true,
 		Lifecycle: storage.Lifecycle{
 			Rules: []storage.LifecycleRule{
-				storage.LifecycleRule{
+				{
 					Action: storage.LifecycleAction{
 						Type: "Delete",
 					},
