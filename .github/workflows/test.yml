@@ -28,18 +28,25 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        go: [1.13]
+        go: [1.14]
 
     name: ${{ matrix.os }}, go ${{ matrix.go }}
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
 
-    - uses: actions/setup-go@v1
+    - uses: actions/setup-go@v2
       with:
-        go-version: ${{ matrix.go }}
+        go-version: '${{ matrix.go }}'
+
+    - uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
     - name: Setup credentials
       run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > ${{ runner.temp }}/account.json
