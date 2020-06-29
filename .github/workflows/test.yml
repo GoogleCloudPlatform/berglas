@@ -48,6 +48,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
+    - name: Get dependencies
+      run: go get -t ./...
+
+    - name: Lint
+      run: make fmtcheck staticcheck spellcheck
+
     - name: Setup credentials
       run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > ${{ runner.temp }}/account.json
 

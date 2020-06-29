@@ -41,7 +41,6 @@ for GOOS in ${GOOSES}; do
         -ldflags "-s -w -extldflags '-static'" \
         -installsuffix cgo \
         -tags netgo \
-        -mod vendor \
         -o build/${GOOS}_${GOARCH}/berglas \
         .
 

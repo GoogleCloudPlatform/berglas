@@ -37,7 +37,7 @@ func (e Error) Error() string {
 	return string(e)
 }
 
-// IsSecretAlreadyExistsError returns true if the given error means that the
+// IsSecretAlreadyExistsErr returns true if the given error means that the
 // secret already exists.
 func IsSecretAlreadyExistsErr(err error) bool {
 	return errors.Cause(err) == errSecretAlreadyExists

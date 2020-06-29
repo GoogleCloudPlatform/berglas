@@ -45,10 +45,10 @@ type StorageDeleteRequest struct {
 func (r *StorageDeleteRequest) isDeleteRequest() {}
 
 // DeleteRequest is an alias for StorageDeleteRequest for
-// backwards-compatability. New clients should use StorageDeleteRequest.
+// backwards-compatibility. New clients should use StorageDeleteRequest.
 type DeleteRequest = StorageDeleteRequest
 
-// SecretManagerDeleteRequestis used as input to delete a secret from Secret
+// SecretManagerDeleteRequest is used as input to delete a secret from Secret
 // Manager.
 type SecretManagerDeleteRequest struct {
 	// Project is the ID or number of the project from which to delete the secret.

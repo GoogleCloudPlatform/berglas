@@ -61,7 +61,7 @@ type StorageUpdateRequest struct {
 func (r *StorageUpdateRequest) isUpdateRequest() {}
 
 // UpdateRequest is an alias for StorageUpdateRequest for
-// backwards-compatability. New clients should use StorageUpdateRequest.
+// backwards-compatibility. New clients should use StorageUpdateRequest.
 type UpdateRequest = StorageUpdateRequest
 
 // SecretManagerUpdateRequest is used as input to update a secret using Secret Manager.

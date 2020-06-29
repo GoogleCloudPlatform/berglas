@@ -47,7 +47,7 @@ type StorageGrantRequest struct {
 func (r *StorageGrantRequest) isGrantRequest() {}
 
 // GrantRequest is an alias for StorageGrantRequest for
-// backwards-compatability. New clients should use StorageGrantRequest.
+// backwards-compatibility. New clients should use StorageGrantRequest.
 type GrantRequest = StorageGrantRequest
 
 // SecretManagerGrantRequest is used as input to grant access to a secret in

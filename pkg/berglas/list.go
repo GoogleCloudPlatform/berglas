@@ -32,7 +32,7 @@ type listRequest interface {
 	isListRequest()
 }
 
-// StorageListrequest is used as input to list secrets from Cloud Storage.
+// StorageListRequest is used as input to list secrets from Cloud Storage.
 type StorageListRequest struct {
 	// Bucket is the name of the bucket where the secrets live.
 	Bucket string
@@ -46,7 +46,7 @@ type StorageListRequest struct {
 
 func (r *StorageListRequest) isListRequest() {}
 
-// ListRequest is an alias for StorageListRequest for backwards-compatability.
+// ListRequest is an alias for StorageListRequest for backwards-compatibility.
 // New clients should use StorageListRequest.
 type ListRequest = StorageListRequest
 

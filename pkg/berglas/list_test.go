@@ -103,7 +103,7 @@ func TestClient_List_secretManager(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if d := len(list.Secrets); d != 4 { // 4 because create creates the first verison
+		if d := len(list.Secrets); d != 4 { // 4 because create creates the first version
 			t.Errorf("expected 3 secrets, got %d: %#v", d, list.Secrets)
 		}
 	})
@@ -199,7 +199,7 @@ func TestClient_List_storage(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if d := len(list.Secrets); d != 4 { // 4 because create creates the first verison
+		if d := len(list.Secrets); d != 4 { // 4 because create creates the first version
 			t.Errorf("expected 3 secrets, got %d: %#v", d, list.Secrets)
 		}
 	})

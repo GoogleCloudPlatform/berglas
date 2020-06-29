@@ -49,7 +49,7 @@ type StorageCreateRequest struct {
 func (r *StorageCreateRequest) isCreateRequest() {}
 
 // CreateRequest is an alias for StorageCreateRequest for
-// backwards-compatability. New clients should use StorageCreateRequest.
+// backwards-compatibility. New clients should use StorageCreateRequest.
 type CreateRequest = StorageCreateRequest
 
 // SecretManagerCreateRequest is used as input to create a secret using Secret
