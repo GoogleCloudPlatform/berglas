@@ -53,6 +53,7 @@ jobs:
 
     - name: Lint
       run: make fmtcheck staticcheck spellcheck
+      if: ${{ matrix.os == 'ubuntu-latest' }}
 
     - name: Setup credentials
       run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > ${{ runner.temp }}/account.json
