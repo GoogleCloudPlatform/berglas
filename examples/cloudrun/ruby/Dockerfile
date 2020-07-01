@@ -31,6 +31,6 @@ RUN bundle install \
   --quiet
 
 COPY . ./
-COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
+COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
 ENTRYPOINT exec /bin/berglas exec -- ./bin/bundle exec ruby app.rb

@@ -61,14 +61,19 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
       brew install berglas
       ```
 
-    - Use the official Docker container:
+    - Use an official Docker container:
 
       ```text
-      docker pull gcr.io/berglas/berglas:latest
+      asia-docker.pkg.dev/berglas/berglas/berglas
+      europe-docker.pkg.dev/berglas/berglas/berglas
+      us-docker.pkg.dev/berglas/berglas/berglas
       ```
 
       This will pull the latest version built against the master branch. To use
       a specific version, specify a git tag in place of "latest" in the URL.
+
+      Note: the `us-docker.pkg.dev/berglas/berglas/berglas` image remains for backwards
+      compatability, but new versions are **not** published there.
 
     - Install from source (requires a working Go installation):
 

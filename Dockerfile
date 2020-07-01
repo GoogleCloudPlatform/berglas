@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.13 AS builder
+FROM golang:1.14 AS builder
+
+RUN apt-get -qq update && apt-get -yqq install upx
 
 ENV GO111MODULE=on \
   CGO_ENABLED=0 \
@@ -26,10 +28,12 @@ RUN go build \
   -a \
   -trimpath \
   -ldflags "-s -w -extldflags '-static'" \
-  -installsuffix cgo \
-  -tags netgo \
+  -tags 'osusergo netgo static_build' \
   -o /bin/berglas \
   .
+
+RUN strip /bin/berglas
+RUN upx -q -9 /bin/berglas
 
 
 

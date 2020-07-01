@@ -31,8 +31,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    name: ${{ matrix.os }}
+
     runs-on: ${{ matrix.os }}
+
+    name: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v2
@@ -47,9 +49,6 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-
-    - name: Get dependencies
-      run: go get -t ./...
 
     - name: Lint
       run: make fmtcheck staticcheck spellcheck
@@ -71,13 +70,24 @@ jobs:
   binaries:
     if: ${{ success() && (github.event_name == 'push' || github.event_name == 'tag') }}
     needs: test
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        goos: ['darwin', 'linux', 'windows']
-        goarch: ['amd64']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+        - os: ubuntu-latest
+          goos: linux
+          goarch: amd64
+        - os: macos-latest
+          goos: darwin
+          goarch: amd64
+        - os: windows-latest
+          goos: windows
+          goarch: amd64
 
-    name: ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.os }}
+
+    name: ${{ matrix.goos }}_${{ matrix.goarch }}
 
     steps:
     - uses: actions/checkout@v2
@@ -93,10 +103,16 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Get dependencies
-      run: go get -t ./...
+    - name: Extract ref
+      id: extract_ref
+      shell: bash
+      run: |-
+        REF="${GITHUB_REF##*/}"
+        REF="${REF//v}"
+        echo "##[set-output name=ref;]$(echo ${REF})"
 
-    - name: Build binaries
+    - name: Build binary
+      shell: bash
       env:
         CGO_ENABLED: 0
         GOOS: ${{ matrix.goos }}
@@ -108,15 +124,52 @@ jobs:
           -ldflags "-s -w -extldflags '-static'" \
           -tags 'osusergo netgo static_build' \
           -o build/${{ env.GOOS }}_${{ env.GOARCH }}/berglas \
-          . \
-          && \
-        strip build/${{ env.GOOS }}_${{ env.GOARCH }}/berglas \
-          && \
-        chmod +x build/${{ env.GOOS }}_${{ env.GOARCH }}/berglas
+          .
 
-    - name: Upload binaries
+    - name: Upload binary
       uses: GoogleCloudPlatform/github-actions/upload-cloud-storage@master
       with:
         credentials: ${{ secrets.GOOGLE_CREDENTIALS }}
-        path: build/
-        destination: gs://berglas/${{ github.ref }}/
+        path: build/${{ matrix.goos }}_${{ matrix.goarch }}
+        destination: berglas/${{ steps.extract_ref.outputs.ref }}
+
+  # container builds and publishes the docker container
+  container:
+    if: ${{ success() && (github.event_name == 'push' || github.event_name == 'tag') }}
+    needs: test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+        - asia-docker.pkg.dev
+        - europe-docker.pkg.dev
+        - us-docker.pkg.dev
+        repository:
+        - berglas/berglas/berglas
+
+    runs-on: ubuntu-latest
+
+    name: ${{ matrix.target }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Extract ref
+      id: extract_ref
+      shell: bash
+      run: |-
+        REF="${GITHUB_REF##*/}"
+        REF="${REF//v}"
+        REF="${REF/main/latest}"
+        echo "##[set-output name=ref;]$(echo ${REF})"
+
+    - name: ${{ matrix.target }}
+      uses: docker/build-push-action@v1
+      with:
+        username: _json_key
+        password: ${{ secrets.GOOGLE_CREDENTIALS }}
+        registry: ${{ matrix.target }}
+        repository: ${{ matrix.repository }}
+        always_pull: true
+        tags: ${{ steps.extract_ref.outputs.ref }}

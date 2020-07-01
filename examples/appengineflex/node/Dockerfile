@@ -23,6 +23,6 @@ COPY package.json package*.json ./
 RUN npm install --only=production
 
 COPY . ./
-COPY --from=gcr.io/berglas/berglas:latest /bin/berglas /bin/berglas
+COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
 ENTRYPOINT exec /bin/berglas exec -- npm start
