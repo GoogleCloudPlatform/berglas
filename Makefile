@@ -29,10 +29,6 @@ builders:
 		  .
 .PHONY: builders
 
-cleanup-gcr:
-	@./bin/cleanup-gcr
-.PHONY: cleanup-gcr
-
 deps:
 	@go get -u -t ./...
 	@go mod tidy
