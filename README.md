@@ -41,9 +41,9 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 
     - Install a pre-compiled binary for your operating system:
 
-        - [darwin/amd64](https://storage.googleapis.com/berglas/master/darwin_amd64/berglas)
-        - [linux/amd64](https://storage.googleapis.com/berglas/master/linux_amd64/berglas)
-        - [windows/amd64](https://storage.googleapis.com/berglas/master/windows_amd64/berglas)
+        - [darwin/amd64](https://storage.googleapis.com/berglas/main/darwin_amd64/berglas)
+        - [linux/amd64](https://storage.googleapis.com/berglas/main/linux_amd64/berglas)
+        - [windows/amd64](https://storage.googleapis.com/berglas/main/windows_amd64/berglas)
 
       This will download the latest version built against the master branch. To
       download a specific version, specify a git tag in place of "master" in the
