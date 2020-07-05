@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Test
+name: CI/CD
 
 on:
   push:
@@ -70,6 +70,7 @@ jobs:
   binaries:
     if: ${{ success() && (github.event_name == 'push' || github.event_name == 'tag') }}
     needs: test
+
     strategy:
       fail-fast: false
       matrix:
