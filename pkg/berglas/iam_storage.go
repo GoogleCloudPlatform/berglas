@@ -16,13 +16,14 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/iam"
-	"github.com/GoogleCloudPlatform/berglas/pkg/retry"
 	"github.com/pkg/errors"
+	"github.com/sethvargo/go-retry"
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
 	iampb "google.golang.org/genproto/googleapis/iam/v1"
@@ -157,16 +158,13 @@ func setClientHeader(h http.Header) {
 // any transient errors or conflicts and automatically retrying.
 func getIAMPolicy(ctx context.Context, h *iam.Handle) (*iam.Policy, error) {
 	var policy *iam.Policy
-	var err error
 
-	if err := retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
-		policy, err = h.Policy(ctx)
+	if err := iamRetry(ctx, func(ctx context.Context) error {
+		rPolicy, err := h.Policy(ctx)
 		if err != nil {
-			if isIAMRetryableError(err) {
-				return retry.RetryableError(err)
-			}
 			return err
 		}
+		policy = rPolicy
 		return nil
 	}); err != nil {
 		return nil, err
@@ -179,13 +177,10 @@ func getIAMPolicy(ctx context.Context, h *iam.Handle) (*iam.Policy, error) {
 // f, and attempts to set the new policy, retrying and accounting for transient
 // errors.
 func updateIAMPolicy(ctx context.Context, h *iam.Handle, f func(*iam.Policy) *iam.Policy) error {
-	return retry.RetryFib(ctx, 500*time.Millisecond, 5, func() error {
+	return iamRetry(ctx, func(ctx context.Context) error {
 		// Get existing policy
 		existingPolicy, err := h.Policy(ctx)
 		if err != nil {
-			if isIAMRetryableError(err) {
-				return retry.RetryableError(err)
-			}
 			return err
 		}
 
@@ -194,42 +189,37 @@ func updateIAMPolicy(ctx context.Context, h *iam.Handle, f func(*iam.Policy) *ia
 
 		// Put new policy
 		if err := h.SetPolicy(ctx, newPolicy); err != nil {
-			if isIAMRetryableError(err) {
-				return retry.RetryableError(err)
-			}
 			return err
 		}
-
 		return nil
 	})
 }
 
-// isIAMRetryableError returns true if the given error should retry, false
-// otherwise.
-func isIAMRetryableError(err error) bool {
-	if terr, ok := grpcstatus.FromError(err); ok {
-		switch terr.Code() {
-		case grpccodes.Aborted:
-			// IAM returns 10 on conflicts
-			return true
-		default:
-			return false
-		}
+// iamRetry is a helper function that executes the given function with retries,
+// handling IAM-specific retry conditions.
+func iamRetry(ctx context.Context, f retry.RetryFunc) error {
+	b, err := retry.NewFibonacci(250 * time.Millisecond)
+	if err != nil {
+		return fmt.Errorf("failed to setup retry: %w", err)
 	}
+	b = retry.WithMaxRetries(5, b)
 
-	if terr, ok := err.(*googleapi.Error); ok {
-		switch {
-		case terr.Code == 412:
-			// IAM returns 412 while propagating
-			return true
-		case terr.Code >= 400 && terr.Code <= 499:
-			// Don't retry other 400s
-			return false
-		default:
-			// Retry 500s and other things
-			return true
+	return retry.Do(ctx, b, func(ctx context.Context) error {
+		err := f(ctx)
+		if err == nil {
+			return nil
 		}
-	}
 
-	return false
+		// IAM gRPC returns 10 on conflicts
+		if terr, ok := grpcstatus.FromError(err); ok && terr.Code() == grpccodes.Aborted {
+			return retry.RetryableError(err)
+		}
+
+		// IAM returns 412 while propagating, also retry on server errors
+		if terr, ok := err.(*googleapi.Error); ok && (terr.Code == 412 || terr.Code >= 500) {
+			return retry.RetryableError(err)
+		}
+
+		return err
+	})
 }
