@@ -35,7 +35,7 @@ To deploy on Cloud Functions:
     ```text
     gcloud functions deploy berglas-secrets-webhook \
       --project ${PROJECT_ID} \
-      --runtime go111 \
+      --runtime go113 \
       --entry-point F \
       --trigger-http
     ```
@@ -94,13 +94,13 @@ cluster. For example:
     Using Secret Manager storage:
 
     ```text
-    berglas grant sm://${PROJECT_ID}/my-secret
+    berglas grant sm://${PROJECT_ID}/my-secret --member serviceAccount:$SA_EMAIL
     ```
 
     Using Cloud Storage storage:
 
     ```text
-    berglas grant ${BUCKET_ID}/my-secret
+    berglas grant ${BUCKET_ID}/my-secret --member serviceAccount:$SA_EMAIL
     ```
 
 1. Create the GKE cluster:
