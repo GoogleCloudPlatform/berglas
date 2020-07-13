@@ -58,7 +58,6 @@ jobs:
       run: make fmtcheck staticcheck spellcheck
 
     - name: Test (Unit)
-      if: ${{ !env.CREDS_JSON }}
       run: make test
 
     - name: Test (Integration)
