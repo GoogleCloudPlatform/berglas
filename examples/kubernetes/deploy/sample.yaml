@@ -15,18 +15,18 @@ spec:
     spec:
       serviceAccountName: envserver
       containers:
-        - name: envserver
-          image: sethvargo/envserver
-          imagePullPolicy: Always
-          command: ["/bin/envserver"]
-          env:
-            # This is an example using Berglas with Secret Manager storage.
-            - name: API_KEY
-              value: sm://PROJECT_ID/my-secret
+      - name: envserver
+        image: sethvargo/envserver
+        imagePullPolicy: Always
+        command: ["/bin/envserver"]
+        env:
+        # This is an example using Berglas with Secret Manager storage.
+        - name: API_KEY
+          value: sm://PROJECT_ID/my-secret
 
-            # This is an example using Berglas with Cloud Storage storage.
-            - name: API_KEY
-              value: berglas://BUCKET_ID/my-secret
+        # This is an example using Berglas with Cloud Storage storage.
+        - name: API_KEY
+          value: berglas://BUCKET_ID/my-secret
 
 ---
 apiVersion: v1
@@ -38,7 +38,7 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-    - port: 80
-      targetPort: 8080
+  - port: 80
+    targetPort: 8080
   selector:
     app: envserver
