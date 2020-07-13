@@ -36,6 +36,9 @@ jobs:
 
     name: ${{ matrix.os }}
 
+    env:
+      CREDS_JSON: ${{ secrets.GOOGLE_CREDENTIALS }}
+
     steps:
     - uses: actions/checkout@v2
 
@@ -51,14 +54,18 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Lint
-      run: make fmtcheck staticcheck spellcheck
       if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: make fmtcheck staticcheck spellcheck
 
-    - name: Setup credentials
-      run: echo '${{ secrets.GOOGLE_CREDENTIALS }}' > ${{ runner.temp }}/account.json
+    - name: Test (Unit)
+      if: ${{ !env.CREDS_JSON }}
+      run: make test
 
-    - name: Test
-      run: make test-acc
+    - name: Test (Integration)
+      if: ${{ env.CREDS_JSON }}
+      run: |-
+        echo '${{ env.CREDS_JSON }}' > ${{ runner.temp }}/account.json
+        make test-acc
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/account.json
         GOOGLE_CLOUD_PROJECT: berglas-test
