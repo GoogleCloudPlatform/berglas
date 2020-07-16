@@ -35,6 +35,7 @@ To deploy on Cloud Functions:
     ```text
     gcloud functions deploy berglas-secrets-webhook \
       --project ${PROJECT_ID} \
+      --allow-unauthenticated \
       --runtime go113 \
       --entry-point F \
       --trigger-http
