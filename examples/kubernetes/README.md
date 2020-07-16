@@ -115,6 +115,7 @@ cluster. For example:
       --no-issue-client-certificate \
       --no-enable-basic-auth \
       --enable-autoupgrade \
+      --scopes cloud-platform \
       --metadata disable-legacy-endpoints=true
     ```
 
