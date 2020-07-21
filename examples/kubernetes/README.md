@@ -116,6 +116,7 @@ cluster. For example:
       --no-enable-basic-auth \
       --enable-autoupgrade \
       --scopes cloud-platform \
+      --workload-pool ${PROJECT_ID}.svc.id.goog \
       --metadata disable-legacy-endpoints=true
     ```
 
@@ -129,6 +130,7 @@ cluster. For example:
 
     ```text
     gcloud iam service-accounts add-iam-policy-binding \
+      --project ${PROJECT_ID} \
       --role "roles/iam.workloadIdentityUser" \
       --member "serviceAccount:${PROJECT_ID}.svc.id.goog[default/envserver]" \
       berglas-accessor@${PROJECT_ID}.iam.gserviceaccount.com
