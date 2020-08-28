@@ -1273,7 +1273,7 @@ func readData(s string) ([]byte, error) {
 		return ioutil.ReadFile(s[1:])
 	case strings.HasPrefix(s, "-"):
 		r := bufio.NewReader(stdin)
-		b, err := r.ReadBytes('\n')
+		b, err := ioutil.ReadAll(r)
 		if err == io.EOF {
 			return b, nil
 		}
