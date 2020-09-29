@@ -912,6 +912,7 @@ func execRun(_ *cobra.Command, args []string) error {
 					fmt.Fprintf(stderr, "failed to signal command: %s\n", signalErr)
 				}
 			case <-doneCh:
+				signal.Stop(signalCh)
 				close(signalCh)
 				return
 			}
