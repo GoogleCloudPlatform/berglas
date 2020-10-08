@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -186,11 +187,11 @@ func secretManagerParseReference(s string) (*Reference, error) {
 	}
 
 	// Parse destination
-	filepath, err := refExtractFilepath(u.Query().Get("destination"))
+	path, err := refExtractFilepath(r.name, u.Query().Get("destination"))
 	if err != nil {
 		return nil, err
 	}
-	r.filepath = filepath
+	r.filepath = path
 
 	return &r, nil
 }
@@ -224,20 +225,22 @@ func storageParseReference(s string) (*Reference, error) {
 	}
 
 	// Parse destination
-	filepath, err := refExtractFilepath(u.Query().Get("destination"))
+	path, err := refExtractFilepath(r.object, u.Query().Get("destination"))
 	if err != nil {
 		return nil, err
 	}
-	r.filepath = filepath
+	r.filepath = path
 
 	return &r, nil
 }
 
-func refExtractFilepath(s string) (string, error) {
+func refExtractFilepath(object, s string) (string, error) {
 	switch s {
 	case "tmpfile", "tempfile":
+		suffix := filepath.Ext(object)
+		pattern := fmt.Sprintf("berglas-*%s", suffix)
 		// create a tempfile for the path
-		f, err := ioutil.TempFile("", "berglas-")
+		f, err := ioutil.TempFile("", pattern)
 		if err != nil {
 			return "", errors.Wrap(err, "failed to create tempfile for secret")
 		}
