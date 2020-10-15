@@ -45,8 +45,8 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
         - [linux/amd64](https://storage.googleapis.com/berglas/main/linux_amd64/berglas)
         - [windows/amd64](https://storage.googleapis.com/berglas/main/windows_amd64/berglas)
 
-      This will download the latest version built against the master branch. To
-      download a specific version, specify a git tag in place of "master" in the
+      This will download the latest version built against the main branch. To
+      download a specific version, specify a git tag in place of "main" in the
       URL.
 
       Depending on your operating system, you may need to mark the downloaded binary as executable:
