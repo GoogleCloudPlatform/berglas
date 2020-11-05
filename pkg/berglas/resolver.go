@@ -75,7 +75,7 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	if pth := ref.Filepath(); pth != "" {
 		logger.WithField("filepath", pth).Debug("writing to filepath")
 
-		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE, 0600)
+		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to open filepath %s", pth)
 		}
