@@ -5,6 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.60.0
 	cloud.google.com/go/storage v1.10.0
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gammazero/workerpool v0.0.0-20200608033439-1a5ca90a5753
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/protobuf v1.4.2

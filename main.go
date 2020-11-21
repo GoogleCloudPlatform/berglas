@@ -26,6 +26,7 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
@@ -869,6 +870,8 @@ func execRun(_ *cobra.Command, args []string) error {
 	// Parse local env
 	env := os.Environ()
 
+	hasUserDefinition := false
+
 	for i, e := range env {
 		p := strings.SplitN(e, "=", 2)
 		if len(p) < 2 {
@@ -876,6 +879,18 @@ func execRun(_ *cobra.Command, args []string) error {
 		}
 
 		k, v := p[0], p[1]
+
+		if k == berglas.SecretsPathsEnvVarName {
+			err := client.CopySecrets(ctx, v)
+			if err != nil {
+				return apiError(err)
+			}
+		}
+
+		if k == berglas.SecretsExecUserEnvVarName {
+			hasUserDefinition = true
+		}
+
 		if !berglas.IsReference(v) {
 			continue
 		}
@@ -884,6 +899,14 @@ func execRun(_ *cobra.Command, args []string) error {
 		if err != nil {
 			return apiError(err)
 		}
+
+		// Check if any of the args is using the variable
+		for j, arg := range execArgs {
+			if strings.Contains(arg, v) {
+				execArgs[j] = strings.ReplaceAll(arg, v, string(s))
+			}
+		}
+
 		env[i] = fmt.Sprintf("%s=%s", k, s)
 	}
 
@@ -893,6 +916,19 @@ func execRun(_ *cobra.Command, args []string) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = env
+
+	// Run as a different user if required
+	if hasUserDefinition {
+		execUser := os.Getenv(berglas.SecretsExecUserEnvVarName)
+		uid, gid, err := berglas.GetUidGid(execUser)
+		if err != nil {
+			return apiError(err)
+		}
+
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid, NoSetGroups: true}
+	}
+
 	if err := cmd.Start(); err != nil {
 		return misuseError(err)
 	}
