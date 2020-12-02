@@ -157,9 +157,12 @@ cluster. For example:
 
 ## Limitations
 
-The mutator requires that containers specify a `command` in their manifest. If a
-container requests Berglas secrets and does not specify a `command`, the mutator
-will log an error and not mutate the spec.
+-   The mutator requires that containers specify a `command` in their manifest.
+    If a container requests Berglas secrets and does not specify a `command`,
+    the mutator will log an error and not mutate the spec.
+
+-   Berglas requires CA certificates to authenticate outbound TLS connections.
+    The target container must have CA certificates in a well-known path.
 
 
 [workload-identity]: https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
