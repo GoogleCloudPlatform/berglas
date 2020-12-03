@@ -41,5 +41,6 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates && \
   update-ca-certificates
 
-COPY --from=builder /bin/berglas /bin/berglas
+RUN mkdir -p /opt/berglas/bin /opt/berglas/certs && ln -s /opt/berglas/bin/berglas /bin
+COPY --from=builder /bin/berglas /opt/berglas/bin/berglas
 ENTRYPOINT ["/bin/berglas"]

@@ -18,6 +18,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,6 +34,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -41,6 +46,10 @@ const (
 	// MisuseExitCode is the exit code returned when the user did something wrong
 	// such as misused a flag.
 	MisuseExitCode = 61
+
+	// Name of the environment variable which allows to specify a directory
+	// from which to load CA certificates.
+	BerglasCaDirEnvVar = "BERGLAS_CA_DIR"
 )
 
 var (
@@ -857,7 +866,18 @@ func editRun(_ *cobra.Command, args []string) error {
 }
 
 func execRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+	// Empty opts by default
+	opts := option.WithGRPCDialOption(grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+
+	// Read CA certs if env var contains path
+	if len(os.Getenv(BerglasCaDirEnvVar)) != 0 {
+		dialOptions, err := loadCerts(os.Getenv(BerglasCaDirEnvVar))
+		if err == nil {
+			opts = option.WithGRPCDialOption(dialOptions)
+		}
+	}
+
+	client, ctx, closer, err := clientWithContext(opts)
 	if err != nil {
 		return misuseError(err)
 	}
@@ -1236,7 +1256,7 @@ func logger() (*logrus.Logger, error) {
 
 // clientWithContext returns an instantiated berglas client and context with a
 // closer.
-func clientWithContext() (*berglas.Client, context.Context, func(), error) {
+func clientWithContext(opts ...option.ClientOption) (*berglas.Client, context.Context, func(), error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 1)
@@ -1255,7 +1275,7 @@ func clientWithContext() (*berglas.Client, context.Context, func(), error) {
 		return nil, nil, nil, errors.Wrap(err, "failed to setup logger")
 	}
 
-	client, err := berglas.New(ctx)
+	client, err := berglas.New(ctx, opts...)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to create berglas client")
 	}
@@ -1308,4 +1328,36 @@ func parseRef(r string) (*berglas.Reference, error) {
 		return nil, errors.Wrapf(err, "failed to parse reference %q", s)
 	}
 	return ref, nil
+}
+
+func loadCerts(dir string) (grpc.DialOption, error) {
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read CA cert directory")
+	}
+
+	for _, f := range files {
+		cert, err := ioutil.ReadFile(dir)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to CA file")
+		}
+
+		if ok := rootCAs.AppendCertsFromPEM(cert); !ok {
+			fmt.Fprintf(stderr, "CA cert not appended %s\n", f.Name())
+		}
+	}
+
+	config := &tls.Config{
+		RootCAs: rootCAs,
+	}
+
+	creds := credentials.NewTLS(config)
+	opts := grpc.WithTransportCredentials(creds)
+
+	return opts, nil
 }

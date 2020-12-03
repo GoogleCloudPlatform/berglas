@@ -19,32 +19,32 @@ const (
 	// berglas binary.
 	berglasContainer = "us-docker.pkg.dev/berglas/berglas/berglas:latest"
 
-	// binVolumeName is the name of the volume where the berglas binary is stored.
-	binVolumeName = "berglas-bin"
+	// volumeName is the name of the volume where the berglas binary is stored.
+	volumeName = "berglas"
 
-	// binVolumeMountPath is the mount path where the berglas binary can be found.
-	binVolumeMountPath = "/berglas/bin/"
+	// volumeMountPath is the mount path where the berglas binary can be found.
+	volumeMountPath = "/berglas/"
 )
 
-// binInitContainer is the container that pulls the berglas binary executable
+// initContainer is the container that pulls the berglas binary executable
 // into a shared volume mount.
-var binInitContainer = corev1.Container{
-	Name:            "copy-berglas-bin",
+var initContainer = corev1.Container{
+	Name:            "copy-berglas",
 	Image:           berglasContainer,
 	ImagePullPolicy: corev1.PullIfNotPresent,
 	Command: []string{"sh", "-c",
-		fmt.Sprintf("cp /bin/berglas %s", binVolumeMountPath)},
+		fmt.Sprintf("cp -r /berglas/* %s", volumeMountPath)},
 	VolumeMounts: []corev1.VolumeMount{
 		{
-			Name:      binVolumeName,
-			MountPath: binVolumeMountPath,
+			Name:      volumeName,
+			MountPath: volumeMountPath,
 		},
 	},
 }
 
-// binVolume is the shared, in-memory volume where the berglas binary lives.
-var binVolume = corev1.Volume{
-	Name: binVolumeName,
+// volume is the shared, in-memory volume where the berglas binary lives.
+var volume = corev1.Volume{
+	Name: volumeName,
 	VolumeSource: corev1.VolumeSource{
 		EmptyDir: &corev1.EmptyDirVolumeSource{
 			Medium: corev1.StorageMediumMemory,
@@ -52,10 +52,10 @@ var binVolume = corev1.Volume{
 	},
 }
 
-// binVolumeMount is the shared volume mount where the berglas binary lives.
-var binVolumeMount = corev1.VolumeMount{
-	Name:      binVolumeName,
-	MountPath: binVolumeMountPath,
+// volumeMount is the shared volume mount where the berglas binary lives.
+var volumeMount = corev1.VolumeMount{
+	Name:      volumeName,
+	MountPath: volumeMountPath,
 	ReadOnly:  true,
 }
 
@@ -95,8 +95,8 @@ func (m *BerglasMutator) Mutate(ctx context.Context, obj metav1.Object) (bool, e
 	// If any of the containers requested berglas secrets, mount the shared volume
 	// and ensure the berglas binary is available via an init container.
 	if mutated {
-		pod.Spec.Volumes = append(pod.Spec.Volumes, binVolume)
-		pod.Spec.InitContainers = append([]corev1.Container{binInitContainer},
+		pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
+		pod.Spec.InitContainers = append([]corev1.Container{initContainer},
 			pod.Spec.InitContainers...)
 	}
 
@@ -120,11 +120,11 @@ func (m *BerglasMutator) mutateContainer(_ context.Context, c *corev1.Container)
 	}
 
 	// Add the shared volume mount
-	c.VolumeMounts = append(c.VolumeMounts, binVolumeMount)
+	c.VolumeMounts = append(c.VolumeMounts, volumeMount)
 
 	// Prepend the command with berglas exec --
 	original := append(c.Command, c.Args...)
-	c.Command = []string{binVolumeMountPath + "berglas"}
+	c.Command = []string{volumeMountPath + "bin/berglas"}
 	c.Args = append([]string{"exec", "--"}, original...)
 
 	return c, true
