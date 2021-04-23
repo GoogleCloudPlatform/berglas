@@ -2,6 +2,7 @@
 build/
 test/account.json
 .env
+.idea
 
 examples/**/vendor/
 examples/**/node_modules/
