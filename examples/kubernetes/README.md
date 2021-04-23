@@ -120,7 +120,7 @@ cluster. For example:
       --metadata disable-legacy-endpoints=true
     ```
 
-Note:  If using existing cluster, remember that in order to use workload identity node pools [have to be updated][update-nodes]  or [created][create-nodes] new ones (after enabling Workload Identity on whole cluster). Otherwise, berglas Service Account will not be bound to pods.
+Note:  If using existing cluster, remember that in order to use Workload Identity, node pools [have to be updated][update-nodes]  or [created][create-nodes] new ones (after enabling Workload Identity on whole cluster). Otherwise, berglas Service Account will not be bound to pods.
 
 
 1. Create a Kubernetes service account:
