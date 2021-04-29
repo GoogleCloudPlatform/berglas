@@ -2,7 +2,7 @@
 
 This document describes the steps required to create a Berglas Cloud Storage
 bucket and Cloud KMS keys manually. **This is an advanced user topic and is not
-required to use Berglas. Users should use the `berglas boostrap` command where
+required to use Berglas. Users should use the `berglas bootstrap` command where
 possible!**
 
 1. Install the [Cloud SDK][cloud-sdk]. More detailed instructions are available

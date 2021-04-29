@@ -37,7 +37,7 @@ const (
 )
 
 // storageIAM returns an IAM storage handle to the given object since one does
-// not exist in the storage libray.
+// not exist in the storage library.
 func (c *Client) storageIAM(bucket, object string) *iam.Handle {
 	return iam.InternalNewHandleClient(&storageIAMClient{
 		raw: c.storageIAMClient,
