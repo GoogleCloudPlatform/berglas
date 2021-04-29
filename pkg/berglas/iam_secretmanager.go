@@ -28,7 +28,7 @@ const (
 )
 
 // secretManagerIAM returns an IAM storage handle to the given secret since one
-// does not exist in the secrets libray.
+// does not exist in the secrets library.
 func (c *Client) secretManagerIAM(project, name string) *iam.Handle {
 	return iam.InternalNewHandleClient(&secretManagerIAMClient{
 		raw: c.secretManagerClient,

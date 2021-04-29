@@ -73,7 +73,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
       a specific version, specify a git tag in place of "latest" in the URL.
 
       Note: the `gcr.io/berglas/berglas:latest` image remains for backwards
-      compatability, but new versions are **not** published there.
+      compatibility, but new versions are **not** published there.
 
     - Install from source (requires a working Go installation):
 
