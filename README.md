@@ -69,7 +69,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
       us-docker.pkg.dev/berglas/berglas/berglas
       ```
 
-      This will pull the latest version built against the master branch. To use
+      This will pull the latest version built against the main branch. To use
       a specific version, specify a git tag in place of "latest" in the URL.
 
       Note: the `gcr.io/berglas/berglas:latest` image remains for backwards
@@ -579,13 +579,13 @@ Berglas is a famous magician who is best known for his secrets.
 ## Contributing
 
 Please see the [contributing
-guidelines](https://github.com/GoogleCloudPlatform/berglas/tree/master/CONTRIBUTING.md).
+guidelines](https://github.com/GoogleCloudPlatform/berglas/tree/main/CONTRIBUTING.md).
 
 
 ## License
 
 This library is licensed under Apache 2.0. Full license text is available in
-[LICENSE](https://github.com/GoogleCloudPlatform/berglas/tree/master/LICENSE).
+[LICENSE](https://github.com/GoogleCloudPlatform/berglas/tree/main/LICENSE).
 
 
 
@@ -606,9 +606,9 @@ This library is licensed under Apache 2.0. Full license text is available in
 [secret-manager]: https://cloud.google.com/secret-manager
 [go-crypto]: https://golang.org/pkg/crypto/
 [envelope-encryption]: https://cloud.google.com/kms/docs/envelope-encryption
-[custom-setup]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/custom-setup.md
-[reference-syntax]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/reference-syntax.md
-[threat-model]: https://github.com/GoogleCloudPlatform/berglas/blob/master/doc/threat-model.md
+[custom-setup]: https://github.com/GoogleCloudPlatform/berglas/blob/main/doc/custom-setup.md
+[reference-syntax]: https://github.com/GoogleCloudPlatform/berglas/blob/main/doc/reference-syntax.md
+[threat-model]: https://github.com/GoogleCloudPlatform/berglas/blob/main/doc/threat-model.md
 [releases]: https://github.com/GoogleCloudPlatform/berglas/releases
 [berglas-godoc]: https://godoc.org/github.com/GoogleCloudPlatform/berglas
 [gcm-limits]: https://crypto.stackexchange.com/questions/31793/plain-text-size-limits-for-aes-gcm-mode-just-64gb
