@@ -80,6 +80,19 @@ instructions):
 
 1. Create environment:
 
+    Using Secret Manager storage:
+    
+    ```text
+    cat > env.yaml <<EOF
+    env_variables:
+      GO111MODULE: on
+      API_KEY: sm://${PROJECT_ID}/api-key 
+      TLS_KEY: sm://${PROJECT_ID}/tls-key?destination=tempfile
+    EOF
+    ```
+
+    Using Google Cloud storage:
+    
     ```text
     cat > env.yaml <<EOF
     env_variables:
