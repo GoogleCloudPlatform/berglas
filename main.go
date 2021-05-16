@@ -494,7 +494,9 @@ func main() {
 	updateCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for re-encryption")
 
-	if err := rootCmd.Execute(); err != nil {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintf(stderr, "%s\n", err)
 		if terr, ok := err.(*exitError); ok {
 			os.Exit(terr.code)
@@ -503,12 +505,12 @@ func main() {
 	}
 }
 
-func accessRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func accessRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	// Deprecated - update to new syntax
 	if accessGeneration != 0 {
@@ -548,12 +550,12 @@ func accessRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func bootstrapRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func bootstrapRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	if err := client.Bootstrap(ctx, &berglas.BootstrapRequest{
 		ProjectID:      projectID,
@@ -614,12 +616,12 @@ func completionRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func createRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func createRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	ref, err := parseRef(args[0])
 	if err != nil {
@@ -663,12 +665,12 @@ func createRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func deleteRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func deleteRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	ref, err := parseRef(args[0])
 	if err != nil {
@@ -701,12 +703,12 @@ func deleteRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func editRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func editRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	// Find the editor
 	var editor string
@@ -783,15 +785,15 @@ func editRun(_ *cobra.Command, args []string) error {
 	editorSplit := strings.Split(editor, " ")
 	editorCmd, editorArgs := editorSplit[0], editorSplit[1:]
 	editorArgs = append(editorArgs, f.Name())
-	cmd := exec.Command(editorCmd, editorArgs...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	if err := cmd.Start(); err != nil {
+	externalCmd := exec.CommandContext(ctx, editorCmd, editorArgs...)
+	externalCmd.Stdin = stdin
+	externalCmd.Stdout = stdout
+	externalCmd.Stderr = stderr
+	if err := externalCmd.Start(); err != nil {
 		err = errors.Wrap(err, "failed to start editor")
 		return misuseError(err)
 	}
-	if err := cmd.Wait(); err != nil {
+	if err := externalCmd.Wait(); err != nil {
 		if terr, ok := err.(*exec.ExitError); ok && terr.ProcessState != nil {
 			code := terr.ProcessState.ExitCode()
 			return exitWithCode(code, errors.Wrap(terr, "editor did not exit 0"))
@@ -856,12 +858,12 @@ func editRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func execRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func execRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	execCmd := args[0]
 	execArgs := args[1:]
@@ -888,30 +890,30 @@ func execRun(_ *cobra.Command, args []string) error {
 	}
 
 	// Spawn the command
-	cmd := exec.Command(execCmd, execArgs...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	cmd.Env = env
-	if err := cmd.Start(); err != nil {
+	externalCmd := exec.CommandContext(ctx, execCmd, execArgs...)
+	externalCmd.Stdin = stdin
+	externalCmd.Stdout = stdout
+	externalCmd.Stderr = stderr
+	externalCmd.Env = env
+	if err := externalCmd.Start(); err != nil {
 		return misuseError(err)
 	}
 
 	// Listen for signals and send them to the underlying command
-	doneCh := make(chan struct{})
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh)
 	go func() {
 		for {
 			select {
 			case s := <-signalCh:
-				if cmd.Process == nil {
+				if externalCmd.Process == nil {
 					return
 				}
-				if signalErr := cmd.Process.Signal(s); signalErr != nil && err == nil {
+
+				if signalErr := externalCmd.Process.Signal(s); signalErr != nil && err == nil {
 					fmt.Fprintf(stderr, "failed to signal command: %s\n", signalErr)
 				}
-			case <-doneCh:
+			case <-ctx.Done():
 				signal.Stop(signalCh)
 				close(signalCh)
 				return
@@ -920,8 +922,7 @@ func execRun(_ *cobra.Command, args []string) error {
 	}()
 
 	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		close(doneCh)
+	if err := externalCmd.Wait(); err != nil {
 		if terr, ok := err.(*exec.ExitError); ok && terr.ProcessState != nil {
 			code := terr.ProcessState.ExitCode()
 			return exitWithCode(code, errors.Wrap(terr, "process exited non-zero"))
@@ -931,12 +932,12 @@ func execRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func grantRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func grantRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	ref, err := parseRef(args[0])
 	if err != nil {
@@ -973,12 +974,12 @@ func grantRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func listRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func listRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	var list *berglas.ListResponse
 
@@ -1032,12 +1033,12 @@ func listRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func migrateRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func migrateRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	bucket := strings.Trim(strings.TrimPrefix(args[0], "gs://"), "/")
 
@@ -1082,12 +1083,12 @@ func migrateRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func revokeRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func revokeRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	ref, err := parseRef(args[0])
 	if err != nil {
@@ -1124,12 +1125,12 @@ func revokeRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func updateRun(_ *cobra.Command, args []string) error {
-	client, ctx, closer, err := clientWithContext()
+func updateRun(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	client, err := clientWithContext(ctx)
 	if err != nil {
 		return misuseError(err)
 	}
-	defer closer()
 
 	ref, err := parseRef(args[0])
 	if err != nil {
@@ -1236,32 +1237,19 @@ func logger() (*logrus.Logger, error) {
 
 // clientWithContext returns an instantiated berglas client and context with a
 // closer.
-func clientWithContext() (*berglas.Client, context.Context, func(), error) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-
+func clientWithContext(ctx context.Context) (*berglas.Client, error) {
 	logger, err := logger()
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to setup logger")
+		return nil, errors.Wrap(err, "failed to setup logger")
 	}
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to create berglas client")
+		return nil, errors.Wrap(err, "failed to create berglas client")
 	}
 	client.SetLogger(logger)
 
-	return client, ctx, cancel, nil
+	return client, nil
 }
 
 // readData reads the given string. If the string starts with an "@", it is
