@@ -129,12 +129,17 @@ jobs:
           -a \
           -trimpath \
           -ldflags "-s -w -extldflags '-static'" \
-          -tags 'osusergo netgo static_build' \
+          -tags "osusergo,netgo,static,static_build" \
           -o build/${{ env.GOOS }}_${{ env.GOARCH }}/berglas \
           .
 
+    - name: Compress binary
+      shell: bash
+      run: |-
+        strip -s build/${{ matrix.goos }}_${{ matrix.goarch }}/berglas
+
     - name: Upload binary
-      uses: GoogleCloudPlatform/github-actions/upload-cloud-storage@master
+      uses: google-github-actions/upload-cloud-storage@v0.3
       with:
         credentials: ${{ secrets.GOOGLE_CREDENTIALS }}
         path: build/${{ matrix.goos }}_${{ matrix.goarch }}
