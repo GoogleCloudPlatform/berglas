@@ -35,7 +35,7 @@ deps:
 .PHONY: deps
 
 dev:
-	@go install -i .
+	@go install .
 .PHONY: dev
 
 docker-push:
