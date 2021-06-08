@@ -28,11 +28,11 @@ RUN go build \
   -a \
   -trimpath \
   -ldflags "-s -w -extldflags '-static'" \
-  -tags 'osusergo netgo static_build' \
+  -tags "osusergo,netgo,static,static_build" \
   -o /bin/berglas \
   .
 
-RUN strip /bin/berglas
+RUN strip -s /bin/berglas
 RUN upx -q -9 /bin/berglas
 
 

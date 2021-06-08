@@ -29,7 +29,6 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -158,8 +157,10 @@ func secretFromAttrs(bucket string, attrs *storage.ObjectAttrs, plaintext []byte
 }
 
 func timestampToTime(ts *timestamp.Timestamp) time.Time {
-	t, _ := ptypes.Timestamp(ts)
-	return t
+	if ts == nil || !ts.IsValid() {
+		return time.Unix(0, 0).UTC()
+	}
+	return ts.AsTime().UTC()
 }
 
 // kmsKeyIncludesVersion returns true if the given KMS key reference includes
