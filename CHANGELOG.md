@@ -2,7 +2,23 @@
 
 All notable changes to Berglas will be documented in this file. This file is maintained by humans and is therefore subject to error.
 
-## [unreleased]
+## [0.6.0]
+### Breaking
+- repo: rename "master" branch to "main"
+- core: require Go 1.16+
+
+### Changed
+- core: updated all dependencies to their latest versions
+- core: preserve file extension when using a tempfile
+- core: truncate an existing file before writing
+- core: stop receiving signals when terminating
+- docs: document Certificate Authority (CA requirements
+- docs: add Secret Manager example to AppEngine
+- k8s: updated example to use Go 1.13
+- k8s: updated example to use cloud-platform scope (required for Secret Manager)
+- k8s: added `--allow-unauthenticated` command to documentation
+
+## [0.5.1]
 ### Changed
 - cli: deprecate `--generations` in favor of hash-based syntax
 
