@@ -63,6 +63,10 @@ type SecretManagerCreateRequest struct {
 
 	// Plaintext is the plaintext to store.
 	Plaintext []byte
+
+	// Locations is an array indicating the canonical IDs (e.g. "us-east1") of the locations to the replicate data at.
+	// This defaults to the automatic replication policy when not specified. An empty array is not allowed.
+	Locations []string
 }
 
 func (r *SecretManagerCreateRequest) isCreateRequest() {}
@@ -114,6 +118,31 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		return nil, errors.New("missing plaintext")
 	}
 
+	var replication *secretspb.Replication
+	if i.Locations == nil {
+		replication = &secretspb.Replication{
+			Replication: &secretspb.Replication_Automatic_{
+				Automatic: &secretspb.Replication_Automatic{},
+			},
+		}
+	} else if len(i.Locations) > 0 {
+		replicas := make([]*secretspb.Replication_UserManaged_Replica, len(i.Locations))
+
+		for n, loc := range i.Locations {
+			replicas[n] = &secretspb.Replication_UserManaged_Replica{Location: loc}
+		}
+
+		replication = &secretspb.Replication{
+			Replication: &secretspb.Replication_UserManaged_{
+				UserManaged: &secretspb.Replication_UserManaged{
+					Replicas: replicas,
+				},
+			},
+		}
+	} else {
+		return nil, errors.New("missing locations")
+	}
+
 	logger := c.Logger().WithFields(logrus.Fields{
 		"project": project,
 		"name":    name,
@@ -127,14 +156,9 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 	secretResp, err := c.secretManagerClient.CreateSecret(ctx, &secretspb.CreateSecretRequest{
 		Parent:   fmt.Sprintf("projects/%s", project),
 		SecretId: name,
-		Secret: &secretspb.Secret{
-			Replication: &secretspb.Replication{
-				Replication: &secretspb.Replication_Automatic_{
-					Automatic: &secretspb.Replication_Automatic{},
-				},
-			},
-		},
+		Secret:   &secretspb.Secret{Replication: replication},
 	})
+
 	if err != nil {
 		terr, ok := grpcstatus.FromError(err)
 		if ok && terr.Code() == grpccodes.AlreadyExists {
@@ -161,6 +185,7 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		Version:   path.Base(versionResp.Name),
 		Plaintext: plaintext,
 		UpdatedAt: timestampToTime(versionResp.CreateTime),
+		Locations: i.Locations,
 	}, nil
 }
 

@@ -144,12 +144,24 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		return nil, errors.Wrap(err, "failed to access secret")
 	}
 
+	logger.Debug("parsing location")
+
+	var locations []string
+	replication := versionResp.ReplicationStatus.GetUserManaged()
+	if replication != nil {
+		locations = make([]string, len(replication.Replicas))
+		for i, r := range replication.Replicas {
+			locations[i] = r.Location
+		}
+	}
+
 	return &Secret{
 		Parent:    project,
 		Name:      name,
 		Version:   path.Base(versionResp.Name),
 		Plaintext: accessResp.Payload.Data,
 		UpdatedAt: timestampToTime(versionResp.CreateTime),
+		Locations: locations,
 	}, nil
 }
 

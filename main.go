@@ -70,6 +70,7 @@ var (
 	kmsLocation    string
 	kmsKeyRing     string
 	kmsCryptoKey   string
+	smLocations    []string
 )
 
 var rootCmd = &cobra.Command{
@@ -449,6 +450,8 @@ func main() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption")
+	createCmd.Flags().StringSliceVar(&smLocations, "locations", nil,
+		"Canonical IDs (e.g. 'us-east1') to replicate secrets to, seperated by comma's")
 
 	rootCmd.AddCommand(deleteCmd)
 
@@ -639,6 +642,7 @@ func createRun(cmd *cobra.Command, args []string) error {
 		secret, err := client.Create(ctx, &berglas.SecretManagerCreateRequest{
 			Project:   ref.Project(),
 			Name:      ref.Name(),
+			Locations: smLocations,
 			Plaintext: plaintext,
 		})
 		if err != nil {
