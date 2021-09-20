@@ -70,6 +70,7 @@ var (
 	kmsLocation    string
 	kmsKeyRing     string
 	kmsCryptoKey   string
+	smLocations    []string
 )
 
 var rootCmd = &cobra.Command{
@@ -449,6 +450,8 @@ func main() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption")
+	createCmd.Flags().StringSliceVar(&smLocations, "locations", nil,
+		"Comma-separated canonical IDs in which to replicate secrets (e.g. 'us-east1,us-west-1')")
 
 	rootCmd.AddCommand(deleteCmd)
 
@@ -639,6 +642,7 @@ func createRun(cmd *cobra.Command, args []string) error {
 		secret, err := client.Create(ctx, &berglas.SecretManagerCreateRequest{
 			Project:   ref.Project(),
 			Name:      ref.Name(),
+			Locations: smLocations,
 			Plaintext: plaintext,
 		})
 		if err != nil {
@@ -647,6 +651,12 @@ func createRun(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(stdout, "Successfully created secret [%s] with version [%s]\n",
 			secret.Name, secret.Version)
 	case berglas.ReferenceTypeStorage:
+		// Check if no unsupported options have been given
+		if len(smLocations) > 0 {
+			return misuseError(fmt.Errorf("locations on a per-secret basis unsupported for Storage keys"))
+		}
+
+		// Create the requested secret
 		secret, err := client.Create(ctx, &berglas.StorageCreateRequest{
 			Bucket:    ref.Bucket(),
 			Object:    ref.Object(),
@@ -656,6 +666,7 @@ func createRun(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return apiError(err)
 		}
+
 		fmt.Fprintf(stdout, "Successfully created secret [%s] with generation [%d]\n",
 			secret.Name, secret.Generation)
 	default:

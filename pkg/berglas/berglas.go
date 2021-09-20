@@ -140,6 +140,11 @@ type Secret struct {
 
 	// KMSKey is the key used to encrypt the secret key. Cloud Storage only.
 	KMSKey string
+
+	// Locations is the list of custom locations the secret is replicated to.
+	// This is set to nil if the secret is automatically replicated instead.
+	// Secret Manager only.
+	Locations []string
 }
 
 // secretFromAttrs constructs a secret from the given object attributes and
