@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"sort"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -154,6 +155,7 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 			locations[i] = r.Location
 		}
 	}
+	sort.Strings(locations)
 
 	return &Secret{
 		Parent:    project,

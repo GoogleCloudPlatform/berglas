@@ -48,7 +48,7 @@ func TestClient_Create_secretManager(t *testing.T) {
 		}
 
 		if createResp.Locations != nil {
-			t.Errorf("expected the locations to be set to `nil`, got %+v", createResp.Locations)
+			t.Errorf("expected %#v to be %#v", createResp.Locations, nil)
 		}
 		if !reflect.DeepEqual(createResp, readResp) {
 			t.Errorf("expected %#v to be %#v", createResp, readResp)

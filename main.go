@@ -451,7 +451,7 @@ func main() {
 	createCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for encryption")
 	createCmd.Flags().StringSliceVar(&smLocations, "locations", nil,
-		"Canonical IDs (e.g. 'us-east1') to replicate secrets to, seperated by comma's")
+		"Comma-separated canonical IDs in which to replicate secrets (e.g. 'us-east1,us-west-1')")
 
 	rootCmd.AddCommand(deleteCmd)
 

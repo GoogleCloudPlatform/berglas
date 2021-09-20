@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -64,8 +65,9 @@ type SecretManagerCreateRequest struct {
 	// Plaintext is the plaintext to store.
 	Plaintext []byte
 
-	// Locations is an array indicating the canonical IDs (e.g. "us-east1") of the locations to the replicate data at.
-	// This defaults to the automatic replication policy when not specified. An empty array is not allowed.
+	// Locations is an array indicating the canonical IDs (e.g. "us-east1") of
+	// the locations to the replicate data at. This defaults to the automatic
+	// replication policy when not specified. An empty array is not allowed.
 	Locations []string
 }
 
@@ -119,13 +121,14 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 	}
 
 	var replication *secretspb.Replication
-	if i.Locations == nil {
+	if len(i.Locations) == 0 {
 		replication = &secretspb.Replication{
 			Replication: &secretspb.Replication_Automatic_{
 				Automatic: &secretspb.Replication_Automatic{},
 			},
 		}
-	} else if len(i.Locations) > 0 {
+	} else {
+		sort.Strings(i.Locations)
 		replicas := make([]*secretspb.Replication_UserManaged_Replica, len(i.Locations))
 
 		for n, loc := range i.Locations {
@@ -139,8 +142,6 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 				},
 			},
 		}
-	} else {
-		return nil, errors.New("missing locations")
 	}
 
 	logger := c.Logger().WithFields(logrus.Fields{
