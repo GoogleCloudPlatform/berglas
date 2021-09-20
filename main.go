@@ -651,6 +651,12 @@ func createRun(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(stdout, "Successfully created secret [%s] with version [%s]\n",
 			secret.Name, secret.Version)
 	case berglas.ReferenceTypeStorage:
+		// Check if no unsupported options have been given
+		if len(smLocations) > 0 {
+			return misuseError(fmt.Errorf("locations on a per-secret basis unsupported for Storage keys"))
+		}
+
+		// Create the requested secret
 		secret, err := client.Create(ctx, &berglas.StorageCreateRequest{
 			Bucket:    ref.Bucket(),
 			Object:    ref.Object(),
@@ -660,6 +666,7 @@ func createRun(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return apiError(err)
 		}
+
 		fmt.Fprintf(stdout, "Successfully created secret [%s] with generation [%d]\n",
 			secret.Name, secret.Generation)
 	default:
