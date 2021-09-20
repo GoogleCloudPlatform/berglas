@@ -43,7 +43,7 @@ docker-push:
 .PHONY: docker-push
 
 fmtcheck:
-	@command -v goimports > /dev/null 2>&1 || (cd tools/ && go get golang.org/x/tools/cmd/goimports && cd ..)
+	@go install golang.org/x/tools/cmd/goimports
 	@CHANGES="$$(goimports -d $(GOFMT_FILES))"; \
 		if [ -n "$${CHANGES}" ]; then \
 			echo "Unformatted (run goimports -w .):\n\n$${CHANGES}\n\n"; \
@@ -62,12 +62,12 @@ publish:
 .PHONY: publish
 
 spellcheck:
-	@command -v misspell > /dev/null 2>&1 || (cd tools/ && go get github.com/client9/misspell/cmd/misspell && cd ..)
+	@go install github.com/client9/misspell/cmd/misspell
 	@misspell -locale="US" -error -source="text" **/*
 .PHONY: spellcheck
 
 staticcheck:
-	@command -v staticcheck > /dev/null 2>&1 || (cd tools/ && go get honnef.co/go/tools/cmd/staticcheck && cd ..)
+	@go install honnef.co/go/tools/cmd/staticcheck
 	@staticcheck -checks="all" -tests $(GOFMT_FILES)
 .PHONY: staticcheck
 
@@ -85,7 +85,7 @@ update-go-samples:
 		rm -f $${dir}/go.mod $${dir}/go.sum ; \
 		(cd $${dir} && \
 			go mod init github.com/GoogleCloudPlatform/berglas/$${dir} && \
-			go get github.com/GoogleCloudPlatform/berglas@v0.5.3 && \
+			go get github.com/GoogleCloudPlatform/berglas@v0.6.0 && \
 			go get ./... && \
 			go mod tidy) ; \
 	done
