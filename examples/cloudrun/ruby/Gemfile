@@ -14,5 +14,5 @@
 
 source 'https://rubygems.org'
 
-gem 'puma', '~> 3.12'
+gem 'puma', '~> 4.3'
 gem 'sinatra', '~> 2.0'
