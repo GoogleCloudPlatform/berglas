@@ -40,7 +40,7 @@ const (
 	// Name, Version, ProjectURL, and UserAgent are used to uniquely identify this
 	// package in logs and other binaries.
 	Name       = "berglas"
-	Version    = "0.5.3"
+	Version    = "0.6.2"
 	ProjectURL = "https://github.com/GoogleCloudPlatform/berglas"
 	UserAgent  = Name + "/" + Version + " (+" + ProjectURL + ")"
 )
