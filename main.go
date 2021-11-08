@@ -26,6 +26,7 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
@@ -900,45 +901,16 @@ func execRun(cmd *cobra.Command, args []string) error {
 		env[i] = fmt.Sprintf("%s=%s", k, s)
 	}
 
-	// Spawn the command
-	externalCmd := exec.CommandContext(ctx, execCmd, execArgs...)
-	externalCmd.Stdin = stdin
-	externalCmd.Stdout = stdout
-	externalCmd.Stderr = stderr
-	externalCmd.Env = env
-	if err := externalCmd.Start(); err != nil {
-		return misuseError(err)
+	execCmdFull, err := exec.LookPath(execCmd)
+	if err != nil {
+		return fmt.Errorf("failed to lookup path for %q: %w", execCmd, err)
 	}
 
-	// Listen for signals and send them to the underlying command
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh)
-	go func() {
-		for {
-			select {
-			case s := <-signalCh:
-				if externalCmd.Process == nil {
-					return
-				}
+	// Unlike os/exec, execv(3) expects the arguments to include the command.
+	execArgs = append([]string{execCmdFull}, execArgs...)
 
-				if signalErr := externalCmd.Process.Signal(s); signalErr != nil && err == nil {
-					fmt.Fprintf(stderr, "failed to signal command: %s\n", signalErr)
-				}
-			case <-ctx.Done():
-				signal.Stop(signalCh)
-				close(signalCh)
-				return
-			}
-		}
-	}()
-
-	// Wait for the command to finish
-	if err := externalCmd.Wait(); err != nil {
-		if terr, ok := err.(*exec.ExitError); ok && terr.ProcessState != nil {
-			code := terr.ProcessState.ExitCode()
-			return exitWithCode(code, errors.Wrap(terr, "process exited non-zero"))
-		}
-		return misuseError(err)
+	if err := syscall.Exec(execCmdFull, execArgs, env); err != nil {
+		return fmt.Errorf("failed to execute %q: %w", execCmd, err)
 	}
 	return nil
 }
