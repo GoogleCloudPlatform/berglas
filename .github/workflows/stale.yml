@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Close stale
+name: 'Close stale'
+
 on:
   schedule:
-  - cron: '0 0 * * *'
+  - cron: '0 */12 * * *'
 
 jobs:
   stale:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/stale@v3
+    - uses: 'actions/stale@v3'
       with:
         repo-token: '${{ secrets.GITHUB_TOKEN }}'
 
@@ -29,14 +30,14 @@ jobs:
           This issue is stale because it has been open for 14 days with no
           activity. It will automatically close after 7 more days of inactivity.
         stale-issue-label: 'kind/stale'
-        exempt-issue-labels: 'bug,enhancement'
+        exempt-issue-labels: 'priority/important-soon,kind/bug,kind/privacy,kind/enhancement'
 
         stale-pr-message: |-
           This Pull Request is stale because it has been open for 14 days with
           no activity. It will automatically close after 7 more days of
           inactivity.
         stale-pr-label: 'kind/stale'
-        exempt-pr-labels: 'bug,enhancement'
+        exempt-pr-labels: 'priority/important-soon,kind/bug,kind/privacy,kind/enhancement'
 
         days-before-stale: 14
         days-before-close: 7
