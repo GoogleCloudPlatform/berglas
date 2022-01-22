@@ -78,8 +78,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     - Install from source (requires a working Go installation):
 
       ```text
-      go get github.com/GoogleCloudPlatform/berglas/...
-      go install github.com/GoogleCloudPlatform/berglas
+      go install github.com/GoogleCloudPlatform/berglas@latest
       ```
 
 1. Export your project ID as an environment variable. The rest of this setup
