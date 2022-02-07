@@ -20,6 +20,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -29,11 +30,10 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
 	storagev1 "google.golang.org/api/storage/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -83,25 +83,25 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 
 	kmsClient, err := kms.NewKeyManagementClient(ctx, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kms client")
+		return nil, fmt.Errorf("failed to create kms client: %w", err)
 	}
 	c.kmsClient = kmsClient
 
 	secretManagerClient, err := secretmanager.NewClient(ctx, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create secretManager client")
+		return nil, fmt.Errorf("failed to create secretManager client: %w", err)
 	}
 	c.secretManagerClient = secretManagerClient
 
 	storageClient, err := storage.NewClient(ctx, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create storage client")
+		return nil, fmt.Errorf("failed to create storage client: %w", err)
 	}
 	c.storageClient = storageClient
 
 	storageIAMClient, err := storagev1.NewService(ctx, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create storagev1 client")
+		return nil, fmt.Errorf("failed to create storagev1 client: %w", err)
 	}
 	c.storageIAMClient = storageIAMClient
 
@@ -161,7 +161,7 @@ func secretFromAttrs(bucket string, attrs *storage.ObjectAttrs, plaintext []byte
 	}
 }
 
-func timestampToTime(ts *timestamp.Timestamp) time.Time {
+func timestampToTime(ts *timestamppb.Timestamp) time.Time {
 	if ts == nil || !ts.IsValid() {
 		return time.Unix(0, 0).UTC()
 	}
@@ -189,23 +189,23 @@ func kmsKeyTrimVersion(s string) string {
 func envelopeDecrypt(dek, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(dek)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create cipher from dek")
+		return nil, fmt.Errorf("failed to create cipher from dek: %w", err)
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create gcm from dek")
+		return nil, fmt.Errorf("failed to create gcm from dek: %w", err)
 	}
 
 	size := aesgcm.NonceSize()
 	if len(data) < size {
-		return nil, errors.New("malformed ciphertext")
+		return nil, fmt.Errorf("malformed ciphertext")
 	}
 	nonce, ciphertext := data[:size], data[size:]
 
 	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decrypt ciphertext with dek")
+		return nil, fmt.Errorf("failed to decrypt ciphertext with dek: %w", err)
 	}
 	return plaintext, nil
 }
@@ -215,23 +215,23 @@ func envelopeDecrypt(dek, data []byte) ([]byte, error) {
 func envelopeEncrypt(plaintext []byte) ([]byte, []byte, error) {
 	key := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate random key bytes")
+		return nil, nil, fmt.Errorf("failed to generate random key bytes: %w", err)
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create cipher from key")
+		return nil, nil, fmt.Errorf("failed to create cipher from key: %w", err)
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create gcm cipher")
+		return nil, nil, fmt.Errorf("failed to create gcm cipher: %w", err)
 	}
 
 	// Generate nonce
 	nonce := make([]byte, aesgcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate random nonce bytes")
+		return nil, nil, fmt.Errorf("failed to generate random nonce bytes: %w", err)
 	}
 
 	// Encrypt the ciphertext with the DEK

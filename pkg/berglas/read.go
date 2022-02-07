@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
@@ -85,7 +84,7 @@ func Read(ctx context.Context, i readRequest) (*Secret, error) {
 // secret stored in Cloud Storage.
 func (c *Client) Read(ctx context.Context, i readRequest) (*Secret, error) {
 	if i == nil {
-		return nil, errors.New("missing request")
+		return nil, fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -94,19 +93,19 @@ func (c *Client) Read(ctx context.Context, i readRequest) (*Secret, error) {
 	case *StorageReadRequest:
 		return c.storageRead(ctx, t)
 	default:
-		return nil, errors.Errorf("unknown read type %T", t)
+		return nil, fmt.Errorf("unknown read type %T", t)
 	}
 }
 
 func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequest) (*Secret, error) {
 	project := i.Project
 	if project == "" {
-		return nil, errors.New("missing project")
+		return nil, fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return nil, errors.New("missing secret name")
+		return nil, fmt.Errorf("missing secret name")
 	}
 
 	version := i.Version
@@ -133,7 +132,7 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		if ok && terr.Code() == grpccodes.NotFound {
 			return nil, errSecretDoesNotExist
 		}
-		return nil, errors.Wrap(err, "failed to read secret")
+		return nil, fmt.Errorf("failed to read secret: %w", err)
 	}
 
 	logger.Debug("accessing secret data")
@@ -142,7 +141,7 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, name, version),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to access secret")
+		return nil, fmt.Errorf("failed to access secret: %w", err)
 	}
 
 	logger.Debug("parsing location")
@@ -170,12 +169,12 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secret, error) {
 	bucket := i.Bucket
 	if bucket == "" {
-		return nil, errors.New("missing bucket name")
+		return nil, fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return nil, errors.New("missing object name")
+		return nil, fmt.Errorf("missing object name")
 	}
 
 	generation := i.Generation
@@ -204,10 +203,10 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		return nil, errSecretDoesNotExist
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read secret metadata")
+		return nil, fmt.Errorf("failed to read secret metadata: %w", err)
 	}
 	if attrs.Metadata == nil || attrs.Metadata[MetadataKMSKey] == "" {
-		return nil, errors.New("missing kms key in secret metadata")
+		return nil, fmt.Errorf("missing kms key in secret metadata")
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
@@ -223,10 +222,10 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		Generation(generation).
 		NewReader(ctx)
 	if err == storage.ErrObjectNotExist {
-		return nil, errors.New("secret object not found")
+		return nil, fmt.Errorf("secret object not found")
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read secret")
+		return nil, fmt.Errorf("failed to read secret: %w", err)
 	}
 
 	// Read the entire response into memory
@@ -234,10 +233,10 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 
 	data, err := ioutil.ReadAll(ior)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read secret into string")
+		return nil, fmt.Errorf("failed to read secret into string: %w", err)
 	}
 	if err := ior.Close(); err != nil {
-		return nil, errors.Wrap(err, "failed to close reader")
+		return nil, fmt.Errorf("failed to close reader: %w", err)
 	}
 
 	// Split into parts
@@ -245,17 +244,17 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 
 	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) < 2 {
-		return nil, errors.New("invalid ciphertext: not enough parts")
+		return nil, fmt.Errorf("invalid ciphertext: not enough parts")
 	}
 
 	encDEK, err := base64.StdEncoding.DecodeString(parts[0])
 	if err != nil {
-		return nil, errors.New("invalid ciphertext: failed to parse dek")
+		return nil, fmt.Errorf("invalid ciphertext: failed to parse dek")
 	}
 
 	ciphertext, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		return nil, errors.New("invalid ciphertext: failed to parse ciphertext")
+		return nil, fmt.Errorf("invalid ciphertext: failed to parse ciphertext")
 	}
 
 	// Decrypt the DEK using a KMS key
@@ -267,7 +266,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		AdditionalAuthenticatedData: []byte(object),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decrypt dek")
+		return nil, fmt.Errorf("failed to decrypt dek: %w", err)
 	}
 	dek := kmsResp.Plaintext
 
@@ -276,7 +275,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 
 	plaintext, err := envelopeDecrypt(dek, ciphertext)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decrypt envelope")
+		return nil, fmt.Errorf("failed to decrypt envelope: %w", err)
 	}
 	return secretFromAttrs(bucket, attrs, plaintext), nil
 }

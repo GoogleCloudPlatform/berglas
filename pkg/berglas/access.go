@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
@@ -79,7 +78,7 @@ func Access(ctx context.Context, i accessRequest) ([]byte, error) {
 // this accesses a secret stored in Cloud Storage encrypted with Cloud KMS.
 func (c *Client) Access(ctx context.Context, i accessRequest) ([]byte, error) {
 	if i == nil {
-		return nil, errors.New("missing request")
+		return nil, fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -88,19 +87,19 @@ func (c *Client) Access(ctx context.Context, i accessRequest) ([]byte, error) {
 	case *StorageAccessRequest:
 		return c.storageAccess(ctx, t)
 	default:
-		return nil, errors.Errorf("unknown access type %T", t)
+		return nil, fmt.Errorf("unknown access type %T", t)
 	}
 }
 
 func (c *Client) secretManagerAccess(ctx context.Context, i *SecretManagerAccessRequest) ([]byte, error) {
 	project := i.Project
 	if project == "" {
-		return nil, errors.New("missing project")
+		return nil, fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return nil, errors.New("missing secret name")
+		return nil, fmt.Errorf("missing secret name")
 	}
 
 	version := i.Version
@@ -125,7 +124,7 @@ func (c *Client) secretManagerAccess(ctx context.Context, i *SecretManagerAccess
 		if ok && terr.Code() == grpccodes.NotFound {
 			return nil, errSecretDoesNotExist
 		}
-		return nil, errors.Wrap(err, "failed to access secret")
+		return nil, fmt.Errorf("failed to access secret: %w", err)
 	}
 
 	return resp.Payload.Data, nil
@@ -134,12 +133,12 @@ func (c *Client) secretManagerAccess(ctx context.Context, i *SecretManagerAccess
 func (c *Client) storageAccess(ctx context.Context, i *StorageAccessRequest) ([]byte, error) {
 	bucket := i.Bucket
 	if bucket == "" {
-		return nil, errors.New("missing bucket name")
+		return nil, fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return nil, errors.New("missing object name")
+		return nil, fmt.Errorf("missing object name")
 	}
 
 	generation := i.Generation
@@ -162,7 +161,7 @@ func (c *Client) storageAccess(ctx context.Context, i *StorageAccessRequest) ([]
 		Generation: generation,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to access secret")
+		return nil, fmt.Errorf("failed to access secret: %w", err)
 	}
 	return secret.Plaintext, nil
 }

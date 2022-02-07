@@ -17,11 +17,11 @@ package berglas
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -122,7 +122,7 @@ func (f *LogFormatterStackdriver) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// JSON!
 	if err := json.NewEncoder(b).Encode(data); err != nil {
-		return nil, errors.Wrap(err, "failed to marshal JSON")
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
 	return b.Bytes(), nil

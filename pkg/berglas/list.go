@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
@@ -110,7 +109,7 @@ func List(ctx context.Context, i listRequest) (*ListResponse, error) {
 // of secrets.
 func (c *Client) List(ctx context.Context, i listRequest) (*ListResponse, error) {
 	if i == nil {
-		return nil, errors.New("missing request")
+		return nil, fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -119,14 +118,14 @@ func (c *Client) List(ctx context.Context, i listRequest) (*ListResponse, error)
 	case *StorageListRequest:
 		return c.storageList(ctx, t)
 	default:
-		return nil, errors.Errorf("unknown list type %T", t)
+		return nil, fmt.Errorf("unknown list type %T", t)
 	}
 }
 
 func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequest) (*ListResponse, error) {
 	project := i.Project
 	if project == "" {
-		return nil, errors.New("missing project")
+		return nil, fmt.Errorf("missing project")
 	}
 
 	prefix := i.Prefix
@@ -153,7 +152,7 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to list secrets")
+			return nil, fmt.Errorf("failed to list secrets: %w", err)
 		}
 
 		if strings.HasPrefix(path.Base(resp.Name), prefix) {
@@ -191,7 +190,7 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 				break
 			}
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to list versions for %s", s.Name)
+				return nil, fmt.Errorf("failed to list versions for %s: %w", s.Name, err)
 			}
 
 			allSecretVersions = append(allSecretVersions, &Secret{
@@ -213,7 +212,7 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListResponse, error) {
 	bucket := i.Bucket
 	if bucket == "" {
-		return nil, errors.New("missing bucket name")
+		return nil, fmt.Errorf("missing bucket name")
 	}
 
 	prefix := i.Prefix
@@ -246,7 +245,7 @@ func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListR
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to list secrets")
+			return nil, fmt.Errorf("failed to list secrets: %w", err)
 		}
 
 		// Check that it has metadata
