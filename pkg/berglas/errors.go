@@ -14,9 +14,7 @@
 
 package berglas
 
-import (
-	"github.com/pkg/errors"
-)
+import "errors"
 
 const (
 	// errSecretAlreadyExists is the error returned if a secret already exists.
@@ -40,17 +38,17 @@ func (e Error) Error() string {
 // IsSecretAlreadyExistsErr returns true if the given error means that the
 // secret already exists.
 func IsSecretAlreadyExistsErr(err error) bool {
-	return errors.Cause(err) == errSecretAlreadyExists
+	return errors.Is(err, errSecretAlreadyExists)
 }
 
 // IsSecretDoesNotExistErr returns true if the given error means that the secret
 // does not exist.
 func IsSecretDoesNotExistErr(err error) bool {
-	return errors.Cause(err) == errSecretDoesNotExist
+	return errors.Is(err, errSecretDoesNotExist)
 }
 
 // IsSecretModifiedErr returns true if the given error means that the secret
 // was modified (CAS failure).
 func IsSecretModifiedErr(err error) bool {
-	return errors.Cause(err) == errSecretModified
+	return errors.Is(err, errSecretModified)
 }

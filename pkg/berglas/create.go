@@ -20,7 +20,6 @@ import (
 	"path"
 	"sort"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	grpccodes "google.golang.org/grpc/codes"
@@ -91,7 +90,7 @@ func Create(ctx context.Context, i createRequest) (*Secret, error) {
 // existing secret.
 func (c *Client) Create(ctx context.Context, i createRequest) (*Secret, error) {
 	if i == nil {
-		return nil, errors.New("missing request")
+		return nil, fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -100,24 +99,24 @@ func (c *Client) Create(ctx context.Context, i createRequest) (*Secret, error) {
 	case *StorageCreateRequest:
 		return c.storageCreate(ctx, t)
 	default:
-		return nil, errors.Errorf("unknown create type %T", t)
+		return nil, fmt.Errorf("unknown create type %T", t)
 	}
 }
 
 func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreateRequest) (*Secret, error) {
 	project := i.Project
 	if project == "" {
-		return nil, errors.New("missing project")
+		return nil, fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return nil, errors.New("missing secret name")
+		return nil, fmt.Errorf("missing secret name")
 	}
 
 	plaintext := i.Plaintext
 	if plaintext == nil {
-		return nil, errors.New("missing plaintext")
+		return nil, fmt.Errorf("missing plaintext")
 	}
 
 	var replication *secretspb.Replication
@@ -165,7 +164,7 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		if ok && terr.Code() == grpccodes.AlreadyExists {
 			return nil, errSecretAlreadyExists
 		}
-		return nil, errors.Wrapf(err, "failed to create secret")
+		return nil, fmt.Errorf("failed to create secret: %w", err)
 	}
 
 	logger.Debug("creating secret version")
@@ -177,7 +176,7 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create secret version")
+		return nil, fmt.Errorf("failed to create secret version: %w", err)
 	}
 
 	return &Secret{
@@ -193,22 +192,22 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 func (c *Client) storageCreate(ctx context.Context, i *StorageCreateRequest) (*Secret, error) {
 	bucket := i.Bucket
 	if bucket == "" {
-		return nil, errors.New("missing bucket name")
+		return nil, fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return nil, errors.New("missing object name")
+		return nil, fmt.Errorf("missing object name")
 	}
 
 	key := i.Key
 	if key == "" {
-		return nil, errors.New("missing key name")
+		return nil, fmt.Errorf("missing key name")
 	}
 
 	plaintext := i.Plaintext
 	if plaintext == nil {
-		return nil, errors.New("missing plaintext")
+		return nil, fmt.Errorf("missing plaintext")
 	}
 
 	logger := c.Logger().WithFields(logrus.Fields{
@@ -222,7 +221,7 @@ func (c *Client) storageCreate(ctx context.Context, i *StorageCreateRequest) (*S
 
 	secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext, 0, 0)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create secret")
+		return nil, fmt.Errorf("failed to create secret: %w", err)
 	}
 	return secret, nil
 }

@@ -16,11 +16,11 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -80,7 +80,7 @@ func Grant(ctx context.Context, i grantRequest) error {
 // underlying KMS key.
 func (c *Client) Grant(ctx context.Context, i grantRequest) error {
 	if i == nil {
-		return errors.New("missing request")
+		return fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -89,19 +89,19 @@ func (c *Client) Grant(ctx context.Context, i grantRequest) error {
 	case *StorageGrantRequest:
 		return c.storageGrant(ctx, t)
 	default:
-		return errors.Errorf("unknown grant type %T", t)
+		return fmt.Errorf("unknown grant type %T", t)
 	}
 }
 
 func (c *Client) secretManagerGrant(ctx context.Context, i *SecretManagerGrantRequest) error {
 	project := i.Project
 	if project == "" {
-		return errors.New("missing project")
+		return fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return errors.New("missing secret name")
+		return fmt.Errorf("missing secret name")
 	}
 
 	members := i.Members
@@ -133,7 +133,7 @@ func (c *Client) secretManagerGrant(ctx context.Context, i *SecretManagerGrantRe
 			return errSecretDoesNotExist
 		}
 
-		return errors.Wrapf(err, "failed to update Secret Manager IAM policy for %s", name)
+		return fmt.Errorf("failed to update Secret Manager IAM policy for %s: %w", name, err)
 	}
 
 	return nil
@@ -142,12 +142,12 @@ func (c *Client) secretManagerGrant(ctx context.Context, i *SecretManagerGrantRe
 func (c *Client) storageGrant(ctx context.Context, i *StorageGrantRequest) error {
 	bucket := i.Bucket
 	if bucket == "" {
-		return errors.New("missing bucket name")
+		return fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return errors.New("missing object name")
+		return fmt.Errorf("missing object name")
 	}
 
 	members := i.Members
@@ -174,10 +174,10 @@ func (c *Client) storageGrant(ctx context.Context, i *StorageGrantRequest) error
 		return errSecretDoesNotExist
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to read secret metadata")
+		return fmt.Errorf("failed to read secret metadata: %w", err)
 	}
 	if attrs.Metadata == nil || attrs.Metadata[MetadataKMSKey] == "" {
-		return errors.New("missing kms key in secret metadata")
+		return fmt.Errorf("missing kms key in secret metadata")
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
@@ -194,7 +194,7 @@ func (c *Client) storageGrant(ctx context.Context, i *StorageGrantRequest) error
 		}
 		return p
 	}); err != nil {
-		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
+		return fmt.Errorf("failed to update Storage IAM policy for %s: %w", object, err)
 	}
 
 	// Grant access to KMS
@@ -207,7 +207,7 @@ func (c *Client) storageGrant(ctx context.Context, i *StorageGrantRequest) error
 		}
 		return p
 	}); err != nil {
-		return errors.Wrapf(err, "failed to update KMS IAM policy for %s", key)
+		return fmt.Errorf("failed to update KMS IAM policy for %s: %w", key, err)
 	}
 
 	return nil

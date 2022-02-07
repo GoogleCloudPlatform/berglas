@@ -16,11 +16,11 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -80,7 +80,7 @@ func Revoke(ctx context.Context, i revokeRequest) error {
 // the underlying KMS key.
 func (c *Client) Revoke(ctx context.Context, i revokeRequest) error {
 	if i == nil {
-		return errors.New("missing request")
+		return fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -89,19 +89,19 @@ func (c *Client) Revoke(ctx context.Context, i revokeRequest) error {
 	case *StorageRevokeRequest:
 		return c.storageRevoke(ctx, t)
 	default:
-		return errors.Errorf("unknown revoke type %T", t)
+		return fmt.Errorf("unknown revoke type %T", t)
 	}
 }
 
 func (c *Client) secretManagerRevoke(ctx context.Context, i *SecretManagerRevokeRequest) error {
 	project := i.Project
 	if project == "" {
-		return errors.New("missing project")
+		return fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return errors.New("missing secret name")
+		return fmt.Errorf("missing secret name")
 	}
 
 	members := i.Members
@@ -133,7 +133,7 @@ func (c *Client) secretManagerRevoke(ctx context.Context, i *SecretManagerRevoke
 			return errSecretDoesNotExist
 		}
 
-		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", name)
+		return fmt.Errorf("failed to update Storage IAM policy for %s: %w", name, err)
 	}
 
 	return nil
@@ -142,12 +142,12 @@ func (c *Client) secretManagerRevoke(ctx context.Context, i *SecretManagerRevoke
 func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) error {
 	bucket := i.Bucket
 	if bucket == "" {
-		return errors.New("missing bucket name")
+		return fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return errors.New("missing object name")
+		return fmt.Errorf("missing object name")
 	}
 
 	members := i.Members
@@ -174,10 +174,10 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 		return errSecretDoesNotExist
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to read secret metadata")
+		return fmt.Errorf("failed to read secret metadata: %w", err)
 	}
 	if attrs.Metadata == nil || attrs.Metadata[MetadataKMSKey] == "" {
-		return errors.New("missing kms key in secret metadata")
+		return fmt.Errorf("missing kms key in secret metadata")
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
@@ -194,7 +194,7 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 		}
 		return p
 	}); err != nil {
-		return errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
+		return fmt.Errorf("failed to update Storage IAM policy for %s: %w", object, err)
 	}
 
 	// Remove access to KMS
@@ -207,7 +207,7 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 		}
 		return p
 	}); err != nil {
-		return errors.Wrapf(err, "failed to update KMS IAM policy for %s", key)
+		return fmt.Errorf("failed to update KMS IAM policy for %s: %w", key, err)
 	}
 
 	return nil

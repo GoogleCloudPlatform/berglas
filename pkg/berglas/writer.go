@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/googleapi"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
@@ -48,7 +47,7 @@ func (c *Client) encryptAndWrite(
 	logger.Debug("generating envelope")
 	dek, ciphertext, err := envelopeEncrypt(plaintext)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform envelope encryption")
+		return nil, fmt.Errorf("failed to perform envelope encryption: %w", err)
 	}
 
 	// Encrypt the plaintext using a KMS key
@@ -59,7 +58,7 @@ func (c *Client) encryptAndWrite(
 		AdditionalAuthenticatedData: []byte(object),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt secret")
+		return nil, fmt.Errorf("failed to encrypt secret: %w", err)
 	}
 	encDEK := kmsResp.Ciphertext
 
@@ -104,7 +103,7 @@ func (c *Client) encryptAndWrite(
 	// Write
 	logger.WithField("metadata", iow.Metadata).Debug("writing object to storage")
 	if _, err := iow.Write([]byte(blob)); err != nil {
-		return nil, errors.Wrap(err, "failed to save encrypted ciphertext to storage")
+		return nil, fmt.Errorf("failed to save encrypted ciphertext to storage: %w", err)
 	}
 
 	// Close and flush
@@ -115,7 +114,7 @@ func (c *Client) encryptAndWrite(
 		if terr, ok := err.(*googleapi.Error); ok {
 			switch terr.Code {
 			case http.StatusNotFound:
-				return nil, errors.New("bucket does not exist")
+				return nil, fmt.Errorf("bucket does not exist")
 			case http.StatusPreconditionFailed:
 				if conds.DoesNotExist {
 					return nil, errSecretAlreadyExists
@@ -124,7 +123,7 @@ func (c *Client) encryptAndWrite(
 			}
 		}
 
-		return nil, errors.Wrap(err, "failed to write to bucket")
+		return nil, fmt.Errorf("failed to write to bucket: %w", err)
 	}
 
 	return secretFromAttrs(bucket, iow.Attrs(), plaintext), nil

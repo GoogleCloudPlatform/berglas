@@ -21,7 +21,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/gammazero/workerpool"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/iterator"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
@@ -75,7 +74,7 @@ func Delete(ctx context.Context, i deleteRequest) error {
 // deletes a secret stored in Cloud Storage.
 func (c *Client) Delete(ctx context.Context, i deleteRequest) error {
 	if i == nil {
-		return errors.New("missing request")
+		return fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -84,19 +83,19 @@ func (c *Client) Delete(ctx context.Context, i deleteRequest) error {
 	case *StorageDeleteRequest:
 		return c.storageDelete(ctx, t)
 	default:
-		return errors.Errorf("unknown delete type %T", t)
+		return fmt.Errorf("unknown delete type %T", t)
 	}
 }
 
 func (c *Client) secretManagerDelete(ctx context.Context, i *SecretManagerDeleteRequest) error {
 	project := i.Project
 	if project == "" {
-		return errors.New("missing project")
+		return fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return errors.New("missing secret name")
+		return fmt.Errorf("missing secret name")
 	}
 
 	logger := c.Logger().WithFields(logrus.Fields{
@@ -112,7 +111,7 @@ func (c *Client) secretManagerDelete(ctx context.Context, i *SecretManagerDelete
 	}); err != nil {
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.NotFound {
-			return errors.Wrap(err, "failed to delete secret")
+			return fmt.Errorf("failed to delete secret: %w", err)
 		}
 	}
 	return nil
@@ -121,12 +120,12 @@ func (c *Client) secretManagerDelete(ctx context.Context, i *SecretManagerDelete
 func (c *Client) storageDelete(ctx context.Context, i *StorageDeleteRequest) error {
 	bucket := i.Bucket
 	if bucket == "" {
-		return errors.New("missing bucket name")
+		return fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return errors.New("missing object name")
+		return fmt.Errorf("missing object name")
 	}
 
 	logger := c.Logger().WithFields(logrus.Fields{
@@ -166,7 +165,7 @@ L:
 			select {
 			case <-childCtx.Done():
 				logger.Debug("exiting because context finished")
-			case errCh <- errors.Wrap(err, "failed to list secrets"):
+			case errCh <- fmt.Errorf("failed to list secrets: %w", err):
 				logger.Debug("pushed error onto channel, canceling other jobs")
 				cancel()
 			default:
@@ -198,7 +197,7 @@ L:
 
 					select {
 					case <-childCtx.Done():
-					case errCh <- errors.Wrap(err, "failed to delete generation"):
+					case errCh <- fmt.Errorf("failed to delete generation: %w", err):
 						logger.Debug("worker pushed error onto channel, canceling other jobs")
 						cancel()
 					default:
@@ -216,7 +215,7 @@ L:
 
 	select {
 	case err := <-errCh:
-		return errors.Wrap(err, "failed to delete secret")
+		return fmt.Errorf("failed to delete secret: %w", err)
 	default:
 		return nil
 	}

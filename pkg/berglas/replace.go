@@ -2,9 +2,9 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,7 +39,7 @@ func (c *Client) Replace(ctx context.Context, key string) error {
 	}
 
 	if err := os.Setenv(key, string(plaintext)); err != nil {
-		return errors.Wrapf(err, "failed to set %s", key)
+		return fmt.Errorf("failed to set %s: %w", key, err)
 	}
 	return nil
 }

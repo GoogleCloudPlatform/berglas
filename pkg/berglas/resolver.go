@@ -16,10 +16,10 @@ package berglas
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +48,7 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 
 	ref, err := ParseReference(s)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse reference %s", s)
+		return nil, fmt.Errorf("failed to parse reference %s: %w", s, err)
 	}
 
 	var req accessRequest
@@ -69,7 +69,7 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 
 	plaintext, err := c.Access(ctx, req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to access secret %s", ref.String())
+		return nil, fmt.Errorf("failed to access secret %s: %w", ref.String(), err)
 	}
 
 	if pth := ref.Filepath(); pth != "" {
@@ -77,25 +77,25 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 
 		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to open filepath %s", pth)
+			return nil, fmt.Errorf("failed to open filepath %s: %w", pth, err)
 		}
 
 		if chmodSupported {
 			if err := f.Chmod(0600); err != nil {
-				return nil, errors.Wrapf(err, "failed to chmod filepath %s", pth)
+				return nil, fmt.Errorf("failed to chmod filepath %s: %w", pth, err)
 			}
 		}
 
 		if _, err := f.Write(plaintext); err != nil {
-			return nil, errors.Wrapf(err, "failed to write secret to filepath %s", pth)
+			return nil, fmt.Errorf("failed to write secret to filepath %s: %w", pth, err)
 		}
 
 		if err := f.Sync(); err != nil {
-			return nil, errors.Wrapf(err, "failed to sync filepath %s", pth)
+			return nil, fmt.Errorf("failed to sync filepath %s: %w", pth, err)
 		}
 
 		if err := f.Close(); err != nil {
-			return nil, errors.Wrapf(err, "failed to close filepath %s", pth)
+			return nil, fmt.Errorf("failed to close filepath %s: %w", pth, err)
 		}
 
 		// Set the plaintext to the resulting file path

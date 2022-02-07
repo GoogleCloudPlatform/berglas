@@ -30,7 +30,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -598,22 +597,22 @@ func completionRun(cmd *cobra.Command, args []string) error {
 	switch shell := args[0]; shell {
 	case "bash":
 		if err := rootCmd.GenBashCompletion(stdout); err != nil {
-			err = errors.Wrap(err, "failed to generate bash completion")
+			err = fmt.Errorf("failed to generate bash completion: %w", err)
 			return apiError(err)
 		}
 	case "zsh":
 		if err := rootCmd.GenZshCompletion(stdout); err != nil {
-			err = errors.Wrap(err, "failed to generate zsh completion")
+			err = fmt.Errorf("failed to generate zsh completion: %w", err)
 			return apiError(err)
 		}
 
 		// enable the `source <(berglas completion SHELL)` pattern for zsh
 		if _, err := io.WriteString(stdout, "compdef _berglas berglas\n"); err != nil {
-			err = errors.Wrap(err, "failed to run compdef")
+			err = fmt.Errorf("failed to run compdef: %w", err)
 			return apiError(err)
 		}
 	default:
-		err := errors.Errorf("unknown completion %q", shell)
+		err := fmt.Errorf("unknown completion %q", shell)
 		return misuseError(err)
 	}
 
@@ -731,7 +730,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if editor == "" {
-		err := errors.New("no editor is set - set VISUAL or EDITOR")
+		err := fmt.Errorf("no editor is set - set VISUAL or EDITOR")
 		return apiError(err)
 	}
 
@@ -767,7 +766,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 	// Create the tempfile
 	f, err := ioutil.TempFile("", "berglas-")
 	if err != nil {
-		err = errors.Wrap(err, "failed to create tempfile for secret")
+		err = fmt.Errorf("failed to create tempfile for secret: %w", err)
 		return apiError(err)
 	}
 
@@ -779,17 +778,17 @@ func editRun(cmd *cobra.Command, args []string) error {
 
 	// Write contents to the original file
 	if _, err := f.Write(originalSecret.Plaintext); err != nil {
-		err = errors.Wrap(err, "failed to write tempfile for secret")
+		err = fmt.Errorf("failed to write tempfile for secret: %w", err)
 		return apiError(err)
 	}
 
 	if err := f.Sync(); err != nil {
-		err = errors.Wrap(err, "failed to sync tempfile for secret")
+		err = fmt.Errorf("failed to sync tempfile for secret: %w", err)
 		return apiError(err)
 	}
 
 	if err := f.Close(); err != nil {
-		err = errors.Wrap(err, "failed to close tempfile for secret")
+		err = fmt.Errorf("failed to close tempfile for secret: %w", err)
 		return apiError(err)
 	}
 
@@ -802,33 +801,33 @@ func editRun(cmd *cobra.Command, args []string) error {
 	externalCmd.Stdout = stdout
 	externalCmd.Stderr = stderr
 	if err := externalCmd.Start(); err != nil {
-		err = errors.Wrap(err, "failed to start editor")
+		err = fmt.Errorf("failed to start editor: %w", err)
 		return misuseError(err)
 	}
 	if err := externalCmd.Wait(); err != nil {
 		if terr, ok := err.(*exec.ExitError); ok && terr.ProcessState != nil {
 			code := terr.ProcessState.ExitCode()
-			return exitWithCode(code, errors.Wrap(terr, "editor did not exit 0"))
+			return exitWithCode(code, fmt.Errorf("editor did not exit 0: %w", err))
 		}
-		err = errors.Wrap(err, "unknown failure in running editor")
+		err = fmt.Errorf("unknown failure in running editor: %w", err)
 		return misuseError(err)
 	}
 
 	// Read the new secret value
 	newPlaintext, err := ioutil.ReadFile(f.Name())
 	if err != nil {
-		err = errors.Wrapf(err, "failed to read secret tempfile")
+		err = fmt.Errorf("failed to read secret tempfile: %w", err)
 		return misuseError(err)
 	}
 
 	// Error if the secret is empty
 	if len(newPlaintext) == 0 {
-		err := errors.New("secret is empty")
+		err := fmt.Errorf("secret is empty")
 		return misuseError(err)
 	}
 
 	if bytes.Equal(newPlaintext, originalSecret.Plaintext) {
-		err := errors.New("secret unchanged - not going to update")
+		err := fmt.Errorf("secret unchanged - not going to update")
 		return misuseError(err)
 	}
 
@@ -841,7 +840,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 			Plaintext: newPlaintext,
 		})
 		if err != nil {
-			err = errors.Wrapf(err, "failed to update secret")
+			err = fmt.Errorf("failed to update secret: %w", err)
 			return misuseError(err)
 		}
 
@@ -857,7 +856,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 			Plaintext:      newPlaintext,
 		})
 		if err != nil {
-			err = errors.Wrapf(err, "failed to update secret")
+			err = fmt.Errorf("failed to update secret: %w", err)
 			return misuseError(err)
 		}
 
@@ -1197,7 +1196,7 @@ func misuseError(err error) *exitError {
 func logger() (*logrus.Logger, error) {
 	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse log level")
+		return nil, fmt.Errorf("failed to parse log level: %w", err)
 	}
 
 	var formatter logrus.Formatter
@@ -1207,7 +1206,7 @@ func logger() (*logrus.Logger, error) {
 	case "json":
 		formatter = new(berglas.LogFormatterStackdriver)
 	default:
-		return nil, errors.Errorf("unknown log format %q", logFormat)
+		return nil, fmt.Errorf("unknown log format %q", logFormat)
 	}
 
 	return &logrus.Logger{
@@ -1223,12 +1222,12 @@ func logger() (*logrus.Logger, error) {
 func clientWithContext(ctx context.Context) (*berglas.Client, error) {
 	logger, err := logger()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to setup logger")
+		return nil, fmt.Errorf("failed to setup logger: %w", err)
 	}
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create berglas client")
+		return nil, fmt.Errorf("failed to create berglas client: %w", err)
 	}
 	client.SetLogger(logger)
 
@@ -1276,7 +1275,7 @@ func parseRef(r string) (*berglas.Reference, error) {
 
 	ref, err := berglas.ParseReference(s)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse reference %q", s)
+		return nil, fmt.Errorf("failed to parse reference %q: %w", s, err)
 	}
 	return ref, nil
 }

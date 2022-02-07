@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -59,12 +58,12 @@ func init() {
 
 		s, err := client.Resolve(ctx, v)
 		if err != nil {
-			handleError(errors.Wrapf(err, "failed to parse %q", k))
+			handleError(fmt.Errorf("failed to parse %q: %w", k, err))
 			continue
 		}
 
 		if err := os.Setenv(k, string(s)); err != nil {
-			handleError(errors.Wrapf(err, "failed to set %q", k))
+			handleError(fmt.Errorf("failed to set %q: %w", k, err))
 			continue
 		}
 	}

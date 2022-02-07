@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -154,7 +152,7 @@ func ParseReference(s string) (*Reference, error) {
 		s = strings.TrimPrefix(s, ReferencePrefixStorage)
 		return storageParseReference(s)
 	default:
-		return nil, errors.New("not a storage or secret manager reference")
+		return nil, fmt.Errorf("not a storage or secret manager reference")
 	}
 }
 
@@ -162,13 +160,13 @@ func secretManagerParseReference(s string) (*Reference, error) {
 	// Parse the remainder as a URL to extract any query params
 	u, err := url.Parse(s)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse secrets reference as url")
+		return nil, fmt.Errorf("failed to parse secrets reference as url: %w", err)
 	}
 
 	// Separate project from secret
 	ss := strings.SplitN(u.Path, "/", 2)
 	if len(ss) < 2 {
-		return nil, errors.Errorf("invalid secret format %q", s)
+		return nil, fmt.Errorf("invalid secret format %q", s)
 	}
 
 	// Create the reference
@@ -183,7 +181,7 @@ func secretManagerParseReference(s string) (*Reference, error) {
 
 	// Secrets cannot be nested
 	if strings.Contains(r.name, "/") {
-		return nil, errors.Errorf("invalid secret name %q", r.name)
+		return nil, fmt.Errorf("invalid secret name %q", r.name)
 	}
 
 	// Parse destination
@@ -203,13 +201,13 @@ func storageParseReference(s string) (*Reference, error) {
 	// Parse the remainder as a URL to extract any query params
 	u, err := url.Parse(s)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse secrets reference as url")
+		return nil, fmt.Errorf("failed to parse secrets reference as url: %w", err)
 	}
 
 	// Separate bucket from path
 	ss := strings.SplitN(u.Path, "/", 2)
 	if len(ss) < 2 {
-		return nil, errors.Errorf("invalid secret format %q", s)
+		return nil, fmt.Errorf("invalid secret format %q", s)
 	}
 
 	// Create the reference
@@ -242,10 +240,10 @@ func refExtractFilepath(object, s string) (string, error) {
 		// create a tempfile for the path
 		f, err := ioutil.TempFile("", pattern)
 		if err != nil {
-			return "", errors.Wrap(err, "failed to create tempfile for secret")
+			return "", fmt.Errorf("failed to create tempfile for secret: %w", err)
 		}
 		if err := f.Close(); err != nil {
-			return "", errors.Wrap(err, "failed to close tempfile for secret")
+			return "", fmt.Errorf("failed to close tempfile for secret: %w", err)
 		}
 		return f.Name(), nil
 	default:

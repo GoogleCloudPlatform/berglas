@@ -16,13 +16,13 @@ package berglas
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/gofrs/uuid"
 )
 
 func TestKMSKeyTrimVersion(t *testing.T) {
@@ -97,11 +97,16 @@ func testBucket(tb testing.TB) string {
 func testName(tb testing.TB) string {
 	tb.Helper()
 
-	u, err := uuid.NewV4()
+	// 32 bytes is a 64 character hex value
+	b := make([]byte, 32)
+	n, err := rand.Read(b)
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return u.String()
+	if got, want := n, len(b); got != want {
+		tb.Fatalf("invalid length, got: %v, want: %v", got, want)
+	}
+	return hex.EncodeToString(b)
 }
 
 func testKey(tb testing.TB) string {

@@ -21,7 +21,6 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	grpccodes "google.golang.org/grpc/codes"
@@ -97,7 +96,7 @@ func Update(ctx context.Context, i updateRequest) (*Secret, error) {
 // updates a secret stored in Cloud Storage encrypted with Cloud KMS.
 func (c *Client) Update(ctx context.Context, i updateRequest) (*Secret, error) {
 	if i == nil {
-		return nil, errors.New("missing request")
+		return nil, fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -106,24 +105,24 @@ func (c *Client) Update(ctx context.Context, i updateRequest) (*Secret, error) {
 	case *StorageUpdateRequest:
 		return c.storageUpdate(ctx, t)
 	default:
-		return nil, errors.Errorf("unknown update type %T", t)
+		return nil, fmt.Errorf("unknown update type %T", t)
 	}
 }
 
 func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdateRequest) (*Secret, error) {
 	project := i.Project
 	if project == "" {
-		return nil, errors.New("missing project")
+		return nil, fmt.Errorf("missing project")
 	}
 
 	name := i.Name
 	if name == "" {
-		return nil, errors.New("missing secret name")
+		return nil, fmt.Errorf("missing secret name")
 	}
 
 	plaintext := i.Plaintext
 	if plaintext == nil {
-		return nil, errors.New("missing plaintext")
+		return nil, fmt.Errorf("missing plaintext")
 	}
 
 	createIfMissing := i.CreateIfMissing
@@ -145,7 +144,7 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 	if err != nil {
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.NotFound {
-			return nil, errors.Wrap(err, "failed to read secret for updating")
+			return nil, fmt.Errorf("failed to read secret for updating: %w", err)
 		}
 
 		logger.Debug("secret does not exist")
@@ -170,7 +169,7 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 		if err != nil {
 			terr, ok := grpcstatus.FromError(err)
 			if !ok || terr.Code() != grpccodes.AlreadyExists {
-				return nil, errors.Wrapf(err, "failed to create secret")
+				return nil, fmt.Errorf("failed to create secret: %w", err)
 			}
 		}
 	}
@@ -184,7 +183,7 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create secret version")
+		return nil, fmt.Errorf("failed to create secret version: %w", err)
 	}
 
 	return &Secret{
@@ -199,12 +198,12 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*Secret, error) {
 	bucket := i.Bucket
 	if bucket == "" {
-		return nil, errors.New("missing bucket name")
+		return nil, fmt.Errorf("missing bucket name")
 	}
 
 	object := i.Object
 	if object == "" {
-		return nil, errors.New("missing object name")
+		return nil, fmt.Errorf("missing object name")
 	}
 
 	// Key and Plaintext may be required depending on whether the object exists.
@@ -275,7 +274,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 				Generation: generation,
 			})
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to get plaintext")
+				return nil, fmt.Errorf("failed to get plaintext: %w", err)
 			}
 		}
 
@@ -285,7 +284,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		storageHandle := c.storageIAM(bucket, object)
 		storageP, err := getIAMPolicy(ctx, storageHandle)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get IAM policy")
+			return nil, fmt.Errorf("failed to get IAM policy: %w", err)
 		}
 
 		// Update the secret
@@ -294,7 +293,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to update secret")
+			return nil, fmt.Errorf("failed to update secret: %w", err)
 		}
 
 		// Copy over the existing IAM memberships, if any
@@ -307,7 +306,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 			}
 			return p
 		}); err != nil {
-			return nil, errors.Wrapf(err, "failed to update Storage IAM policy for %s", object)
+			return nil, fmt.Errorf("failed to update Storage IAM policy for %s: %w", object, err)
 		}
 		return secret, nil
 	case storage.ErrObjectNotExist:
@@ -318,11 +317,11 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		}
 
 		if key == "" {
-			return nil, errors.New("missing key name")
+			return nil, fmt.Errorf("missing key name")
 		}
 
 		if plaintext == nil {
-			return nil, errors.New("missing plaintext")
+			return nil, fmt.Errorf("missing plaintext")
 		}
 
 		logger.Debug("creating secret")
@@ -331,10 +330,10 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to update secret")
+			return nil, fmt.Errorf("failed to update secret: %w", err)
 		}
 		return secret, nil
 	default:
-		return nil, errors.Wrap(err, "failed to fetch existing secret")
+		return nil, fmt.Errorf("failed to fetch existing secret: %w", err)
 	}
 }

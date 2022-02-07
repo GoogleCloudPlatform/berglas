@@ -21,14 +21,13 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/googleapi"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type bootstrapRequest interface {
@@ -83,7 +82,7 @@ func Bootstrap(ctx context.Context, i bootstrapRequest) error {
 // underlying KMS key.
 func (c *Client) Bootstrap(ctx context.Context, i bootstrapRequest) error {
 	if i == nil {
-		return errors.New("missing request")
+		return fmt.Errorf("missing request")
 	}
 
 	switch t := i.(type) {
@@ -92,7 +91,7 @@ func (c *Client) Bootstrap(ctx context.Context, i bootstrapRequest) error {
 	case *StorageBootstrapRequest:
 		return c.storageBootstrap(ctx, t)
 	default:
-		return errors.Errorf("unknown bootstrap type %T", t)
+		return fmt.Errorf("unknown bootstrap type %T", t)
 	}
 }
 
@@ -103,12 +102,12 @@ func (c *Client) secretManagerBootstrap(ctx context.Context, i *SecretManagerBoo
 func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapRequest) error {
 	projectID := i.ProjectID
 	if projectID == "" {
-		return errors.New("missing project ID")
+		return fmt.Errorf("missing project ID")
 	}
 
 	bucket := i.Bucket
 	if bucket == "" {
-		return errors.New("missing bucket name")
+		return fmt.Errorf("missing bucket name")
 	}
 
 	bucketLocation := strings.ToUpper(i.BucketLocation)
@@ -155,7 +154,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
-			return errors.Wrapf(err, "failed to create KMS key ring %s", kmsKeyRing)
+			return fmt.Errorf("failed to create KMS key ring %s: %w", kmsKeyRing, err)
 		}
 	}
 
@@ -170,11 +169,11 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 			RotationSchedule: &kmspb.CryptoKey_RotationPeriod{
-				RotationPeriod: &duration.Duration{
+				RotationPeriod: &durationpb.Duration{
 					Seconds: int64(rotationPeriod.Seconds()),
 				},
 			},
-			NextRotationTime: &timestamp.Timestamp{
+			NextRotationTime: &timestamppb.Timestamp{
 				Seconds: time.Now().Add(time.Duration(rotationPeriod)).Unix(),
 			},
 			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
@@ -187,7 +186,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
-			return errors.Wrapf(err, "failed to create KMS crypto key %s", kmsCryptoKey)
+			return fmt.Errorf("failed to create KMS crypto key %s: %w", kmsCryptoKey, err)
 		}
 	}
 
@@ -218,7 +217,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 		logger.WithError(err).Error("failed to create bucket")
 
 		if !isBucketAlreadyExistsError(err) {
-			return errors.Wrapf(err, "failed to create storage bucket %s", bucket)
+			return fmt.Errorf("failed to create storage bucket %s: %w", bucket, err)
 		}
 	}
 

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/iam"
-	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
@@ -108,7 +107,7 @@ func parseBucketObj(s string) (string, string, error) {
 
 	ss := strings.SplitN(s, "/", 2)
 	if len(ss) < 2 {
-		return "", "", errors.Errorf("does not match bucket/object format: %s", s)
+		return "", "", fmt.Errorf("does not match bucket/object format: %s", s)
 	}
 
 	return ss[0], ss[1], nil
@@ -198,11 +197,7 @@ func updateIAMPolicy(ctx context.Context, h *iam.Handle, f func(*iam.Policy) *ia
 // iamRetry is a helper function that executes the given function with retries,
 // handling IAM-specific retry conditions.
 func iamRetry(ctx context.Context, f retry.RetryFunc) error {
-	b, err := retry.NewFibonacci(250 * time.Millisecond)
-	if err != nil {
-		return fmt.Errorf("failed to setup retry: %w", err)
-	}
-	b = retry.WithMaxRetries(5, b)
+	b := retry.WithMaxRetries(5, retry.NewFibonacci(250*time.Millisecond))
 
 	return retry.Do(ctx, b, func(ctx context.Context) error {
 		err := f(ctx)
