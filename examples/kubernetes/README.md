@@ -12,15 +12,8 @@ API server.
 
 ## Deployment
 
-One of the easiest ways to deploy the mutation webhook is using Cloud Functions.
-To deploy on Cloud Functions:
-
-1. Enable the Cloud Functions API (this only needs to be done once per project):
-
-    ```text
-    gcloud services enable --project ${PROJECT_ID} \
-      cloudfunctions.googleapis.com
-    ```
+One of the easiest ways to deploy the mutation webhook is using Cloud Run. To
+deploy on Cloud Run:
 
 1. Set environment variables (replace with your values):
 
@@ -28,27 +21,41 @@ To deploy on Cloud Functions:
     export PROJECT_ID=my-project
     ```
 
-1. Ensure you are in the `kubernetes/` directory
-
-1. Deploy the mutation webhook:
+1. Enable the Cloud Run API (this only needs to be done once per project):
 
     ```text
-    gcloud functions deploy berglas-secrets-webhook \
-      --project ${PROJECT_ID} \
-      --allow-unauthenticated \
-      --runtime go113 \
-      --entry-point F \
-      --trigger-http
+    gcloud services enable --project ${PROJECT_ID} \
+      artifactregistry.googleapis.com \
+      cloudbuild.googleapis.com \
+      run.googleapis.com
     ```
 
-    Note: This function does **not** require authentication. It does **not**
-    need permission to access secrets. The function purely mutates YAML
-    configurations before sending them to the scheduler.
-
-1. Extract the Cloud Function URL:
+1. **Ensure you are in the `examples/kubernetes/` directory!**
 
     ```text
-    ENDPOINT=$(gcloud functions describe berglas-secrets-webhook --project ${PROJECT_ID} --format 'value(httpsTrigger.url)')
+    cd examples/kubernetes
+    ```
+
+1. Deploy the mutating webhook:
+
+    ```text
+    gcloud run deploy berglas-webhook \
+      --project ${PROJECT_ID} \
+      --region us-central1 \
+      --allow-unauthenticated \
+      --source .
+    ```
+
+    Note: This service does **not** require authentication. It does **not** need
+    permission to access secrets. The function purely mutates YAML
+    configurations before sending them to the scheduler.
+
+    You may be prompted to create an Artifact Registry repository. Say "Yes".
+
+1. Extract the Cloud Run URL:
+
+    ```text
+    ENDPOINT=$(gcloud run services describe berglas-webhook --project ${PROJECT_ID} --region us-central1 --format 'value(status.url)')
     ```
 
 1. Register the webhook with this URL:
@@ -63,7 +70,7 @@ To deploy on Cloud Functions:
     kubectl get mutatingwebhookconfiguration
 
     NAME
-    berglas-secrets-webhook
+    berglas-webhook
     ```
 
 
