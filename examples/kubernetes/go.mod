@@ -1,6 +1,6 @@
 module github.com/GoogleCloudPlatform/berglas/examples/kubernetes
 
-go 1.14
+go 1.13
 
 require (
 	github.com/GoogleCloudPlatform/berglas v0.5.3
