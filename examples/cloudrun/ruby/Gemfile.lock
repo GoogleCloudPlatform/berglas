@@ -5,7 +5,7 @@ GEM
     nio4r (2.5.8)
     puma (4.3.9)
       nio4r (~> 2.0)
-    rack (2.2.3)
+    rack (2.2.3.1)
     rack-protection (2.0.5)
       rack
     sinatra (2.0.5)
