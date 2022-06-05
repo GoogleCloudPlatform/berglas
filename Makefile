@@ -42,34 +42,9 @@ docker-push:
 	@./bin/docker-push
 .PHONY: docker-push
 
-fmtcheck:
-	@go install golang.org/x/tools/cmd/goimports
-	@CHANGES="$$(goimports -d $(GOFMT_FILES))"; \
-		if [ -n "$${CHANGES}" ]; then \
-			echo "Unformatted (run goimports -w .):\n\n$${CHANGES}\n\n"; \
-			exit 1; \
-		fi
-	@# Annoyingly, goimports does not support the simplify flag.
-	@CHANGES="$$(gofmt -s -d $(GOFMT_FILES))"; \
-		if [ -n "$${CHANGES}" ]; then \
-			echo "Unformatted (run gofmt -s -w .):\n\n$${CHANGES}\n\n"; \
-			exit 1; \
-		fi
-.PHONY: fmtcheck
-
 publish:
 	@GOOSES="${GOOSES}" GOARCHES="${GOARCHES}" ./bin/publish
 .PHONY: publish
-
-spellcheck:
-	@go install github.com/client9/misspell/cmd/misspell
-	@misspell -locale="US" -error -source="text" **/*
-.PHONY: spellcheck
-
-staticcheck:
-	@go install honnef.co/go/tools/cmd/staticcheck
-	@staticcheck -checks="all" -tests $(GOFMT_FILES)
-.PHONY: staticcheck
 
 test:
 	@go test -short -parallel=40 ./...
