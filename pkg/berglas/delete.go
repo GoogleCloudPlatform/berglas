@@ -20,8 +20,8 @@ import (
 	"runtime"
 
 	"cloud.google.com/go/storage"
-	"github.com/gammazero/workerpool"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/api/iterator"
 	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	grpccodes "google.golang.org/grpc/codes"
@@ -144,13 +144,14 @@ func (c *Client) storageDelete(ctx context.Context, i *StorageDeleteRequest) err
 		})
 
 	// Create a workerpool for parallel deletion of resources
-	ws := runtime.NumCPU() - 1
-	wp := workerpool.New(ws)
+	parallelism := int64(runtime.NumCPU() - 1)
+	sem := semaphore.NewWeighted(parallelism)
+
 	errCh := make(chan error)
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	logger.WithField("parallelism", ws).Debug("deleting secrets")
+	logger.WithField("parallelism", parallelism).Debug("deleting secrets")
 
 L:
 	for {
@@ -182,14 +183,18 @@ L:
 			logger.WithField("generation", obj.Generation).
 				Debug("queuing delete worker")
 
-			wp.Submit(func() {
-				err := c.storageClient.
+			if err := sem.Acquire(ctx, 1); err != nil {
+				return fmt.Errorf("failed to acquire semaphore: %w", err)
+			}
+
+			go func() {
+				defer sem.Release(1)
+
+				if err := c.storageClient.
 					Bucket(bucket).
 					Object(object).
 					Generation(obj.Generation).
-					Delete(childCtx)
-
-				if err != nil {
+					Delete(childCtx); err != nil {
 					logger.
 						WithError(err).
 						WithField("generation", obj.Generation).
@@ -205,13 +210,15 @@ L:
 						cancel()
 					}
 				}
-			})
+			}()
 		}
 	}
 
 	// Wait for jobs to finish
 	logger.Debug("waiting for delete jobs to finish")
-	wp.StopWait()
+	if err := sem.Acquire(ctx, parallelism); err != nil {
+		return fmt.Errorf("failed to wait for jobs to finish: %w", err)
+	}
 
 	select {
 	case err := <-errCh:

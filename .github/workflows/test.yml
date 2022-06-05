@@ -38,21 +38,18 @@ jobs:
       CREDS_JSON: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: '1.17'
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-
-    - name: Lint
-      run: make fmtcheck staticcheck spellcheck
 
     - name: Test (Unit)
       run: make test
@@ -92,13 +89,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: '1.17'
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -154,10 +151,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Authenticate to Artifact Registry
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: _json_key
         password: ${{ secrets.GOOGLE_CREDENTIALS }}
