@@ -2,7 +2,7 @@ module github.com/GoogleCloudPlatform/berglas/examples/appengine/go
 
 go 1.18
 
-require github.com/GoogleCloudPlatform/berglas v0.6.3-0.20220605004847-b808f1653679
+require github.com/GoogleCloudPlatform/berglas v0.6.3-0.20220726215352-081c881c4b33
 
 require (
 	cloud.google.com/go v0.103.0 // indirect
@@ -26,7 +26,7 @@ require (
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/api v0.88.0 // indirect
+	google.golang.org/api v0.89.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b // indirect
 	google.golang.org/grpc v1.48.0 // indirect

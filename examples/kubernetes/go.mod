@@ -3,7 +3,7 @@ module github.com/GoogleCloudPlatform/berglas/examples/kubernetes
 go 1.18
 
 require (
-	github.com/GoogleCloudPlatform/berglas v0.6.3-0.20220605004847-b808f1653679
+	github.com/GoogleCloudPlatform/berglas v0.6.3-0.20220726215352-081c881c4b33
 	github.com/sirupsen/logrus v1.9.0
 	github.com/slok/kubewebhook/v2 v2.3.0
 	k8s.io/api v0.24.3
@@ -39,7 +39,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect
 	gomodules.xyz/orderedmap v0.1.0 // indirect
-	google.golang.org/api v0.88.0 // indirect
+	google.golang.org/api v0.89.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b // indirect
 	google.golang.org/grpc v1.48.0 // indirect
