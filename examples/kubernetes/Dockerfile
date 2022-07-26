@@ -1,4 +1,4 @@
-# Copyright 2019 The Berglas Authors
+# Copyright 2022 The webhook Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 FROM golang:1.18 AS builder
 
 ENV GO111MODULE=on \
+  GOPROXY=https://proxy.golang.org,direct \
   CGO_ENABLED=0 \
   GOOS=linux \
   GOARCH=amd64
@@ -25,17 +26,16 @@ COPY . .
 RUN go build \
   -a \
   -trimpath \
-  -ldflags "-s -w -extldflags '-static'" \
-  -installsuffix cgo \
-  -tags netgo \
-  -o /bin/app \
+  -ldflags "-s -w -extldflags=-static" \
+  -o /bin/webhook \
   .
 
+RUN strip -s /bin/webhook
 
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates && \
   update-ca-certificates
 
-COPY --from=builder /bin/app /bin/app
-ENTRYPOINT ["/bin/app"]
+COPY --from=builder /bin/webhook /bin/webhook
+ENTRYPOINT ["/bin/webhook"]

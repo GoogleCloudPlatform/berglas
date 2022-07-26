@@ -1,4 +1,4 @@
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: berglas-webhook
@@ -8,6 +8,8 @@ metadata:
 
 webhooks:
 - name: berglas-webhook.cloud.google.com
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: NoneOnDryRun
   clientConfig:
     url: REPLACE_WITH_YOUR_URL
     caBundle: ""
