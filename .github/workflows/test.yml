@@ -42,14 +42,9 @@ jobs:
 
     - uses: actions/setup-go@v3
       with:
-        go-version: '1.18'
+        go-version: '1.19'
 
-    - uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+    - run: 'go mod download'
 
     - name: Test (Unit)
       run: make test
@@ -93,14 +88,9 @@ jobs:
 
     - uses: actions/setup-go@v3
       with:
-        go-version: '1.18'
+        go-version: '1.19'
 
-    - uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+    - run: 'go mod download'
 
     - name: Extract ref
       id: extract_ref
@@ -126,7 +116,7 @@ jobs:
           .
 
     - name: Upload binary
-      uses: google-github-actions/upload-cloud-storage@main
+      uses: google-github-actions/upload-cloud-storage@v0
       with:
         credentials: ${{ secrets.GOOGLE_CREDENTIALS }}
         path: build/${{ matrix.goos }}_${{ matrix.goarch }}

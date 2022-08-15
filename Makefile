@@ -12,39 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-NAME = berglas
-GOOSES = darwin linux windows
-GOARCHES = amd64
-
-VETTERS = "asmdecl,assign,atomic,bools,buildtag,cgocall,composites,copylocks,errorsas,httpresponse,loopclosure,lostcancel,nilfunc,printf,shift,stdmethods,structtag,tests,unmarshal,unreachable,unsafeptr,unusedresult"
-GOFMT_FILES = $(shell go list -f '{{.Dir}}' ./...)
-
-export GO111MODULE = on
-export CGO_ENABLED = 0
-
-builders:
-	@cd cloudbuild/builders/go-gcloud-make && \
-		gcloud builds submit \
-		  --project berglas-test \
-		  .
-.PHONY: builders
-
-deps:
-	@go get -u -t ./...
-	@go mod tidy
-.PHONY: deps
-
 dev:
 	@go install .
 .PHONY: dev
-
-docker-push:
-	@./bin/docker-push
-.PHONY: docker-push
-
-publish:
-	@GOOSES="${GOOSES}" GOARCHES="${GOARCHES}" ./bin/publish
-.PHONY: publish
 
 test:
 	@go test -short -parallel=40 ./...
@@ -62,6 +32,6 @@ update-go-samples:
 			go mod init github.com/GoogleCloudPlatform/berglas/$${dir} && \
 			go get -u github.com/GoogleCloudPlatform/berglas@main && \
 			go get -u ./... && \
-			go mod tidy -go=1.18 -compat=1.18) ; \
+			go mod tidy -go=1.19 -compat=1.19) ; \
 	done
 .PHONY: update-go-samples
