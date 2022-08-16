@@ -39,45 +39,29 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
 
 1. Install the `berglas` CLI using **one** of the following methods:
 
-    - Install a pre-compiled binary for your operating system:
+    - Install a pre-compiled binary for your operating system from the [latest
+      releases](releases).
 
-        - [darwin/amd64](https://storage.googleapis.com/berglas/main/darwin_amd64/berglas)
-        - [linux/amd64](https://storage.googleapis.com/berglas/main/linux_amd64/berglas)
-        - [windows/amd64](https://storage.googleapis.com/berglas/main/windows_amd64/berglas)
-
-      This will download the latest version built against the main branch. To
-      download a specific version, specify a git tag in place of "main" in the
-      URL.
-
-      Depending on your operating system, you may need to mark the downloaded binary as executable:
-
-        ```text
-        chmod +x /path/to/berglas
-        ```
-
-    - If you use [Homebrew](https://brew.sh/) on macOS, you can install like this:
+    - Use an [official Docker container](ghcr.io/GoogleCloudPlatform/berglas):
 
       ```text
+      docker run --pull -it ghcr.io/GoogleCloudPlatform/berglas
+      ```
+
+      Note: older Docker container images are available on Container Registry
+      and Artifact Registry, but new versions are not published there.
+
+    - Use [Homebrew](https://brew.sh/) on macOS:
+
+      ```sh
       brew install berglas
       ```
 
-    - Use an official Docker container:
-
-      ```text
-      asia-docker.pkg.dev/berglas/berglas/berglas
-      europe-docker.pkg.dev/berglas/berglas/berglas
-      us-docker.pkg.dev/berglas/berglas/berglas
-      ```
-
-      This will pull the latest version built against the main branch. To use
-      a specific version, specify a git tag in place of "latest" in the URL.
-
-      Note: the `gcr.io/berglas/berglas:latest` image remains for backwards
-      compatibility, but new versions are **not** published there.
+      Note: sometimes the Homebrew formula can be several versions behind.
 
     - Install from source (requires a working Go installation):
 
-      ```text
+      ```sh
       go install github.com/GoogleCloudPlatform/berglas@latest
       ```
 

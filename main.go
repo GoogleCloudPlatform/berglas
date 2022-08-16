@@ -29,6 +29,7 @@ import (
 	"syscall"
 	"text/tabwriter"
 
+	"github.com/GoogleCloudPlatform/berglas/internal/version"
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -94,7 +95,7 @@ For more information and examples, see the help text for a specific command.
 `, "\n"),
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	Version:       berglas.Version,
+	Version:       version.Version,
 }
 
 var accessCmd = &cobra.Command{
