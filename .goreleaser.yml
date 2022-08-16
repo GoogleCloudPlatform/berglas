@@ -1,0 +1,132 @@
+before:
+  hooks:
+    - 'go mod tidy'
+
+builds:
+  -
+    env:
+      - 'CGO_ENABLED=0'
+      - 'GO111MODULE=on'
+      - 'GOPROXY=https://proxy.golang.org,direct'
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - '-a'
+      - '-trimpath'
+    ldflags:
+      - '-s'
+      - '-w'
+      - '-X={{ .ModulePath }}/internal/version.Name=berglas'
+      - '-X={{ .ModulePath }}/internal/version.Version={{ .Version }}'
+      - '-X={{ .ModulePath }}/internal/version.Commit={{ .FullCommit }}'
+      - '-extldflags=-static'
+    goos:
+      - 'darwin'
+      - 'linux'
+      - 'windows'
+    goarch:
+      - 'amd64'
+      - 'arm64'
+    binary: 'berglas'
+
+dockers:
+  -
+    use: 'buildx'
+    goos: 'linux'
+    goarch: 'amd64'
+    image_templates:
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+    build_flag_templates:
+      - '--platform=linux/amd64'
+      - '--pull'
+      - '--label=org.opencontainers.image.created={{ .CommitTimestamp }}'
+      - '--label=org.opencontainers.image.description=Berglas is a tool for managing secrets on Google Cloud.'
+      - '--label=org.opencontainers.image.licenses=Apache-2.0'
+      - '--label=org.opencontainers.image.name=berglas'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.title=berglas'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+  -
+    use: 'buildx'
+    goos: 'linux'
+    goarch: 'arm64'
+    image_templates:
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+    build_flag_templates:
+      - '--platform=linux/arm64'
+      - '--pull'
+      - '--label=org.opencontainers.image.created={{ .CommitTimestamp }}'
+      - '--label=org.opencontainers.image.description=Berglas is a tool for managing secrets on Google Cloud.'
+      - '--label=org.opencontainers.image.licenses=Apache-2.0'
+      - '--label=org.opencontainers.image.name=berglas'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.title=berglas'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+
+docker_manifests:
+  -
+    name_template: 'asia-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}'
+    image_templates:
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+  -
+    name_template: 'asia-docker.pkg.dev/berglas/berglas/berglas:latest'
+    image_templates:
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+      - 'asia-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+  -
+    name_template: 'europe-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}'
+    image_templates:
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+  -
+    name_template: 'europe-docker.pkg.dev/berglas/berglas/berglas:latest'
+    image_templates:
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+      - 'europe-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+  -
+    name_template: 'us-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}'
+    image_templates:
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-amd64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:{{ .Version }}-arm64'
+  -
+    name_template: 'us-docker.pkg.dev/berglas/berglas/berglas:latest'
+    image_templates:
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:latest-amd64'
+      - 'us-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
+
+archives:
+  - format: 'tar.gz'
+    name_template: 'berglas_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: 'windows'
+        format: 'zip'
+
+checksum:
+  name_template: 'berglas_{{ .Version }}_SHA512SUMS'
+  algorithm: 'sha512'
+
+signs:
+  - artifacts: 'checksum'
+    args:
+      - '--batch'
+      - '--local-user'
+      - '{{ .Env.GPG_FINGERPRINT }}'
+      - '--output'
+      - '${signature}'
+      - '--detach-sign'
+      - '${artifact}'
+
+release:
+  draft: false

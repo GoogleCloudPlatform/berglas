@@ -14,7 +14,7 @@
 
 steps:
 - id: berglas
-  name: us-docker.pkg.dev/berglas/berglas/berglas
+  name: ghcr.io/GoogleCloudPlatform/berglas
   env:
   - API_KEY=berglas://${_BUCKET_ID}/api-key?destination=/secrets/api-key
   - TLS_KEY=berglas://${_BUCKET_ID}/tls-key?destination=/secrets/tls-key

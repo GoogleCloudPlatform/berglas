@@ -150,7 +150,7 @@ func iamFromStorageBindings(rbs []*storagev1.PolicyBindings) []*iampb.Binding {
 }
 
 func setClientHeader(h http.Header) {
-	h.Set("User-Agent", UserAgent)
+	h.Set("User-Agent", userAgent)
 }
 
 // getIAMPolicy fetches the IAM policy for the given resource handle, handling

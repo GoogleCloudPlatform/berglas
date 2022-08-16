@@ -30,19 +30,17 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
+	"github.com/GoogleCloudPlatform/berglas/internal/version"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
 	storagev1 "google.golang.org/api/storage/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const (
-	// Name, Version, ProjectURL, and UserAgent are used to uniquely identify this
-	// package in logs and other binaries.
-	Name       = "berglas"
-	Version    = "0.6.2"
-	ProjectURL = "https://github.com/GoogleCloudPlatform/berglas"
-	UserAgent  = Name + "/" + Version + " (+" + ProjectURL + ")"
+var (
+	// userAgent is the HTTP user agent.
+	userAgent = fmt.Sprintf("%s/%s (+https://github.com/GoogleCloudPlatform/berglas)",
+		version.Name, version.Version)
 )
 
 const (
@@ -77,7 +75,7 @@ type Client struct {
 
 // New creates a new berglas client.
 func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
-	opts = append(opts, option.WithUserAgent(UserAgent))
+	opts = append(opts, option.WithUserAgent(userAgent))
 
 	var c Client
 
