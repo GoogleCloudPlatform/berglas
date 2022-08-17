@@ -26,6 +26,6 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY . ./
-COPY --from=ghcr.io/GoogleCloudPlatform/berglas:latest /bin/berglas /bin/berglas
+COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
 ENTRYPOINT exec /bin/berglas exec -- gunicorn --bind 0.0.0.0:${PORT} --workers 1 --threads 8 app:app
