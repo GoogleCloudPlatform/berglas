@@ -536,7 +536,7 @@ func accessRun(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return apiError(err)
 		}
-		fmt.Fprintf(stdout, "%s", plaintext)
+		fmt.Fprintf(stdout, "%s\n", plaintext)
 	case berglas.ReferenceTypeStorage:
 		plaintext, err := client.Access(ctx, &berglas.StorageAccessRequest{
 			Bucket:     ref.Bucket(),
@@ -546,7 +546,7 @@ func accessRun(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return apiError(err)
 		}
-		fmt.Fprintf(stdout, "%s", plaintext)
+		fmt.Fprintf(stdout, "%s\n", plaintext)
 	default:
 		return misuseError(fmt.Errorf("unknown type %T", t))
 	}
