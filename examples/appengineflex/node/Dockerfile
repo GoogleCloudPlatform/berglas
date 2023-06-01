@@ -14,7 +14,7 @@
 
 # Note: if you switch to a slim base image, like an alpine-based image, you
 # will need to add the ca-certificates package for Berglas to work.
-FROM node:10
+FROM node:16
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
