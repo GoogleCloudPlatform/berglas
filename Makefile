@@ -22,6 +22,6 @@ update-go-samples:
 			go mod init github.com/GoogleCloudPlatform/berglas/$${dir} && \
 			go get -u github.com/GoogleCloudPlatform/berglas@main && \
 			go get -u ./... && \
-			go mod tidy -go=1.19 -compat=1.19) ; \
+			go mod tidy -go=1.20 -compat=1.20) ; \
 	done
 .PHONY: update-go-samples
