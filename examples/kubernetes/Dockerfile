@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.19 AS builder
+FROM golang:1.20 AS builder
 
 ENV GO111MODULE=on \
   GOPROXY=https://proxy.golang.org,direct \
