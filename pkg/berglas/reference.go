@@ -49,9 +49,10 @@ type Reference struct {
 	generation int64
 
 	// Secret Manager properties
-	project string
-	name    string
-	version string
+	project  string
+	name     string
+	version  string
+	jmespath string
 
 	// Common properties
 	typ      ReferenceType
@@ -92,9 +93,15 @@ func (r *Reference) Version() string {
 	return r.version
 }
 
-// Filepath is the disk to write the reference, if any.
+// Filepath is the file to write the reference, if any.
 func (r *Reference) Filepath() string {
 	return r.filepath
+}
+
+// JMESPath is a JMESPath expression used to extract a single item
+// from a secret stored as a JSON-encoded object.
+func (r *Reference) JMESPath() string {
+	return r.jmespath
 }
 
 // Type is the type of reference, used for switching.
@@ -190,6 +197,9 @@ func secretManagerParseReference(s string) (*Reference, error) {
 		return nil, err
 	}
 	r.filepath = path
+
+	// Parse JMESPath
+	r.jmespath = u.Query().Get("path")
 
 	return &r, nil
 }

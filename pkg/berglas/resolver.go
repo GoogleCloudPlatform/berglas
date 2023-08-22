@@ -16,10 +16,12 @@ package berglas
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
 
+	"github.com/jmespath/go-jmespath"
 	"github.com/sirupsen/logrus"
 )
 
@@ -70,6 +72,23 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	plaintext, err := c.Access(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to access secret %s: %w", ref.String(), err)
+	}
+
+	if jmespathExpr := ref.JMESPath(); jmespathExpr != "" {
+		var data interface{}
+		if err := json.Unmarshal([]byte(plaintext), &data); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON secret %s: %w", ref.String(), err)
+		}
+
+		result, err := jmespath.Search(jmespathExpr, data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query secret %s for JMESPath expression %s: %w", ref.String(), jmespathExpr, err)
+		}
+		if result == nil {
+			return nil, fmt.Errorf("JMESPath expression %s matched no data in %s: %w", jmespathExpr, ref.String(), err)
+		}
+
+		plaintext = []byte(result.(string))
 	}
 
 	if pth := ref.Filepath(); pth != "" {

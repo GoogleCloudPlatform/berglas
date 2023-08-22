@@ -63,6 +63,109 @@ func TestClient_Resolve_secretManager(t *testing.T) {
 			t.Errorf("expected %q to be %q", act, exp)
 		}
 	})
+
+	t.Run("malformed-json", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		project, name := testProject(t), testName(t)
+		plaintext := []byte("not a JSON object")
+
+		secret, err := client.Create(ctx, &SecretManagerCreateRequest{
+			Project:   project,
+			Name:      name,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testSecretManagerCleanup(t, project, name)
+
+		ref := fmt.Sprintf("sm://%s/%s?path=foo#%s", project, name, secret.Version)
+
+		if _, err := client.Resolve(ctx, ref); err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("jmespath", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		project, name := testProject(t), testName(t)
+		field := "password"
+		value := "hunter2"
+		plaintext := []byte(fmt.Sprintf(`{"username":"foo","%s":"%s"}`, field, value))
+
+		secret, err := client.Create(ctx, &SecretManagerCreateRequest{
+			Project:   project,
+			Name:      name,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testSecretManagerCleanup(t, project, name)
+
+		ref := fmt.Sprintf("sm://%s/%s?path=%s#%s", project, name, field, secret.Version)
+
+		b, err := client.Resolve(ctx, ref)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if act, exp := b, []byte(value); !bytes.Equal(act, exp) {
+			t.Errorf("expected %q to be %q", act, exp)
+		}
+	})
+
+	t.Run("unmatched-jmespath", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		project, name := testProject(t), testName(t)
+		plaintext := []byte(`{}`)
+
+		secret, err := client.Create(ctx, &SecretManagerCreateRequest{
+			Project:   project,
+			Name:      name,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testSecretManagerCleanup(t, project, name)
+
+		ref := fmt.Sprintf("sm://%s/%s?path=%s#%s", project, name, "unmatched.jmespath", secret.Version)
+
+		if _, err := client.Resolve(ctx, ref); err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("malformed-jmespath", func(t *testing.T) {
+		t.Parallel()
+
+		client, ctx := testClient(t)
+		project, name := testProject(t), testName(t)
+		plaintext := []byte(`{"test":"value"}`)
+
+		secret, err := client.Create(ctx, &SecretManagerCreateRequest{
+			Project:   project,
+			Name:      name,
+			Plaintext: plaintext,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer testSecretManagerCleanup(t, project, name)
+
+		ref := fmt.Sprintf("sm://%s/%s?path=%s#%s", project, name, ".", secret.Version)
+
+		if _, err := client.Resolve(ctx, ref); err == nil {
+			t.Error("expected error")
+		}
+	})
 }
 
 func TestClient_Resolve_storage(t *testing.T) {

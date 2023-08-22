@@ -46,6 +46,11 @@ sm://[PROJECT]/[NAME]?[OPTIONS]#[VERSION]
     - `[PATH]` - resolve the secret and write the contents to the specified file
       path.
 
+- `path` - when this URL query parameter is supplied, the value of the
+  secret must be a JSON object. Berglas will deserialize and then
+  treat `path` as a [JMESPath](https://jmespath.org/) query to extract
+  a single value from the object.
+
 ## Examples
 
 Read a Cloud Storage secret:
@@ -70,4 +75,10 @@ Read a specific generation of a secret:
 
 ```text
 sm://my-project/my-secret#13
+```
+
+Read a path from a secret that is encoded as a JSON object:
+
+```text
+sm://my-project/my-secret?path=password
 ```

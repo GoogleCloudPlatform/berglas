@@ -99,6 +99,42 @@ func TestParseReference(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"jmespath",
+			"sm://foo/bar?path=quux",
+			&Reference{
+				project:  "foo",
+				name:     "bar",
+				jmespath: "quux",
+				typ:      ReferenceTypeSecretManager,
+			},
+			false,
+		},
+		{
+			"jmespath",
+			"sm://foo/bar?path=quux#12",
+			&Reference{
+				project:  "foo",
+				name:     "bar",
+				jmespath: "quux",
+				version:  "12",
+				typ:      ReferenceTypeSecretManager,
+			},
+			false,
+		},
+		{
+			"jmespath-and-destination_path",
+			"sm://foo/bar?path=quux&destination=/var/foo#12",
+			&Reference{
+				project:  "foo",
+				name:     "bar",
+				jmespath: "quux",
+				version:  "12",
+				filepath: "/var/foo",
+				typ:      ReferenceTypeSecretManager,
+			},
+			false,
+		},
 
 		// Storage
 		{
