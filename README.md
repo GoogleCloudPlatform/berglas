@@ -302,42 +302,35 @@ its child command, if one was provided.
   Berglas resolves environment variables to their plaintext values using the
   [`berglas://reference syntax][reference-syntax]. This integration works with
   any language runtime because berglas serves as the entrypoint to the Docker
-  container. See [examples/appengineflex](examples/appengineflex) for examples
-  and invocations.
+  container.
 
 - **App Engine (Standard)** - When invoked via [App Engine][app-engine],
   Berglas resolves environment variables to their plaintext values using the
   [`berglas://`reference syntax][reference-syntax]. This integration only works
   with the Go language runtime because it requires importing the `auto/`
-  package. See [examples/appengine](examples/appengine) for examples
-  and invocations.
+  package.
 
 - **Cloud Run** - When invoked via [Cloud Run][cloud-run], Berglas resolves
   environment variables to their plaintext values using the [`berglas://`
   reference syntax][reference-syntax]. This integration works with any language
-  runtime because berglas serves as the entrypoint to the Docker container. See
-  [examples/cloudrun](examples/cloudrun) for examples and invocations.
+  runtime because berglas serves as the entrypoint to the Docker container.
 
 - **Cloud Functions** - When invoked via [Cloud Functions][cloud-functions],
   Berglas resolves environment variables to their plaintext values using the
   [`berglas://` reference syntax][reference-syntax]. This integration only works
   with the Go language runtime because it requires importing the `auto/`
-  package. See [examples/cloudfunctions](examples/cloudfunctions) for examples
-  and invocations.
+  package.
 
 - **Cloud Build** - When invoked via [Cloud Build][cloud-build], Berglas
   resolves environment variables to plaintext values using the [`berglas://`
   reference syntax][reference-syntax]. This integration only works with volume
   mounts, so all Berglas secrets need to specify the `?destination` parameter.
-  See [examples/cloudbuild](examples/cloudbuild) for examples and invocations.
 
 - **Kubernetes** - Kubernetes pods can consume Berglas secrets by installing a
   [MutatingWebhook][k8s-mutating]. This webhook mutates incoming pods with the
   [`berglas://` reference syntax][reference-syntax] in environment references to
   resolve at runtime. This integration works with any container, but all pods
   requesting berglas secrets must set an command in their Kubernetes manifests.
-  See [examples/kubernetes](examples/kubernetes) for samples and installation
-  instructions.
 
 - **Anything** - Wrap any process with `berglas exec --` and Berglas will
   parse any local environment variables with the [`berglas://` reference
@@ -352,11 +345,6 @@ The default logging behavior for the berglas CLI is "text" (it can be changed
 with the `--log-format` flag). The default logging behavior for the berglas
 library is structured JSON which integrates well with Cloud Logging (it can be
 changed to any valid formatter and you can even inject your own logger).
-
-
-## Examples
-
-Examples are available in the [`examples/` folder](examples).
 
 
 ## Library Usage
