@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: 'actions/setup-go@v34'
+      - uses: 'actions/setup-go@v4'
         with:
           go-version: '1.21'
 
