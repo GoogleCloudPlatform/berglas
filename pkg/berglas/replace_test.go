@@ -26,7 +26,7 @@ func TestClient_Replace_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name, env := testProject(t), testName(t), testName(t)
 
 		os.Setenv(env, fmt.Sprintf("sm://%s/%s", project, name))
@@ -39,7 +39,7 @@ func TestClient_Replace_secretManager(t *testing.T) {
 	t.Run("replaces", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name, env := testProject(t), testName(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -72,7 +72,7 @@ func TestClient_Replace_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, env := testBucket(t), testName(t), testName(t)
 
 		os.Setenv(env, fmt.Sprintf("berglas://%s/%s", bucket, object))
@@ -85,7 +85,7 @@ func TestClient_Replace_storage(t *testing.T) {
 	t.Run("replaces", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key, env := testBucket(t), testName(t), testKey(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 

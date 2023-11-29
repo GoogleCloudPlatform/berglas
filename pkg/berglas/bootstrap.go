@@ -20,10 +20,10 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	"google.golang.org/api/googleapi"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -130,27 +130,27 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 		kmsCryptoKey = "berglas-key"
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project_id":      projectID,
-		"bucket":          bucket,
-		"bucket_location": bucketLocation,
-		"kms_location":    kmsLocation,
-		"kms_key_ring":    kmsKeyRing,
-		"kms_crypto_key":  kmsCryptoKey,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project_id", projectID,
+		"bucket", bucket,
+		"bucket_location", bucketLocation,
+		"kms_location", kmsLocation,
+		"kms_key_ring", kmsKeyRing,
+		"kms_crypto_key", kmsCryptoKey,
+	)
 
-	logger.Debug("bootstrap.start")
-	defer logger.Debug("bootstrap.finish")
+	logger.DebugContext(ctx, "bootstrap.start")
+	defer logger.DebugContext(ctx, "bootstrap.finish")
 
 	// Create the KMS key ring
-	logger.Debug("creating KMS key ring")
+	logger.DebugContext(ctx, "creating KMS key ring")
 
 	if _, err := c.kmsClient.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s",
 			projectID, kmsLocation),
 		KeyRingId: kmsKeyRing,
 	}); err != nil {
-		logger.WithError(err).Error("failed to create KMS key ring")
+		logger.ErrorContext(ctx, "failed to create KMS key ring", "error", err)
 
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
@@ -159,7 +159,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 	}
 
 	// Create the KMS crypto key
-	logger.Debug("creating KMS crypto key")
+	logger.DebugContext(ctx, "creating KMS crypto key")
 
 	rotationPeriod := 30 * 24 * time.Hour
 	if _, err := c.kmsClient.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
@@ -182,7 +182,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 			},
 		},
 	}); err != nil {
-		logger.WithError(err).Error("failed to create KMS crypto key")
+		logger.ErrorContext(ctx, "failed to create KMS crypto key", "error", err)
 
 		terr, ok := grpcstatus.FromError(err)
 		if !ok || terr.Code() != grpccodes.AlreadyExists {
@@ -191,7 +191,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 	}
 
 	// Create the storage bucket
-	logger.Debug("creating bucket")
+	logger.DebugContext(ctx, "creating bucket")
 
 	if err := c.storageClient.Bucket(bucket).Create(ctx, projectID, &storage.BucketAttrs{
 		PredefinedACL:              "private",
@@ -214,7 +214,7 @@ func (c *Client) storageBootstrap(ctx context.Context, i *StorageBootstrapReques
 			"purpose": "berglas",
 		},
 	}); err != nil {
-		logger.WithError(err).Error("failed to create bucket")
+		logger.ErrorContext(ctx, "failed to create bucket", "error", err)
 
 		if !isBucketAlreadyExistsError(err) {
 			return fmt.Errorf("failed to create storage bucket %s: %w", bucket, err)

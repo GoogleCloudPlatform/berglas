@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 )
 
 // Replace parses a berglas reference and replaces it. See Client.Replace for
@@ -25,13 +25,13 @@ func Replace(ctx context.Context, key string) error {
 func (c *Client) Replace(ctx context.Context, key string) error {
 	value := os.Getenv(key)
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"key":       key,
-		"reference": value,
-	})
+	logger := logging.FromContext(ctx).With(
+		"key", key,
+		"reference", value,
+	)
 
-	logger.Debug("replacevalue.start")
-	defer logger.Debug("replacevalue.finish")
+	logger.DebugContext(ctx, "replacevalue.start")
+	defer logger.DebugContext(ctx, "replacevalue.finish")
 
 	plaintext, err := c.Resolve(ctx, value)
 	if err != nil {

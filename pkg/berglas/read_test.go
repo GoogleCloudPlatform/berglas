@@ -25,7 +25,7 @@ func TestClient_Read_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 
 		_, err := client.Read(ctx, &SecretManagerReadRequest{
@@ -40,7 +40,7 @@ func TestClient_Read_secretManager(t *testing.T) {
 	t.Run("latest", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -73,7 +73,7 @@ func TestClient_Read_secretManager(t *testing.T) {
 	t.Run("version", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -112,7 +112,7 @@ func TestClient_Read_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object := testBucket(t), testName(t)
 
 		_, err := client.Read(ctx, &StorageReadRequest{
@@ -127,7 +127,7 @@ func TestClient_Read_storage(t *testing.T) {
 	t.Run("latest", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -162,7 +162,7 @@ func TestClient_Read_storage(t *testing.T) {
 	t.Run("version", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 

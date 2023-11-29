@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"runtime"
 
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/api/iterator"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -98,13 +98,13 @@ func (c *Client) secretManagerDelete(ctx context.Context, i *SecretManagerDelete
 		return fmt.Errorf("missing secret name")
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project": project,
-		"name":    name,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+	)
 
-	logger.Debug("delete.start")
-	defer logger.Debug("delete.finish")
+	logger.DebugContext(ctx, "delete.start")
+	defer logger.DebugContext(ctx, "delete.finish")
 
 	if err := c.secretManagerClient.DeleteSecret(ctx, &secretspb.DeleteSecretRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s", project, name),
@@ -128,13 +128,13 @@ func (c *Client) storageDelete(ctx context.Context, i *StorageDeleteRequest) err
 		return fmt.Errorf("missing object name")
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket": bucket,
-		"object": object,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+	)
 
-	logger.Debug("delete.start")
-	defer logger.Debug("delete.finish")
+	logger.DebugContext(ctx, "delete.start")
+	defer logger.DebugContext(ctx, "delete.finish")
 
 	it := c.storageClient.
 		Bucket(bucket).
@@ -151,37 +151,37 @@ func (c *Client) storageDelete(ctx context.Context, i *StorageDeleteRequest) err
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	logger.WithField("parallelism", parallelism).Debug("deleting secrets")
+	logger.DebugContext(ctx, "deleting secrets", "parallelism", parallelism)
 
 L:
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
-			logger.Debug("out of objects")
+			logger.DebugContext(ctx, "out of objects")
 			break
 		}
 		if err != nil {
-			logger.WithError(err).Error("failed to get object")
+			logger.ErrorContext(ctx, "failed to get object", "error", err)
 
 			select {
 			case <-childCtx.Done():
-				logger.Debug("exiting because context finished")
+				logger.DebugContext(ctx, "exiting because context finished")
 			case errCh <- fmt.Errorf("failed to list secrets: %w", err):
-				logger.Debug("pushed error onto channel, canceling other jobs")
+				logger.DebugContext(ctx, "pushed error onto channel, canceling other jobs")
 				cancel()
 			default:
-				logger.WithError(err).Error("received error, but channel blocked")
+				logger.ErrorContext(ctx, "received error, but channel blocked", "error", err)
 			}
 		}
 
 		// Don't queue more tasks if a failure has been encountered already
 		select {
 		case <-childCtx.Done():
-			logger.Debug("child context is finished, exiting")
+			logger.DebugContext(ctx, "child context is finished, exiting")
 			break L
 		default:
-			logger.WithField("generation", obj.Generation).
-				Debug("queuing delete worker")
+			logger := logger.With("generation", obj.Generation)
+			logger.DebugContext(ctx, "queueing delete worker")
 
 			if err := sem.Acquire(ctx, 1); err != nil {
 				return fmt.Errorf("failed to acquire semaphore: %w", err)
@@ -195,18 +195,15 @@ L:
 					Object(object).
 					Generation(obj.Generation).
 					Delete(childCtx); err != nil {
-					logger.
-						WithError(err).
-						WithField("generation", obj.Generation).
-						Debug("worker failed to delete object")
+					logger.ErrorContext(ctx, "worker failed to delete object", "error", err)
 
 					select {
 					case <-childCtx.Done():
 					case errCh <- fmt.Errorf("failed to delete generation: %w", err):
-						logger.Debug("worker pushed error onto channel, canceling other jobs")
+						logger.DebugContext(ctx, "worker pushed error onto channel, canceling other jobs")
 						cancel()
 					default:
-						logger.WithError(err).Error("worker received error but channel blocked")
+						logger.ErrorContext(ctx, "worker received error but channel blocked", "error", err)
 						cancel()
 					}
 				}
@@ -215,7 +212,7 @@ L:
 	}
 
 	// Wait for jobs to finish
-	logger.Debug("waiting for delete jobs to finish")
+	logger.DebugContext(ctx, "waiting for delete jobs to finish")
 	if err := sem.Acquire(ctx, parallelism); err != nil {
 		return fmt.Errorf("failed to wait for jobs to finish: %w", err)
 	}

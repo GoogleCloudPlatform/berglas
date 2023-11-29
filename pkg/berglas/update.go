@@ -20,9 +20,9 @@ import (
 	"path"
 
 	"cloud.google.com/go/iam"
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -127,16 +127,16 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 
 	createIfMissing := i.CreateIfMissing
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project":           project,
-		"name":              name,
-		"create_if_missing": createIfMissing,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+		"create_if_missing", createIfMissing,
+	)
 
-	logger.Debug("update.start")
-	defer logger.Debug("update.finish")
+	logger.DebugContext(ctx, "update.start")
+	defer logger.DebugContext(ctx, "update.finish")
 
-	logger.Debug("reading existing secret")
+	logger.DebugContext(ctx, "reading existing secret")
 
 	secretResp, err := c.secretManagerClient.GetSecret(ctx, &secretspb.GetSecretRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s", project, name),
@@ -147,13 +147,13 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 			return nil, fmt.Errorf("failed to read secret for updating: %w", err)
 		}
 
-		logger.Debug("secret does not exist")
+		logger.DebugContext(ctx, "secret does not exist")
 
 		if !createIfMissing {
 			return nil, errSecretDoesNotExist
 		}
 
-		logger.Debug("creating secret")
+		logger.DebugContext(ctx, "creating secret")
 
 		secretResp, err = c.secretManagerClient.CreateSecret(ctx, &secretspb.CreateSecretRequest{
 			Parent:   fmt.Sprintf("projects/%s", project),
@@ -174,7 +174,7 @@ func (c *Client) secretManagerUpdate(ctx context.Context, i *SecretManagerUpdate
 		}
 	}
 
-	logger.Debug("creating secret version")
+	logger.DebugContext(ctx, "creating secret version")
 
 	versionResp, err := c.secretManagerClient.AddSecretVersion(ctx, &secretspb.AddSecretVersionRequest{
 		Parent: secretResp.Name,
@@ -214,17 +214,17 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 	metageneration := i.Metageneration
 	createIfMissing := i.CreateIfMissing
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":            bucket,
-		"object":            object,
-		"key":               key,
-		"generation":        generation,
-		"metageneration":    metageneration,
-		"create_if_missing": createIfMissing,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"key", key,
+		"generation", generation,
+		"metageneration", metageneration,
+		"create_if_missing", createIfMissing,
+	)
 
-	logger.Debug("update.start")
-	defer logger.Debug("update.finish")
+	logger.DebugContext(ctx, "update.start")
+	defer logger.DebugContext(ctx, "update.finish")
 
 	// If no specific generations were given, lookup the latest generation to make
 	// sure we don't conflict with another write.
@@ -234,39 +234,39 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		Attrs(ctx)
 	switch err {
 	case nil:
-		logger = logger.WithFields(logrus.Fields{
-			"existing.bucket":         attrs.Bucket,
-			"existing.name":           attrs.Name,
-			"existing.size":           attrs.Size,
-			"existing.metadata":       attrs.Metadata,
-			"existing.generation":     attrs.Generation,
-			"existing.metageneration": attrs.Metageneration,
-			"existing.created":        attrs.Created,
-			"existing.deleted":        attrs.Deleted,
-			"existing.updated":        attrs.Updated,
-		})
-		logger.Debug("found existing storage object")
+		logger = logger.With(
+			"existing.bucket", attrs.Bucket,
+			"existing.name", attrs.Name,
+			"existing.size", attrs.Size,
+			"existing.metadata", attrs.Metadata,
+			"existing.generation", attrs.Generation,
+			"existing.metageneration", attrs.Metageneration,
+			"existing.created", attrs.Created,
+			"existing.deleted", attrs.Deleted,
+			"existing.updated", attrs.Updated,
+		)
+		logger.DebugContext(ctx, "found existing storage object")
 
 		if generation == 0 {
 			generation = attrs.Generation
-			logger = logger.WithField("generation", generation)
-			logger.Debug("setting generation")
+			logger = logger.With("generation", generation)
+			logger.DebugContext(ctx, "setting generation")
 		}
 
 		if metageneration == 0 {
 			metageneration = attrs.Metageneration
-			logger = logger.WithField("metageneration", metageneration)
-			logger.Debug("setting metageneration")
+			logger = logger.With("metageneration", metageneration)
+			logger.DebugContext(ctx, "setting metageneration")
 		}
 
 		if key == "" {
 			key = attrs.Metadata[MetadataKMSKey]
-			logger = logger.WithField("key", key)
-			logger.Debug("setting key")
+			logger = logger.With("key", key)
+			logger.DebugContext(ctx, "setting key")
 		}
 
 		if plaintext == nil {
-			logger.Debug("attempting to access plaintext")
+			logger.DebugContext(ctx, "attempting to access plaintext")
 
 			plaintext, err = c.Access(ctx, &AccessRequest{
 				Bucket:     bucket,
@@ -279,7 +279,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		}
 
 		// Get existing IAM policies
-		logger.Debug("getting iam policies")
+		logger.DebugContext(ctx, "getting iam policies")
 
 		storageHandle := c.storageIAM(bucket, object)
 		storageP, err := getIAMPolicy(ctx, storageHandle)
@@ -288,7 +288,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		}
 
 		// Update the secret
-		logger.Debug("updating secret")
+		logger.DebugContext(ctx, "updating secret")
 
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,
 			generation, metageneration)
@@ -297,7 +297,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		}
 
 		// Copy over the existing IAM memberships, if any
-		logger.Debug("updating iam policies")
+		logger.DebugContext(ctx, "updating iam policies")
 
 		if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
 			// Copy any IAM permissions from the old object over to the new object.
@@ -310,7 +310,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		}
 		return secret, nil
 	case storage.ErrObjectNotExist:
-		logger.Debug("secret does not exist")
+		logger.DebugContext(ctx, "secret does not exist")
 
 		if !createIfMissing {
 			return nil, errSecretDoesNotExist
@@ -324,7 +324,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 			return nil, fmt.Errorf("missing plaintext")
 		}
 
-		logger.Debug("creating secret")
+		logger.DebugContext(ctx, "creating secret")
 
 		// Update the secret.
 		secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext,

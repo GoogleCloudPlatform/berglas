@@ -26,7 +26,7 @@ func TestClient_Resolve_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		ref := fmt.Sprintf("sm://%s/%s#%s", project, name, "12")
 
@@ -38,7 +38,7 @@ func TestClient_Resolve_secretManager(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -71,7 +71,7 @@ func TestClient_Resolve_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object := testBucket(t), testName(t)
 		ref := fmt.Sprintf("berglas://%s/%s#%d", bucket, object, 21324253)
 
@@ -83,7 +83,7 @@ func TestClient_Resolve_storage(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 

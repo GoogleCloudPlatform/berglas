@@ -20,7 +20,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 )
 
 // chmodSupported indicates whether the OS supports chmod
@@ -39,12 +39,12 @@ func Resolve(ctx context.Context, s string) ([]byte, error) {
 // Resolve parses and extracts a berglas reference. The result is the plaintext
 // secrets contents, or a path to the decrypted contents on disk.
 func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
-	logger := c.Logger().WithFields(logrus.Fields{
-		"reference": s,
-	})
+	logger := logging.FromContext(ctx).With(
+		"reference", s,
+	)
 
-	logger.Debug("resolve.start")
-	defer logger.Debug("resolve.finish")
+	logger.DebugContext(ctx, "resolve.start")
+	defer logger.DebugContext(ctx, "resolve.finish")
 
 	ref, err := ParseReference(s)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c *Client) Resolve(ctx context.Context, s string) ([]byte, error) {
 	}
 
 	if pth := ref.Filepath(); pth != "" {
-		logger.WithField("filepath", pth).Debug("writing to filepath")
+		logger.DebugContext(ctx, "writing to filepath", "filepath", pth)
 
 		f, err := os.OpenFile(ref.Filepath(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {

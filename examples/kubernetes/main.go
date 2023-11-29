@@ -192,7 +192,7 @@ func logAt(lvl, msg string, args ...any) {
 
 	payload, err := json.Marshal(body)
 	if err != nil {
-		panic(fmt.Sprintf("failed to make JSON error message: %s", err))
+		panic(fmt.Sprintf("failed to make JSON error message: %w", err))
 	}
 	fmt.Fprintln(os.Stderr, string(payload))
 }

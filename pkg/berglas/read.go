@@ -18,15 +18,15 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path"
 	"sort"
 	"strings"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -113,16 +113,16 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		version = "latest"
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project": project,
-		"name":    name,
-		"version": version,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+		"version", version,
+	)
 
-	logger.Debug("read.start")
-	defer logger.Debug("read.finish")
+	logger.DebugContext(ctx, "read.start")
+	defer logger.DebugContext(ctx, "read.finish")
 
-	logger.Debug("reading secret version")
+	logger.DebugContext(ctx, "reading secret version")
 
 	versionResp, err := c.secretManagerClient.GetSecretVersion(ctx, &secretspb.GetSecretVersionRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, name, version),
@@ -135,7 +135,7 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		return nil, fmt.Errorf("failed to read secret: %w", err)
 	}
 
-	logger.Debug("accessing secret data")
+	logger.DebugContext(ctx, "accessing secret data")
 
 	accessResp, err := c.secretManagerClient.AccessSecretVersion(ctx, &secretspb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, name, version),
@@ -144,7 +144,7 @@ func (c *Client) secretManagerRead(ctx context.Context, i *SecretManagerReadRequ
 		return nil, fmt.Errorf("failed to access secret: %w", err)
 	}
 
-	logger.Debug("parsing location")
+	logger.DebugContext(ctx, "parsing location")
 
 	var locations []string
 	replication := versionResp.ReplicationStatus.GetUserManaged()
@@ -182,17 +182,17 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		generation = -1
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":     bucket,
-		"object":     object,
-		"generation": generation,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"generation", generation,
+	)
 
-	logger.Debug("read.start")
-	defer logger.Debug("read.finish")
+	logger.DebugContext(ctx, "read.start")
+	defer logger.DebugContext(ctx, "read.finish")
 
 	// Get attributes to find the KMS key
-	logger.Debug("reading attributes from storage")
+	logger.DebugContext(ctx, "reading attributes from storage")
 
 	attrs, err := c.storageClient.
 		Bucket(bucket).
@@ -210,11 +210,11 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
-	logger = logger.WithField("key", key)
-	logger.Debug("found kms key")
+	logger = logger.With("key", key)
+	logger.DebugContext(ctx, "found kms key")
 
 	// Download the file from GCS
-	logger.Debug("downloading file from storage")
+	logger.DebugContext(ctx, "downloading file from storage")
 
 	ior, err := c.storageClient.
 		Bucket(bucket).
@@ -229,9 +229,9 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 	}
 
 	// Read the entire response into memory
-	logger.Debug("reading object into memory")
+	logger.DebugContext(ctx, "reading object into memory")
 
-	data, err := ioutil.ReadAll(ior)
+	data, err := io.ReadAll(ior)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read secret into string: %w", err)
 	}
@@ -240,7 +240,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 	}
 
 	// Split into parts
-	logger.Debug("deconstructing and decoding ciphertext into parts")
+	logger.DebugContext(ctx, "deconstructing and decoding ciphertext into parts")
 
 	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) < 2 {
@@ -258,7 +258,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 	}
 
 	// Decrypt the DEK using a KMS key
-	logger.Debug("decrypting dek using kms")
+	logger.DebugContext(ctx, "decrypting dek using kms")
 
 	kmsResp, err := c.kmsClient.Decrypt(ctx, &kmspb.DecryptRequest{
 		Name:                        key,
@@ -271,7 +271,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 	dek := kmsResp.Plaintext
 
 	// Decrypt with the local key
-	logger.Debug("decrypting data with deck locally")
+	logger.DebugContext(ctx, "decrypting data with deck locally")
 
 	plaintext, err := envelopeDecrypt(dek, ciphertext)
 	if err != nil {

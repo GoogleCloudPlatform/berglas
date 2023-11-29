@@ -22,16 +22,13 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"os"
 	"strings"
-	"sync"
 	"time"
 
 	kms "cloud.google.com/go/kms/apiv1"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
 	"github.com/GoogleCloudPlatform/berglas/internal/version"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
 	storagev1 "google.golang.org/api/storage/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -68,9 +65,6 @@ type Client struct {
 	secretManagerClient *secretmanager.Client
 	storageClient       *storage.Client
 	storageIAMClient    *storagev1.Service
-
-	loggerLock sync.RWMutex
-	logger     *logrus.Logger
 }
 
 // New creates a new berglas client.
@@ -102,14 +96,6 @@ func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
 		return nil, fmt.Errorf("failed to create storagev1 client: %w", err)
 	}
 	c.storageIAMClient = storageIAMClient
-
-	c.logger = &logrus.Logger{
-		Out:          os.Stderr,
-		Formatter:    new(logrus.JSONFormatter),
-		Hooks:        make(logrus.LevelHooks),
-		Level:        logrus.FatalLevel,
-		ReportCaller: true,
-	}
 
 	return &c, nil
 }

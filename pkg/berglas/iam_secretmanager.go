@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/iam"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	iampb "google.golang.org/genproto/googleapis/iam/v1"
 )
 
 const (
