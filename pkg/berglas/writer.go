@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	"google.golang.org/api/googleapi"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 // encryptAndWrite is a low-level function for encrypting and writing data.
@@ -31,27 +31,27 @@ func (c *Client) encryptAndWrite(
 	ctx context.Context, bucket, object, key string, plaintext []byte,
 	generation, metageneration int64) (*Secret, error) {
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":         bucket,
-		"object":         object,
-		"key":            key,
-		"generation":     generation,
-		"metageneration": metageneration,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"key", key,
+		"generation", generation,
+		"metageneration", metageneration,
+	)
 
-	logger.Debug("encryptAndWrite.start")
-	defer logger.Debug("encryptAndWrite.finish")
+	logger.DebugContext(ctx, "encryptAndWrite.start")
+	defer logger.DebugContext(ctx, "encryptAndWrite.finish")
 
 	// Generate a unique DEK and encrypt the plaintext locally (useful for large
 	// pieces of data).
-	logger.Debug("generating envelope")
+	logger.DebugContext(ctx, "generating envelope")
 	dek, ciphertext, err := envelopeEncrypt(plaintext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to perform envelope encryption: %w", err)
 	}
 
 	// Encrypt the plaintext using a KMS key
-	logger.Debug("encrypting envelope")
+	logger.DebugContext(ctx, "encrypting envelope")
 	kmsResp, err := c.kmsClient.Encrypt(ctx, &kmspb.EncryptRequest{
 		Name:                        key,
 		Plaintext:                   dek,
@@ -101,15 +101,15 @@ func (c *Client) encryptAndWrite(
 	iow.Metadata[MetadataKMSKey] = kmsKeyTrimVersion(key)
 
 	// Write
-	logger.WithField("metadata", iow.Metadata).Debug("writing object to storage")
+	logger.DebugContext(ctx, "writing object to storage", "metadata", iow.Metadata)
 	if _, err := iow.Write([]byte(blob)); err != nil {
 		return nil, fmt.Errorf("failed to save encrypted ciphertext to storage: %w", err)
 	}
 
 	// Close and flush
-	logger.Debug("finalizing writer")
+	logger.DebugContext(ctx, "finalizing writer")
 	if err := iow.Close(); err != nil {
-		logger.WithError(err).Error("failed to finalize writer")
+		logger.ErrorContext(ctx, "failed to initialize writer", "error", err)
 
 		if terr, ok := err.(*googleapi.Error); ok {
 			switch terr.Code {

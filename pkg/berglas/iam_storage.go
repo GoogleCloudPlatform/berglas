@@ -22,10 +22,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/iam"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	"github.com/sethvargo/go-retry"
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
-	iampb "google.golang.org/genproto/googleapis/iam/v1"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

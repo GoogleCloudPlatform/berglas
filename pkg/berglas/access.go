@@ -18,9 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -107,14 +106,14 @@ func (c *Client) secretManagerAccess(ctx context.Context, i *SecretManagerAccess
 		version = "latest"
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project": project,
-		"name":    name,
-		"version": version,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+		"version", version,
+	)
 
-	logger.Debug("access.start")
-	defer logger.Debug("access.finish")
+	logger.DebugContext(ctx, "access.start")
+	defer logger.DebugContext(ctx, "access.finish")
 
 	resp, err := c.secretManagerClient.AccessSecretVersion(ctx, &secretspb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", project, name, version),
@@ -146,14 +145,14 @@ func (c *Client) storageAccess(ctx context.Context, i *StorageAccessRequest) ([]
 		generation = -1
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":     bucket,
-		"object":     object,
-		"generation": generation,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"generation", generation,
+	)
 
-	logger.Debug("access.start")
-	defer logger.Debug("access.finish")
+	logger.DebugContext(ctx, "access.start")
+	defer logger.DebugContext(ctx, "access.finish")
 
 	secret, err := c.Read(ctx, &ReadRequest{
 		Bucket:     bucket,

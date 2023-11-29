@@ -25,7 +25,7 @@ func TestClient_Update_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -42,7 +42,7 @@ func TestClient_Update_secretManager(t *testing.T) {
 	t.Run("missing_create_if_missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -60,7 +60,7 @@ func TestClient_Update_secretManager(t *testing.T) {
 	t.Run("exists", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -99,7 +99,7 @@ func TestClient_Update_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -117,7 +117,7 @@ func TestClient_Update_storage(t *testing.T) {
 	t.Run("missing_create_if_missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 
@@ -136,7 +136,7 @@ func TestClient_Update_storage(t *testing.T) {
 	t.Run("exists", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret plaintext")
 

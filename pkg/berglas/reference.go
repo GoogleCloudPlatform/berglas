@@ -16,8 +16,8 @@ package berglas
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -238,7 +238,7 @@ func refExtractFilepath(object, s string) (string, error) {
 		suffix := filepath.Ext(object)
 		pattern := fmt.Sprintf("berglas-*%s", suffix)
 		// create a tempfile for the path
-		f, err := ioutil.TempFile("", pattern)
+		f, err := os.CreateTemp("", pattern)
 		if err != nil {
 			return "", fmt.Errorf("failed to create tempfile for secret: %w", err)
 		}

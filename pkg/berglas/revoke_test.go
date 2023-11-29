@@ -43,7 +43,7 @@ func TestClient_Revoke_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name, serviceAccount := testProject(t), testName(t), testServiceAccount(t)
 
 		if err := client.Revoke(ctx, &SecretManagerRevokeRequest{
@@ -58,7 +58,7 @@ func TestClient_Revoke_secretManager(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name, serviceAccount := testProject(t), testName(t), testServiceAccount(t)
 		plaintext := []byte("my secret value")
 
@@ -119,7 +119,7 @@ func TestClient_Revoke_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, serviceAccount := testBucket(t), testName(t), testServiceAccount(t)
 
 		if err := client.Revoke(ctx, &StorageRevokeRequest{
@@ -134,7 +134,7 @@ func TestClient_Revoke_storage(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key, serviceAccount := testBucket(t), testName(t), testKey(t), testServiceAccount(t)
 		plaintext := []byte("my secret value")
 

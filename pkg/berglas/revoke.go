@@ -21,7 +21,7 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -110,16 +110,16 @@ func (c *Client) secretManagerRevoke(ctx context.Context, i *SecretManagerRevoke
 	}
 	sort.Strings(members)
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project": project,
-		"name":    name,
-		"members": members,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+		"members", members,
+	)
 
-	logger.Debug("revoke.start")
-	defer logger.Debug("revoke.finish")
+	logger.DebugContext(ctx, "revoke.start")
+	defer logger.DebugContext(ctx, "revoke.finish")
 
-	logger.Debug("revoking access to seetcr")
+	logger.DebugContext(ctx, "revoking access to seetcr")
 
 	storageHandle := c.secretManagerIAM(project, name)
 	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
@@ -156,17 +156,17 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 	}
 	sort.Strings(members)
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":  bucket,
-		"object":  object,
-		"members": members,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"members", members,
+	)
 
-	logger.Debug("revoke.start")
-	defer logger.Debug("revoke.finish")
+	logger.DebugContext(ctx, "revoke.start")
+	defer logger.DebugContext(ctx, "revoke.finish")
 
 	// Get attributes to find the KMS key
-	logger.Debug("finding storage object")
+	logger.DebugContext(ctx, "finding storage object")
 
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
@@ -181,11 +181,11 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 	}
 	key := attrs.Metadata[MetadataKMSKey]
 
-	logger = logger.WithField("key", key)
-	logger.Debug("found kms key")
+	logger = logger.With("key", key)
+	logger.DebugContext(ctx, "found kms key")
 
 	// Remove access to storage
-	logger.Debug("revoking access to storage")
+	logger.DebugContext(ctx, "revoking access to storage")
 
 	storageHandle := c.storageIAM(bucket, object)
 	if err := updateIAMPolicy(ctx, storageHandle, func(p *iam.Policy) *iam.Policy {
@@ -198,7 +198,7 @@ func (c *Client) storageRevoke(ctx context.Context, i *StorageRevokeRequest) err
 	}
 
 	// Remove access to KMS
-	logger.Debug("revoking access to kms")
+	logger.DebugContext(ctx, "revoking access to kms")
 
 	kmsHandle := c.kmsClient.ResourceIAM(key)
 	if err := updateIAMPolicy(ctx, kmsHandle, func(p *iam.Policy) *iam.Policy {

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 )
 
 func TestKMSKeyTrimVersion(t *testing.T) {
@@ -63,15 +65,16 @@ func TestKMSKeyTrimVersion(t *testing.T) {
 	}
 }
 
-func testClient(tb testing.TB) (*Client, context.Context) {
+func testClient(tb testing.TB) (context.Context, *Client) {
 	tb.Helper()
 
-	ctx := context.Background()
+	ctx := logging.WithLogger(context.Background(), logging.TestLogger(tb))
+
 	client, err := New(ctx)
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return client, ctx
+	return ctx, client
 }
 
 func testProject(tb testing.TB) string {
@@ -135,13 +138,10 @@ func testServiceAccount(tb testing.TB) string {
 func testSecretManagerCleanup(tb testing.TB, project, name string) {
 	tb.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, client := testClient(tb)
 
-	client, err := New(context.Background())
-	if err != nil {
-		tb.Fatal(err)
-	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
 	if err := client.Delete(ctx, &SecretManagerDeleteRequest{
 		Project: project,
@@ -154,13 +154,10 @@ func testSecretManagerCleanup(tb testing.TB, project, name string) {
 func testStorageCleanup(tb testing.TB, bucket, object string) {
 	tb.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, client := testClient(tb)
 
-	client, err := New(context.Background())
-	if err != nil {
-		tb.Fatal(err)
-	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
 	if err := client.Delete(ctx, &StorageDeleteRequest{
 		Object: object,

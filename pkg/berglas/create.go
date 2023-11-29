@@ -20,8 +20,8 @@ import (
 	"path"
 	"sort"
 
-	"github.com/sirupsen/logrus"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -143,15 +143,15 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		}
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project": project,
-		"name":    name,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"name", name,
+	)
 
-	logger.Debug("create.start")
-	defer logger.Debug("create.finish")
+	logger.DebugContext(ctx, "create.start")
+	defer logger.DebugContext(ctx, "create.finish")
 
-	logger.Debug("creating secret")
+	logger.DebugContext(ctx, "creating secret")
 
 	secretResp, err := c.secretManagerClient.CreateSecret(ctx, &secretspb.CreateSecretRequest{
 		Parent:   fmt.Sprintf("projects/%s", project),
@@ -167,7 +167,7 @@ func (c *Client) secretManagerCreate(ctx context.Context, i *SecretManagerCreate
 		return nil, fmt.Errorf("failed to create secret: %w", err)
 	}
 
-	logger.Debug("creating secret version")
+	logger.DebugContext(ctx, "creating secret version")
 
 	versionResp, err := c.secretManagerClient.AddSecretVersion(ctx, &secretspb.AddSecretVersionRequest{
 		Parent: secretResp.Name,
@@ -210,14 +210,14 @@ func (c *Client) storageCreate(ctx context.Context, i *StorageCreateRequest) (*S
 		return nil, fmt.Errorf("missing plaintext")
 	}
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket": bucket,
-		"object": object,
-		"key":    key,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"object", object,
+		"key", key,
+	)
 
-	logger.Debug("create.start")
-	defer logger.Debug("create.finish")
+	logger.DebugContext(ctx, "create.start")
+	defer logger.DebugContext(ctx, "create.finish")
 
 	secret, err := c.encryptAndWrite(ctx, bucket, object, key, plaintext, 0, 0)
 	if err != nil {

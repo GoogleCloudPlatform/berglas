@@ -22,7 +22,7 @@ func TestClient_List_secretManager(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, prefix := testProject(t), testName(t)
 
 		list, err := client.List(ctx, &SecretManagerListRequest{
@@ -41,7 +41,7 @@ func TestClient_List_secretManager(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, prefix := testProject(t), testName(t)
 
 		for i := 0; i < 3; i++ {
@@ -72,7 +72,7 @@ func TestClient_List_secretManager(t *testing.T) {
 	t.Run("versions", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 
 		if _, err := client.Create(ctx, &SecretManagerCreateRequest{
@@ -115,7 +115,7 @@ func TestClient_List_storage(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, prefix := testBucket(t), testName(t)
 
 		list, err := client.List(ctx, &StorageListRequest{
@@ -134,7 +134,7 @@ func TestClient_List_storage(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, prefix, key := testBucket(t), testName(t), testKey(t)
 
 		for i := 0; i < 3; i++ {
@@ -166,7 +166,7 @@ func TestClient_List_storage(t *testing.T) {
 	t.Run("versions", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 
 		if _, err := client.Create(ctx, &StorageCreateRequest{

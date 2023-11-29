@@ -22,7 +22,7 @@ func TestClient_Delete_secretManager(t *testing.T) {
 	t.Run("exists", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 		plaintext := []byte("my secret value")
 
@@ -53,7 +53,7 @@ func TestClient_Delete_secretManager(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		project, name := testProject(t), testName(t)
 
 		if err := client.Delete(ctx, &SecretManagerDeleteRequest{
@@ -78,7 +78,7 @@ func TestClient_Delete_storage(t *testing.T) {
 	t.Run("exists", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object, key := testBucket(t), testName(t), testKey(t)
 		plaintext := []byte("my secret value")
 
@@ -110,7 +110,7 @@ func TestClient_Delete_storage(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		t.Parallel()
 
-		client, ctx := testClient(t)
+		ctx, client := testClient(t)
 		bucket, object := testBucket(t), testName(t)
 
 		if err := client.Delete(ctx, &StorageDeleteRequest{

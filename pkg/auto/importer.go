@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 )
 
 var (
@@ -32,18 +34,29 @@ var (
 	continueOnError, _ = strconv.ParseBool(os.Getenv("BERGLAS_CONTINUE_ON_ERROR"))
 
 	// logLevel is the log level to use.
-	logLevel, _ = logrus.ParseLevel(os.Getenv("BERGLAS_LOG_LEVEL"))
+	logLevel = os.Getenv("BERGLAS_LOG_LEVEL")
+
+	// logFormat is the log level to use.
+	logFormat = os.Getenv("BERGLAS_LOG_FORMAT")
 )
 
 func init() {
-	ctx := context.Background()
+	ctx, done := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM)
+	defer done()
+
+	logger, err := logging.New(os.Stderr, logLevel, logFormat, false)
+	if err != nil {
+		handleError(fmt.Errorf("failed to initialize logger: %w", err))
+		return
+	}
+	ctx = logging.WithLogger(ctx, logger)
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		handleError(fmt.Errorf("failed to initialize berglas client: %s", err))
+		handleError(fmt.Errorf("failed to initialize berglas client: %w", err))
 		return
 	}
-	client.SetLogLevel(logLevel)
 
 	for _, e := range os.Environ() {
 		p := strings.SplitN(e, "=", 2)

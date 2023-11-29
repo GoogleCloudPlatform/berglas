@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -31,7 +30,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/berglas/internal/version"
 	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +50,7 @@ var (
 
 	logFormat string
 	logLevel  string
+	logDebug  bool
 
 	accessGeneration int64
 
@@ -413,10 +413,12 @@ already exist.
 func main() {
 	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
 
-	rootCmd.PersistentFlags().StringVarP(&logFormat, "log-format", "f", "console",
+	rootCmd.PersistentFlags().StringVarP(&logFormat, "log-format", "f", "text",
 		"Format in which to log")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "fatal",
 		"Level at which to log")
+	rootCmd.PersistentFlags().BoolVar(&logDebug, "log-debug", false,
+		"Enable verbose source debug logging")
 
 	rootCmd.AddCommand(accessCmd)
 	accessCmd.Flags().Int64Var(&accessGeneration, "generation", 0,
@@ -498,20 +500,25 @@ func main() {
 	updateCmd.Flags().StringVar(&key, "key", "",
 		"KMS key to use for re-encryption")
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		fmt.Fprintf(stderr, "%s\n", err)
+		cancel()
+
+		code := 1
 		if terr, ok := err.(*exitError); ok {
-			os.Exit(terr.code)
+			code = terr.code
 		}
-		os.Exit(1)
+
+		fmt.Fprintf(stderr, "%s\n", err)
+		os.Exit(code)
 	}
 }
 
 func accessRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -555,8 +562,7 @@ func accessRun(cmd *cobra.Command, args []string) error {
 }
 
 func bootstrapRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -621,8 +627,7 @@ func completionRun(cmd *cobra.Command, args []string) error {
 }
 
 func createRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -678,8 +683,7 @@ func createRun(cmd *cobra.Command, args []string) error {
 }
 
 func deleteRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -716,8 +720,7 @@ func deleteRun(cmd *cobra.Command, args []string) error {
 }
 
 func editRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -765,7 +768,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create the tempfile
-	f, err := ioutil.TempFile("", "berglas-")
+	f, err := os.CreateTemp("", "berglas-")
 	if err != nil {
 		err = fmt.Errorf("failed to create tempfile for secret: %w", err)
 		return apiError(err)
@@ -815,7 +818,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// Read the new secret value
-	newPlaintext, err := ioutil.ReadFile(f.Name())
+	newPlaintext, err := os.ReadFile(f.Name())
 	if err != nil {
 		err = fmt.Errorf("failed to read secret tempfile: %w", err)
 		return misuseError(err)
@@ -871,8 +874,7 @@ func editRun(cmd *cobra.Command, args []string) error {
 }
 
 func execRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -916,8 +918,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 }
 
 func grantRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -958,8 +959,7 @@ func grantRun(cmd *cobra.Command, args []string) error {
 }
 
 func listRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -1017,8 +1017,7 @@ func listRun(cmd *cobra.Command, args []string) error {
 }
 
 func migrateRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -1067,8 +1066,7 @@ func migrateRun(cmd *cobra.Command, args []string) error {
 }
 
 func revokeRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -1109,8 +1107,7 @@ func revokeRun(cmd *cobra.Command, args []string) error {
 }
 
 func updateRun(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	client, err := clientWithContext(ctx)
+	ctx, client, err := clientWithContext(cmd.Context())
 	if err != nil {
 		return misuseError(err)
 	}
@@ -1193,46 +1190,20 @@ func misuseError(err error) *exitError {
 	return exitWithCode(MisuseExitCode, err)
 }
 
-// logger returns the logger for this cli.
-func logger() (*logrus.Logger, error) {
-	level, err := logrus.ParseLevel(logLevel)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse log level: %w", err)
-	}
-
-	var formatter logrus.Formatter
-	switch logFormat {
-	case "console", "text":
-		formatter = new(logrus.TextFormatter)
-	case "json":
-		formatter = new(berglas.LogFormatterStackdriver)
-	default:
-		return nil, fmt.Errorf("unknown log format %q", logFormat)
-	}
-
-	return &logrus.Logger{
-		Out:       stderr,
-		Formatter: formatter,
-		Hooks:     make(logrus.LevelHooks),
-		Level:     level,
-	}, nil
-}
-
 // clientWithContext returns an instantiated berglas client and context with a
 // closer.
-func clientWithContext(ctx context.Context) (*berglas.Client, error) {
-	logger, err := logger()
+func clientWithContext(ctx context.Context) (context.Context, *berglas.Client, error) {
+	logger, err := logging.New(stderr, logLevel, logFormat, logDebug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup logger: %w", err)
+		return ctx, nil, err
 	}
+	ctx = logging.WithLogger(ctx, logger)
 
 	client, err := berglas.New(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create berglas client: %w", err)
+		return ctx, nil, fmt.Errorf("failed to create berglas client: %w", err)
 	}
-	client.SetLogger(logger)
-
-	return client, nil
+	return ctx, client, nil
 }
 
 // readData reads the given string. If the string starts with an "@", it is
@@ -1242,7 +1213,7 @@ func clientWithContext(ctx context.Context) (*berglas.Client, error) {
 func readData(s string) ([]byte, error) {
 	switch {
 	case strings.HasPrefix(s, "@"):
-		return ioutil.ReadFile(s[1:])
+		return os.ReadFile(s[1:])
 	case strings.HasPrefix(s, "-"):
 		r := bufio.NewReader(stdin)
 		b, err := r.ReadBytes('\n')

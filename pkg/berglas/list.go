@@ -21,10 +21,10 @@ import (
 	"sort"
 	"strings"
 
+	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
 	"google.golang.org/api/iterator"
-	secretspb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 type listRequest interface {
@@ -131,14 +131,14 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 	prefix := i.Prefix
 	versions := i.Versions
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"project":  project,
-		"prefix":   prefix,
-		"versions": versions,
-	})
+	logger := logging.FromContext(ctx).With(
+		"project", project,
+		"prefix", prefix,
+		"versions", versions,
+	)
 
-	logger.Debug("list.start")
-	defer logger.Debug("list.finish")
+	logger.DebugContext(ctx, "list.start")
+	defer logger.DebugContext(ctx, "list.finish")
 
 	allSecrets := []*Secret{}
 
@@ -148,7 +148,7 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 	for {
 		resp, err := it.Next()
 		if err == iterator.Done {
-			logger.Debug("out of secrets")
+			logger.DebugContext(ctx, "out of secrets")
 			break
 		}
 		if err != nil {
@@ -174,11 +174,10 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 	allSecretVersions := make([]*Secret, 0, len(allSecrets)*2)
 
 	for _, s := range allSecrets {
-		logger = logger.WithFields(logrus.Fields{
-			"project": s.Parent,
-			"name":    s.Name,
-		})
-		logger.Debug("listing secret versions")
+		logger := logger.With(
+			"project", s.Parent,
+			"name", s.Name)
+		logger.DebugContext(ctx, "listing secret versions")
 
 		it := c.secretManagerClient.ListSecretVersions(ctx, &secretspb.ListSecretVersionsRequest{
 			Parent: fmt.Sprintf("projects/%s/secrets/%s", s.Parent, s.Name),
@@ -186,7 +185,7 @@ func (c *Client) secretManagerList(ctx context.Context, i *SecretManagerListRequ
 		for {
 			resp, err := it.Next()
 			if err == iterator.Done {
-				logger.Debug("out of versions")
+				logger.DebugContext(ctx, "out of versions")
 				break
 			}
 			if err != nil {
@@ -218,14 +217,14 @@ func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListR
 	prefix := i.Prefix
 	generations := i.Generations
 
-	logger := c.Logger().WithFields(logrus.Fields{
-		"bucket":      bucket,
-		"prefix":      prefix,
-		"generations": generations,
-	})
+	logger := logging.FromContext(ctx).With(
+		"bucket", bucket,
+		"prefix", prefix,
+		"generations", generations,
+	)
 
-	logger.Debug("list.start")
-	defer logger.Debug("list.finish")
+	logger.DebugContext(ctx, "list.start")
+	defer logger.DebugContext(ctx, "list.finish")
 
 	allObjects := map[string][]*storage.ObjectAttrs{}
 
@@ -241,7 +240,7 @@ func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListR
 	for {
 		obj, err := it.Next()
 		if err == iterator.Done {
-			logger.Debug("out of objects")
+			logger.DebugContext(ctx, "out of objects")
 			break
 		}
 		if err != nil {
@@ -250,14 +249,14 @@ func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListR
 
 		// Check that it has metadata
 		if obj.Metadata == nil || obj.Metadata[MetadataIDKey] != "1" {
-			logger.WithFields(logrus.Fields{
-				"object":   obj.Name,
-				"metadata": obj.Metadata,
-			}).Debug("found object without metadata")
+			logger.DebugContext(ctx, "found object without metadata",
+				"object", obj.Name,
+				"metadata", obj.Metadata)
 			continue
 		}
 
-		logger.WithField("object", obj.Name).Debug("adding object to list")
+		logger.DebugContext(ctx, "adding object to list",
+			"object", obj.Name)
 		allObjects[obj.Name] = append(allObjects[obj.Name], obj)
 	}
 
@@ -265,7 +264,7 @@ func (c *Client) storageList(ctx context.Context, i *StorageListRequest) (*ListR
 
 	// list objects returns all generations even if the live object is gone.
 	// filter on names which have not been deleted
-	logger.Debug("filtering objects with no live versions")
+	logger.DebugContext(ctx, "filtering objects with no live versions")
 
 	for _, objects := range allObjects {
 		foundLiveObject := false
