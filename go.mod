@@ -1,6 +1,6 @@
 module github.com/GoogleCloudPlatform/berglas
 
-go 1.21
+go 1.21.4
 
 require (
 	cloud.google.com/go/iam v1.1.5
