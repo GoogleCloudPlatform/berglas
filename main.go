@@ -415,7 +415,7 @@ func main() {
 
 	rootCmd.PersistentFlags().StringVarP(&logFormat, "log-format", "f", "text",
 		"Format in which to log")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "fatal",
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warning",
 		"Level at which to log")
 	rootCmd.PersistentFlags().BoolVar(&logDebug, "log-debug", false,
 		"Enable verbose source debug logging")

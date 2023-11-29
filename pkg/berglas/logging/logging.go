@@ -25,7 +25,9 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +36,14 @@ type contextKey string
 
 // loggerKey points to the value in the context where the logger is stored.
 const loggerKey = contextKey("logger")
+
+var defaultLoggerOnce = sync.OnceValue(func() *slog.Logger {
+	l, err := New(os.Stderr, "warning", "json", false)
+	if err != nil {
+		panic(fmt.Errorf("failed to create logger: %w", err))
+	}
+	return l
+})
 
 // New creates a new logger in the specified format and writes to the provided
 // writer at the provided level. Use the returned leveler to dynamically change
@@ -107,7 +117,8 @@ func FromContext(ctx context.Context) *slog.Logger {
 	if logger, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
 		return logger
 	}
-	panic("no logger in context")
+
+	return defaultLoggerOnce()
 }
 
 // cloudLoggingAttrsEncoder updates the [slog.Record] attributes to match the
