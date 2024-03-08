@@ -20,7 +20,7 @@ certificate:
 
 image:
   # -- Container image repo that contains the admission server
-  repository: ghcr.io/GoogleCloudPlatform/berglas/berglas-webhook
+  repository: ghcr.io/GoogleCloudPlatform/berglas/berglas
   # -- Container image tag
   tag: ""
   # -- Container image pull policy
