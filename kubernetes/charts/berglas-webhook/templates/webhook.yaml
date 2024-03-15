@@ -1,0 +1,102 @@
+{{- $ca := genCA "svc-cat-ca" (.Values.certificate.caLifespan | int) }}
+{{- $svcName := include "berglas-webhook.fullname" . }}
+{{- $cn := printf "%s.%s.svc" $svcName .Release.Namespace }}
+{{- $altName1 := printf "%s.cluster.local" $cn }}
+{{- $altName2 := printf "%s" $cn }}
+{{- $server := genSignedCert $cn nil (concat (list $altName1 $altName2) .Values.certificate.extraAltNames) (.Values.certificate.certLifespan | int) $ca }}
+{{- $tlsCrt := b64enc $server.Cert }}
+{{- $tlsKey := b64enc $server.Key }}
+{{- $caCrt :=  b64enc $ca.Cert }}
+
+{{- $podsNamespaceSelector := default dict }}
+{{- $podsObjectSelector := default dict }}
+
+{{- if .Values.pods.namespaceSelector }}
+{{- $podsNamespaceSelector = .Values.pods.namespaceSelector }}
+{{- else }}
+{{- $podsNamespaceSelector = .Values.namespaceSelector }}
+{{- end }}
+{{- if .Values.pods.objectSelector }}
+{{- $podsObjectSelector = .Values.pods.objectSelector }}
+{{- else }}
+{{- $podsObjectSelector = .Values.objectSelector }}
+{{- end }}
+
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "berglas-webhook.servingCertificate" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  tls.crt: {{ $tlsCrt }}
+  tls.key: {{ $tlsKey }}
+  ca.crt:  {{ $caCrt }}
+---
+{{- if semverCompare ">=1.16-0" (include "berglas-webhook.capabilities.kubeVersion" .) }}
+apiVersion: admissionregistration.k8s.io/v1
+{{- else }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- end }}
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ template "berglas-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+webhooks:
+- name: pods.{{ template "berglas-webhook.name" . }}.berglas.com
+  {{- if semverCompare ">=1.14-0" (include "berglas-webhook.capabilities.kubeVersion" .) }}
+  {{- with .Values.reinvocationPolicy }}
+  reinvocationPolicy: {{ . }}
+  {{- end }}
+  admissionReviewVersions: ["v1", "v1beta1"]
+  {{- if .Values.timeoutSeconds }}
+  timeoutSeconds: {{ .Values.timeoutSeconds }}
+  {{- end }}
+  {{- end }}
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ template "berglas-webhook.fullname" . }}
+      path: /mutate
+    caBundle: {{ $caCrt }}
+  rules:
+  - operations:
+    - CREATE
+    apiGroups:
+    - "*"
+    apiVersions:
+    - "*"
+    resources:
+    - pods
+  failurePolicy: {{ .Values.podsFailurePolicy }}
+  namespaceSelector:
+  {{- if $podsNamespaceSelector.matchLabels }}
+    matchLabels:
+{{ toYaml $podsNamespaceSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if $podsNamespaceSelector.matchExpressions }}
+{{ toYaml $podsNamespaceSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - {{ .Release.Namespace }}
+{{- if semverCompare ">=1.15-0" (include "berglas-webhook.capabilities.kubeVersion" .) }}
+  objectSelector:
+  {{- if $podsObjectSelector.matchLabels }}
+    matchLabels:
+{{ toYaml $podsObjectSelector.matchLabels | indent 6 }}
+  {{- end }}
+    matchExpressions:
+    {{- if $podsObjectSelector.matchExpressions }}
+{{ toYaml $podsObjectSelector.matchExpressions | indent 4 }}
+    {{- end }}
+    - key: berglas-webhook.berglas/mutate
+      operator: NotIn
+      values:
+      - skip
+{{- end }}
+{{- if semverCompare ">=1.12-0" (include "berglas-webhook.capabilities.kubeVersion" .) }}
+  sideEffects: {{ .Values.apiSideEffectValue }}
+{{- end }}
