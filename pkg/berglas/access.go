@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

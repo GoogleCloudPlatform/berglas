@@ -28,9 +28,9 @@ import (
 	"syscall"
 	"text/tabwriter"
 
-	"github.com/GoogleCloudPlatform/berglas/internal/version"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/internal/version"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 	"github.com/spf13/cobra"
 )
 

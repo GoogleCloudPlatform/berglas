@@ -62,7 +62,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     - Install from source (requires a working Go installation):
 
       ```sh
-      go install github.com/GoogleCloudPlatform/berglas@latest
+      go install github.com/GoogleCloudPlatform/berglas/v2@latest
       ```
 
 1. Export your project ID as an environment variable. The rest of this setup
@@ -353,7 +353,7 @@ Berglas is also a Go library that can be imported in Go projects:
 
 ```go
 import (
-	_ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
+	_ "github.com/GoogleCloudPlatform/berglas/v2/pkg/auto"
 )
 ```
 
@@ -372,7 +372,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas"
 )
 
 func main() {

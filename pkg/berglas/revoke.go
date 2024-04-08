@@ -21,7 +21,7 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )

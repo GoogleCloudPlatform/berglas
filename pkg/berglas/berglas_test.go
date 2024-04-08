@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 )
 
 func TestKMSKeyTrimVersion(t *testing.T) {

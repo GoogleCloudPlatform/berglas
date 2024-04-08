@@ -20,7 +20,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 )
 
 // chmodSupported indicates whether the OS supports chmod
