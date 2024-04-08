@@ -24,8 +24,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 )
 
 var (

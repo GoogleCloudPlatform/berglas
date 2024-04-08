@@ -23,7 +23,7 @@ import (
 
 	secretspb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas/logging"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas/logging"
 	"google.golang.org/api/iterator"
 )
 

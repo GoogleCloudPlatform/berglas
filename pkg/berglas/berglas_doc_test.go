@@ -19,7 +19,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/GoogleCloudPlatform/berglas/pkg/berglas"
+	"github.com/GoogleCloudPlatform/berglas/v2/pkg/berglas"
 )
 
 var (

@@ -28,7 +28,7 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/storage"
-	"github.com/GoogleCloudPlatform/berglas/internal/version"
+	"github.com/GoogleCloudPlatform/berglas/v2/internal/version"
 	"google.golang.org/api/option"
 	storagev1 "google.golang.org/api/storage/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"

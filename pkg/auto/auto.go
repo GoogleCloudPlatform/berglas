@@ -14,14 +14,14 @@
 
 // Package auto automatically parses berglas references when imported.
 //
-//     import (
-//       _ "github.com/GoogleCloudPlatform/berglas/pkg/auto"
-//     )
+//	import (
+//	  _ "github.com/GoogleCloudPlatform/berglas/v2/pkg/auto"
+//	)
 //
 // Set environment variables on your deployment using the berglas:// prefix in
 // the format:
 //
-//     berglas://<bucket>/<secret>?<params>
+//	berglas://<bucket>/<secret>?<params>
 //
 // - "bucket" is the name of the Google Cloud Storage bucket where secrets
 // are stored
@@ -30,14 +30,13 @@
 //
 // Examples:
 //
-//     berglas://my-bucket/my-secret
-//     berglas://my-bucket/path/to/secret?destination=tempfile
-//     berglas://my-bucket/path/to/secret?destination=/var/foo/bar
+//	berglas://my-bucket/my-secret
+//	berglas://my-bucket/path/to/secret?destination=tempfile
+//	berglas://my-bucket/path/to/secret?destination=/var/foo/bar
 //
 // On init, the package queries the list of configured environment variables
 // against the metadata service. If environment variables match, their values
 // are automatically replaced with the secret value.
-//
 //
 // By default, any errors result in a panic. If you want the function to
 // continue executing even if resolution or communication fails, set the
