@@ -1,6 +1,6 @@
 # Berglas
 
-[![Build Status](https://img.shields.io/github/workflow/status/GoogleCloudPlatform/berglas/Test.svg?style=flat-square)](https://github.com/GoogleCloudPlatform/berglas/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/GoogleCloudPlatform/berglas/test.yml?branch=main&style=flat-square)](https://github.com/GoogleCloudPlatform/berglas/actions/workflows/test.yml?query=branch%3Amain)
 [![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)][berglas-godoc]
 
 ![Berglas Logo](/logos/berglas.svg)
