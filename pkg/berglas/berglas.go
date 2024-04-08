@@ -34,12 +34,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-var (
-	// userAgent is the HTTP user agent.
-	userAgent = fmt.Sprintf("%s/%s (+https://github.com/GoogleCloudPlatform/berglas)",
-		version.Name, version.Version)
-)
-
 const (
 	// CacheControl is the cache-control value to set on the GCS objects. This is
 	// configured to use no caching, since users most likely want their secrets to
@@ -69,7 +63,7 @@ type Client struct {
 
 // New creates a new berglas client.
 func New(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
-	opts = append(opts, option.WithUserAgent(userAgent))
+	opts = append(opts, option.WithUserAgent(version.UserAgent))
 
 	var c Client
 

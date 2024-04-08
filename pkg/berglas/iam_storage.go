@@ -23,6 +23,7 @@ import (
 
 	"cloud.google.com/go/iam"
 	"cloud.google.com/go/iam/apiv1/iampb"
+	"github.com/GoogleCloudPlatform/berglas/v2/internal/version"
 	"github.com/sethvargo/go-retry"
 	"google.golang.org/api/googleapi"
 	storagev1 "google.golang.org/api/storage/v1"
@@ -150,7 +151,7 @@ func iamFromStorageBindings(rbs []*storagev1.PolicyBindings) []*iampb.Binding {
 }
 
 func setClientHeader(h http.Header) {
-	h.Set("User-Agent", userAgent)
+	h.Set("User-Agent", version.UserAgent)
 }
 
 // getIAMPolicy fetches the IAM policy for the given resource handle, handling
