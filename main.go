@@ -95,7 +95,7 @@ For more information and examples, see the help text for a specific command.
 `, "\n"),
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	Version:       version.Version,
+	Version:       version.HumanVersion,
 }
 
 var accessCmd = &cobra.Command{
