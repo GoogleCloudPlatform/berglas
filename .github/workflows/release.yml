@@ -41,16 +41,9 @@ jobs:
           username: '_json_key'
           password: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
-      - id: 'import_gpg'
-        uses: 'crazy-max/ghaction-import-gpg@v6'
-        with:
-          gpg_private_key: '${{ secrets.GPG_PRIVATE_KEY }}'
-          passphrase: '${{ secrets.GPG_PASSPHRASE }}'
-
       - uses: 'goreleaser/goreleaser-action@v6'
         with:
           version: 'latest'
           args: 'release --clean'
         env:
-          GPG_FINGERPRINT: '${{ steps.import_gpg.outputs.fingerprint }}'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'

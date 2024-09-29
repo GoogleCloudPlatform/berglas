@@ -117,16 +117,5 @@ checksum:
   name_template: 'berglas_{{ .Version }}_SHA512SUMS'
   algorithm: 'sha512'
 
-signs:
-  - artifacts: 'checksum'
-    args:
-      - '--batch'
-      - '--local-user'
-      - '{{ .Env.GPG_FINGERPRINT }}'
-      - '--output'
-      - '${signature}'
-      - '--detach-sign'
-      - '${artifact}'
-
 release:
   draft: false
