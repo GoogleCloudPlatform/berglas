@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - 'go mod tidy'
@@ -107,11 +109,13 @@ docker_manifests:
       - 'us-docker.pkg.dev/berglas/berglas/berglas:latest-arm64'
 
 archives:
-  - format: 'tar.gz'
+  - formats:
+      - 'tar.gz'
     name_template: 'berglas_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
       - goos: 'windows'
-        format: 'zip'
+        formats:
+          - 'zip'
 
 checksum:
   name_template: 'berglas_{{ .Version }}_SHA512SUMS'
