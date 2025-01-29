@@ -13,35 +13,35 @@ jobs:
   release:
     runs-on: 'ubuntu-latest'
     steps:
-      - uses: 'docker/setup-qemu-action@v3'
+      - uses: 'docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a' # ratchet:docker/setup-qemu-action@v3
 
-      - uses: 'actions/checkout@v4'
+      - uses: 'actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683' # ratchet:actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: 'actions/setup-go@v5'
+      - uses: 'actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34' # ratchet:actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
 
-      - uses: 'docker/login-action@v3'
+      - uses: 'docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567' # ratchet:docker/login-action@v3
         with:
           registry: 'asia-docker.pkg.dev'
           username: '_json_key'
           password: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
-      - uses: 'docker/login-action@v3'
+      - uses: 'docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567' # ratchet:docker/login-action@v3
         with:
           registry: 'europe-docker.pkg.dev'
           username: '_json_key'
           password: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
-      - uses: 'docker/login-action@v3'
+      - uses: 'docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567' # ratchet:docker/login-action@v3
         with:
           registry: 'us-docker.pkg.dev'
           username: '_json_key'
           password: '${{ secrets.GOOGLE_CREDENTIALS }}'
 
-      - uses: 'goreleaser/goreleaser-action@v6'
+      - uses: 'goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf' # ratchet:goreleaser/goreleaser-action@v6
         with:
           version: 'latest'
           args: 'release --clean'
