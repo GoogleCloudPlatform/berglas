@@ -42,7 +42,7 @@ stored in [Cloud Storage][cloud-storage]. An interoperable layer also exists wit
     - Install a pre-compiled binary for your operating system from the [latest
       releases](releases).
 
-    - Use an [official Docker container](us-docker.pkg.dev/berglas/berglas/berglas):
+    - Use an [official Docker container](https://us-docker.pkg.dev/berglas/berglas/berglas):
 
       ```text
       docker run -it us-docker.pkg.dev/berglas/berglas/berglas
