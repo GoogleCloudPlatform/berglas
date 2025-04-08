@@ -17,6 +17,7 @@ package berglas
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -199,7 +200,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		Object(object).
 		Generation(generation).
 		Attrs(ctx)
-	if err == storage.ErrObjectNotExist {
+	if errors.Is(err, storage.ErrObjectNotExist) {
 		return nil, errSecretDoesNotExist
 	}
 	if err != nil {
@@ -221,7 +222,7 @@ func (c *Client) storageRead(ctx context.Context, i *StorageReadRequest) (*Secre
 		Object(object).
 		Generation(generation).
 		NewReader(ctx)
-	if err == storage.ErrObjectNotExist {
+	if errors.Is(err, storage.ErrObjectNotExist) {
 		return nil, fmt.Errorf("secret object not found")
 	}
 	if err != nil {

@@ -16,6 +16,7 @@ package berglas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -170,7 +171,7 @@ func (c *Client) storageGrant(ctx context.Context, i *StorageGrantRequest) error
 
 	objHandle := c.storageClient.Bucket(bucket).Object(object)
 	attrs, err := objHandle.Attrs(ctx)
-	if err == storage.ErrObjectNotExist {
+	if errors.Is(err, storage.ErrObjectNotExist) {
 		return errSecretDoesNotExist
 	}
 	if err != nil {
