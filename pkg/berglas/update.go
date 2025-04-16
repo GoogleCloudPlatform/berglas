@@ -16,6 +16,7 @@ package berglas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 
@@ -232,8 +233,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 		Bucket(bucket).
 		Object(object).
 		Attrs(ctx)
-	switch err {
-	case nil:
+	if err == nil {
 		logger = logger.With(
 			"existing.bucket", attrs.Bucket,
 			"existing.name", attrs.Name,
@@ -309,7 +309,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 			return nil, fmt.Errorf("failed to update Storage IAM policy for %s: %w", object, err)
 		}
 		return secret, nil
-	case storage.ErrObjectNotExist:
+	} else if errors.Is(err, storage.ErrObjectNotExist) {
 		logger.DebugContext(ctx, "secret does not exist")
 
 		if !createIfMissing {
@@ -333,7 +333,7 @@ func (c *Client) storageUpdate(ctx context.Context, i *StorageUpdateRequest) (*S
 			return nil, fmt.Errorf("failed to update secret: %w", err)
 		}
 		return secret, nil
-	default:
+	} else {
 		return nil, fmt.Errorf("failed to fetch existing secret: %w", err)
 	}
 }
