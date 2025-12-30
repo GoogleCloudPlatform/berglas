@@ -59,7 +59,7 @@ secrets:
     using the Google Cloud Console from the web.
 
     ```text
-    gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
+    gcloud storage buckets create gs://${BUCKET_ID} --project ${PROJECT_ID}
     ```
 
     **It is strongly recommended that you create a new bucket instead of using
@@ -69,11 +69,11 @@ secrets:
 1. Set the default ACL permissions on the bucket to private:
 
     ```text
-    gsutil defacl set private gs://${BUCKET_ID}
+    gcloud storage buckets update gs://${BUCKET_ID} --predefined-default-object-acl=private
     ```
 
     ```text
-    gsutil acl set private gs://${BUCKET_ID}
+    gcloud storage buckets update gs://${BUCKET_ID} --predefined-acl=private
     ```
 
     The default permissions grant anyone with Owner/Editor access on the project

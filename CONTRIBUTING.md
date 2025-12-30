@@ -51,8 +51,8 @@ infrastructure or services should run in this project.
 1. Create a Cloud Storage bucket:
 
     ```text
-    gsutil mb -p ${PROJECT_ID} gs://${BUCKET_ID}
-    gsutil versioning set on gs://${BUCKET_ID}
+    gcloud storage buckets create --project ${PROJECT_ID} gs://${BUCKET_ID}
+    gcloud storage buckets update --versioning gs://${BUCKET_ID}
     ```
 
 1. Create a Cloud KMS key:
