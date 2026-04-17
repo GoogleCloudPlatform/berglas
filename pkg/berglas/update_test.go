@@ -163,7 +163,7 @@ func TestClient_Update_storage(t *testing.T) {
 		}
 
 		if act, exp := updateResp.Generation, createResp.Generation; act == exp {
-			t.Errorf("expected version %q to be changed", act)
+			t.Errorf("expected version %d to be changed", act)
 		}
 
 		if act, exp := updateResp.Plaintext, plaintext2; !bytes.Equal(act, exp) {
