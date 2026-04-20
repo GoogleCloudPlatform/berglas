@@ -151,7 +151,7 @@ func TestClient_Read_storage(t *testing.T) {
 		}
 
 		if exp, act := secret.Generation, resp.Generation; exp != act {
-			t.Errorf("expected version %q to be %q", act, exp)
+			t.Errorf("expected version %d to be %d", act, exp)
 		}
 
 		if exp, act := plaintext, resp.Plaintext; !bytes.Equal(exp, act) {
@@ -187,7 +187,7 @@ func TestClient_Read_storage(t *testing.T) {
 		}
 
 		if exp, act := secret.Generation, resp.Generation; exp != act {
-			t.Errorf("expected generation %q to be %q", act, exp)
+			t.Errorf("expected generation %d to be %d", act, exp)
 		}
 
 		if exp, act := plaintext, resp.Plaintext; !bytes.Equal(exp, act) {
