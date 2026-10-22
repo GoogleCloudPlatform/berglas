@@ -903,15 +903,16 @@ func execRun(cmd *cobra.Command, args []string) error {
 		env[i] = fmt.Sprintf("%s=%s", k, s)
 	}
 
-	execCmdFull, err := exec.LookPath(execCmd)
-	if err != nil {
-		return fmt.Errorf("failed to lookup path for %q: %w", execCmd, err)
-	}
+	c := exec.Command(execCmd, execArgs...)
+	c.Env = env
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
 
-	// Unlike os/exec, execv(3) expects the arguments to include the command.
-	execArgs = append([]string{execCmdFull}, execArgs...)
-
-	if err := syscall.Exec(execCmdFull, execArgs, env); err != nil {
+	if err := c.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
 		return fmt.Errorf("failed to execute %q: %w", execCmd, err)
 	}
 	return nil
